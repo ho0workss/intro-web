@@ -63,6 +63,7 @@ function enterDashboard(){
   renderAnnouncements();renderNotifications();renderHomeLeave();renderHomePending();
   renderLeaveData();renderPastLeaves();initPartnerTables();initAiModels();renderRequests();renderRoles();renderMembers();renderDeptRole();renderPartnerMgmt();
   renderAds();renderEvents();renderDesign();renderEcommerce();loadProfileForm();
+  updateMessengerNavBadge();
   setTimeout(()=>showToast('👋','환영합니다',CURRENT.name+'님'),200);
 }
 // ========== 회원가입 신청 (로그인 화면) ==========
@@ -169,7 +170,6 @@ function switchSettingTab(tab){
 }
 function openModal(id){document.getElementById(id).classList.remove('hidden')}
 function closeModal(id){document.getElementById(id).classList.add('hidden')}
-function openAnnouncementModal(){openModal('announcementModal')}
 function openLeaveModal(){
   const today=new Date().toISOString().split('T')[0];
   document.getElementById('leaveStart').value=today;
@@ -200,18 +200,50 @@ function getAnnouncements(){return ST.get('announcements',[
   {id:1,title:'2분기 전사 워크샵 안내',content:'6월 첫째 주에 진행됩니다.',author:'관리자',username:'intro',created:'2026-05-12 09:30',start:'2026-05-12T09:00',end:'2026-05-30T18:00',pinned:true}
 ])}
 function saveAnnouncements(a){ST.set('announcements',a)}
+function isAnnouncementActive(a){
+  if(!a||!a.end)return true;
+  const end=new Date(a.end.includes('T')?a.end:a.end+'T23:59:59');
+  return end>=new Date();
+}
 function renderAnnouncements(){
-  const anns=getAnnouncements();
+  const all=getAnnouncements();
+  const anns=all.filter(isAnnouncementActive);
   const list=document.getElementById('announcementList');if(!list)return;
-  if(anns.length===0){list.innerHTML='<div class="px-3 py-8 text-center text-gray-400 text-sm">공지가 없습니다.</div>';document.getElementById('annCount').textContent='0';return}
+  if(anns.length===0){list.innerHTML='<div class="px-3 py-8 text-center text-gray-400 text-sm">진행 중인 공지가 없습니다.</div>';const ac=document.getElementById('annCount');if(ac)ac.textContent='0';return}
   list.innerHTML=anns.map(a=>`<div class="flex items-start gap-2 px-3 py-3 cursor-pointer hover-bg" onclick="showAnnouncementDetail(${a.id})">${a.pinned?'<span class="text-red-500 text-xs mt-1">📌</span>':'<span class="w-4"></span>'}<div class="flex-1 min-w-0"><p class="text-sm font-medium truncate">${escapeHtml(a.title)}</p><p class="text-xs text-gray-400 mt-0.5">${a.author} · ${a.created.split(' ')[0]} · 마감 ${a.end.split('T')[0]}</p></div></div>`).join('');
-  document.getElementById('annCount').textContent=anns.length;
+  const ac=document.getElementById('annCount');if(ac)ac.textContent=anns.length;
+}
+let editingAnnouncementId=null;
+function openAnnouncementModal(){
+  editingAnnouncementId=null;
+  document.getElementById('annModalTitle').textContent='📣 새 공지';
+  document.getElementById('annSubmitBtn').textContent='등록';
+  document.getElementById('annTitle').value='';
+  document.getElementById('annContent').value='';
+  document.getElementById('annPinned').checked=false;
+  openModal('announcementModal');
 }
 function submitAnnouncement(){
   const t=document.getElementById('annTitle').value.trim();
   const c=document.getElementById('annContent').value.trim();
   if(!t||!c){alert('제목과 내용을 입력하세요');return}
   const anns=getAnnouncements();
+  if(editingAnnouncementId!=null){
+    const idx=anns.findIndex(a=>a.id===editingAnnouncementId);
+    if(idx>=0){
+      anns[idx].title=t;
+      anns[idx].content=c;
+      anns[idx].start=document.getElementById('annStart').value;
+      anns[idx].end=document.getElementById('annEnd').value;
+      anns[idx].pinned=document.getElementById('annPinned').checked;
+    }
+    anns.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
+    saveAnnouncements(anns);renderAnnouncements();
+    closeModal('announcementModal');
+    editingAnnouncementId=null;
+    showToast('✏️','공지 수정',t);
+    return;
+  }
   anns.unshift({id:Date.now(),title:t,content:c,author:CURRENT.name,username:CURRENT.username,created:new Date().toISOString().replace('T',' ').substring(0,16),start:document.getElementById('annStart').value,end:document.getElementById('annEnd').value,pinned:document.getElementById('annPinned').checked});
   anns.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
   saveAnnouncements(anns);renderAnnouncements();
@@ -231,14 +263,44 @@ function showAnnouncementDetail(id){
   document.getElementById('detailStart').textContent=a.start.replace('T',' ');
   document.getElementById('detailEnd').textContent=a.end.replace('T',' ');
   document.getElementById('detailContent').textContent=a.content;
-  document.getElementById('detailDeleteBtn').classList.toggle('hidden',a.username!==CURRENT.username&&CURRENT.role!=='admin');
+  const canManage=a.username===CURRENT.username||CURRENT.role==='admin';
+  document.getElementById('detailDeleteBtn').classList.toggle('hidden',!canManage);
+  document.getElementById('detailEditBtn').classList.toggle('hidden',!canManage);
   openModal('announcementDetail');
+}
+function editAnnouncement(){
+  const a=getAnnouncements().find(x=>x.id===currentDetailId);if(!a)return;
+  if(a.username!==CURRENT.username&&CURRENT.role!=='admin'){alert('수정 권한이 없습니다');return}
+  editingAnnouncementId=a.id;
+  document.getElementById('annModalTitle').textContent='✏️ 공지 수정';
+  document.getElementById('annSubmitBtn').textContent='수정 저장';
+  document.getElementById('annTitle').value=a.title;
+  document.getElementById('annContent').value=a.content;
+  document.getElementById('annStart').value=a.start;
+  document.getElementById('annEnd').value=a.end;
+  document.getElementById('annPinned').checked=!!a.pinned;
+  closeModal('announcementDetail');
+  openModal('announcementModal');
 }
 function deleteAnnouncement(){
   if(!confirm('삭제하시겠습니까?'))return;
   saveAnnouncements(getAnnouncements().filter(a=>a.id!==currentDetailId));
   renderAnnouncements();closeModal('announcementDetail');
+  if(!document.getElementById('announcementArchive').classList.contains('hidden'))renderAnnouncementArchive();
   showToast('🗑️','공지 삭제','');
+}
+function openAnnouncementArchive(){renderAnnouncementArchive();openModal('announcementArchive')}
+function renderAnnouncementArchive(){
+  const list=document.getElementById('archiveList');if(!list)return;
+  const all=getAnnouncements();
+  const active=all.filter(isAnnouncementActive);
+  const expired=all.filter(a=>!isAnnouncementActive(a));
+  if(all.length===0){list.innerHTML='<p class="text-center text-gray-400 py-8 text-sm">등록된 공지가 없습니다.</p>';return}
+  const renderItem=(a,dim)=>`<div class="flex items-start gap-2 py-3 cursor-pointer hover-bg px-2 rounded ${dim?'opacity-60':''}" onclick="showAnnouncementDetail(${a.id})">${a.pinned?'<span class="text-red-500 text-xs mt-1">📌</span>':'<span class="w-4"></span>'}<div class="flex-1 min-w-0"><p class="text-sm font-medium truncate">${escapeHtml(a.title)}</p><p class="text-xs text-gray-400 mt-0.5">${a.author} · ${a.created.split(' ')[0]} · 마감 ${a.end.split('T')[0]}${dim?' · <span class="text-red-400">마감됨</span>':''}</p></div></div>`;
+  let html='';
+  if(active.length){html+='<p class="text-xs font-semibold text-gray-500 px-2 py-2">📌 진행 중 ('+active.length+')</p>'+active.map(a=>renderItem(a,false)).join('');}
+  if(expired.length){html+='<p class="text-xs font-semibold text-gray-500 px-2 py-2 mt-2">🗂️ 지난 공지 ('+expired.length+')</p>'+expired.map(a=>renderItem(a,true)).join('');}
+  list.innerHTML=html;
 }
 
 // ========== 휴가 ==========
@@ -318,14 +380,15 @@ function renderLeaveData(){
   // 내 사용 내역
   const myBody=document.getElementById('myLeaveBody');
   if(myBody){
+    const today=new Date().toISOString().split('T')[0];
     const my=getLeaves().filter(l=>l.username===CURRENT.username);
-    myBody.innerHTML=my.length===0?'<tr><td colspan="8" class="text-center text-gray-400 py-4">신청 내역이 없습니다.</td></tr>':my.map((l,i)=>`<tr><td class="sheet-row-num">${i+1}</td><td><span class="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700">${l.type}</span></td><td>${l.start}</td><td>${l.end}</td><td>${l.cost===0?'미차감':'-'+l.cost+'일'}</td><td class="text-xs text-gray-500">${escapeHtml(l.reason||'-')}</td><td><span class="text-xs px-2 py-0.5 rounded ${l.status==='approved'?'bg-green-50 text-green-700':l.status==='pending'?'bg-amber-50 text-amber-700':'bg-red-50 text-red-600'}">${l.status==='approved'?'승인':l.status==='pending'?'대기':'반려'}</span></td><td>${l.status==='pending'?`<button onclick="cancelLeave(${l.id})" class="text-xs text-red-500 hover:underline">취소</button>`:'-'}</td></tr>`).join('');
+    myBody.innerHTML=my.length===0?'<tr><td colspan="7" class="text-center text-gray-400 py-4">신청 내역이 없습니다.</td></tr>':my.map((l,i)=>`<tr><td class="sheet-row-num">${i+1}</td><td><span class="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700">${l.type}</span></td><td>${l.start}</td><td>${l.end}</td><td>${l.cost===0?'미차감':'-'+l.cost+'일'}</td><td class="text-xs text-gray-500">${escapeHtml(l.reason||'-')}</td><td>${l.start>today?`<button onclick="cancelLeave(${l.id})" class="text-xs text-red-500 hover:underline">취소</button>`:'-'}</td></tr>`).join('');
   }
   // 전체 내역
   const allBody=document.getElementById('allLeaveBody');
   if(allBody){
     const all=getLeaves();
-    allBody.innerHTML=all.length===0?'<tr><td colspan="6" class="text-center text-gray-400 py-4">내역 없음</td></tr>':all.map((l,i)=>`<tr><td class="sheet-row-num">${i+1}</td><td>${l.name}</td><td><span class="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700">${l.type}</span></td><td>${l.start} ~ ${l.end}</td><td>${l.cost===0?'미차감':'-'+l.cost+'일'}</td><td><span class="text-xs px-2 py-0.5 rounded ${l.status==='approved'?'bg-green-50 text-green-700':l.status==='pending'?'bg-amber-50 text-amber-700':'bg-red-50 text-red-600'}">${l.status==='approved'?'승인':l.status==='pending'?'대기':'반려'}</span></td></tr>`).join('');
+    allBody.innerHTML=all.length===0?'<tr><td colspan="5" class="text-center text-gray-400 py-4">내역 없음</td></tr>':all.map((l,i)=>`<tr><td class="sheet-row-num">${i+1}</td><td>${l.name}</td><td><span class="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700">${l.type}</span></td><td>${l.start} ~ ${l.end}</td><td>${l.cost===0?'미차감':'-'+l.cost+'일'}</td></tr>`).join('');
   }
 }
 function cancelLeave(id){
@@ -865,7 +928,7 @@ function selectRoom(room){
   currentRoom=room;
   document.getElementById('chatTitle').textContent=room;
   setUnread(room,0);
-  renderRoomList();loadMessages();
+  renderRoomList();loadMessages();updateMessengerNavBadge();
 }
 function loadMessages(){renderMessages(getMessages(currentRoom))}
 function renderMessages(msgs){
@@ -918,8 +981,6 @@ function sendMsg(){
       showToast('@',`${getUsers()[u].name}님 호출`,'팝업 알림 발송');
     }
   });
-  // 다른 채팅방 안 읽음 카운트 (시뮬레이션)
-  getRooms().forEach(r=>{if(r.id!==currentRoom&&Math.random()<0.1)setUnread(r.id,getUnread(r.id)+1)});
 }
 function aiRespond(question){
   const responses=[
@@ -934,12 +995,26 @@ function aiRespond(question){
   CHANNEL.postMessage({type:'msg',room:currentRoom,message:msg});
 }
 CHANNEL.addEventListener('message',(e)=>{
-  if(e.data.type==='msg'&&e.data.room===currentRoom){
-    const msgs=getMessages(currentRoom);
-    if(!msgs.find(m=>m.id===e.data.message.id)){msgs.push(e.data.message);saveMessages(currentRoom,msgs);renderMessages(msgs)}
+  if(e.data.type==='msg'){
+    const room=e.data.room;
+    const msgs=getMessages(room);
+    if(msgs.find(m=>m.id===e.data.message.id))return;
+    msgs.push(e.data.message);saveMessages(room,msgs);
+    if(room===currentRoom){
+      renderMessages(msgs);
+    }else if(e.data.message.from!==CURRENT.username){
+      setUnread(room,getUnread(room)+1);
+    }
+    renderRoomList();updateMessengerNavBadge();
   }
   if(e.data.type==='reload'&&e.data.room===currentRoom)loadMessages();
 });
+function updateMessengerNavBadge(){
+  const badge=document.getElementById('messengerNavBadge');if(!badge)return;
+  const total=getRooms().reduce((s,r)=>s+(getUnread(r.id)||0),0);
+  if(total>0){badge.textContent=total>99?'99+':total;badge.style.display='inline-flex'}
+  else{badge.style.display='none'}
+}
 
 // 채팅방 우클릭
 function showRoomContext(e,roomId){
@@ -1650,18 +1725,41 @@ function updEc(t,id,k,v){const d=getEcData(t);const x=d.find(y=>y.id===id);if(x)
 function renderPastLeaves(){
   const body=document.getElementById('pastLeaveBody');if(!body)return;
   const today=new Date().toISOString().split('T')[0];
-  let leaves=getLeaves().filter(l=>l.end<today);
+  const allPast=getLeaves().filter(l=>l.end<today);
   // 연도 옵션
-  const years=[...new Set(leaves.map(l=>l.start.split('-')[0]))].sort().reverse();
   const yearSel=document.getElementById('pastLeaveYear');
-  if(yearSel.options.length===0||yearSel.options.length!==years.length+1){
+  const years=[...new Set(allPast.map(l=>l.start.split('-')[0]))].sort().reverse();
+  if(yearSel.options.length!==years.length+1){
+    const prev=yearSel.value;
     yearSel.innerHTML='<option value="all">전체 연도</option>'+years.map(y=>`<option value="${y}">${y}년</option>`).join('');
+    if([...yearSel.options].some(o=>o.value===prev))yearSel.value=prev;
   }
-  const yf=yearSel.value;const uf=document.getElementById('pastLeaveUser').value;
-  if(yf&&yf!=='all')leaves=leaves.filter(l=>l.start.startsWith(yf));
+  // 신청자 옵션 (이름 단위로 unique)
+  const userSel=document.getElementById('pastLeaveUser');
+  const applicants=[...new Map(allPast.map(l=>[l.username,l.name])).entries()];
+  const desiredUserCount=applicants.length+2;
+  if(userSel.options.length!==desiredUserCount){
+    const prev=userSel.value;
+    userSel.innerHTML='<option value="all">전체 신청자</option><option value="me">나만</option>'+applicants.map(([u,n])=>`<option value="user:${escapeHtml(u)}">${escapeHtml(n)}</option>`).join('');
+    if([...userSel.options].some(o=>o.value===prev))userSel.value=prev;
+  }
+  // 유형 옵션
+  const typeSel=document.getElementById('pastLeaveType');
+  const types=[...new Set(allPast.map(l=>l.type))];
+  if(typeSel.options.length!==types.length+1){
+    const prev=typeSel.value;
+    typeSel.innerHTML='<option value="all">전체 유형</option>'+types.map(t=>`<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+    if([...typeSel.options].some(o=>o.value===prev))typeSel.value=prev;
+  }
+  // 필터 적용
+  let leaves=allPast.slice();
+  const yf=yearSel.value;if(yf&&yf!=='all')leaves=leaves.filter(l=>l.start.startsWith(yf));
+  const uf=userSel.value;
   if(uf==='me')leaves=leaves.filter(l=>l.username===CURRENT.username);
-  if(leaves.length===0){body.innerHTML='<tr><td colspan="7" class="text-center text-gray-400 py-4">과거 휴가 내역이 없습니다.</td></tr>';return}
-  body.innerHTML=leaves.map((l,i)=>`<tr><td class="sheet-row-num">${i+1}</td><td>${l.name}</td><td><span class="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700">${l.type}</span></td><td>${l.start} ~ ${l.end}</td><td>${l.cost===0?'미차감':'-'+l.cost+'일'}</td><td class="text-xs text-gray-500">${escapeHtml(l.reason||'-')}</td><td><span class="text-xs px-2 py-0.5 rounded ${l.status==='approved'?'bg-green-50 text-green-700':l.status==='pending'?'bg-amber-50 text-amber-700':'bg-red-50 text-red-600'}">${l.status==='approved'?'승인':l.status==='pending'?'대기':'반려'}</span></td></tr>`).join('');
+  else if(uf&&uf.startsWith('user:'))leaves=leaves.filter(l=>l.username===uf.slice(5));
+  const tf=typeSel.value;if(tf&&tf!=='all')leaves=leaves.filter(l=>l.type===tf);
+  if(leaves.length===0){body.innerHTML='<tr><td colspan="6" class="text-center text-gray-400 py-4">조건에 맞는 휴가 내역이 없습니다.</td></tr>';return}
+  body.innerHTML=leaves.map((l,i)=>`<tr><td class="sheet-row-num">${i+1}</td><td>${l.name}</td><td><span class="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700">${l.type}</span></td><td>${l.start} ~ ${l.end}</td><td>${l.cost===0?'미차감':'-'+l.cost+'일'}</td><td class="text-xs text-gray-500">${escapeHtml(l.reason||'-')}</td></tr>`).join('');
 }
 
 // ========== Helpers ==========
