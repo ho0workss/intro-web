@@ -127,8 +127,26 @@ function refreshUserUI(){
 }
 function roleLabel(r){return r==='admin'?'관리자':r==='manager'?'매니저':'멤버'}
 
+// ========== 모바일 사이드바 토글 ==========
+function isMobileView(){return window.innerWidth<=768}
+function toggleMobileSidebar(){
+  const aside=document.querySelector('#dashboard>aside');
+  const bd=document.getElementById('mobileBackdrop');
+  if(!aside)return;
+  const open=aside.classList.toggle('sidebar-open');
+  if(bd)bd.classList.toggle('show',open);
+}
+function closeMobileSidebar(){
+  const aside=document.querySelector('#dashboard>aside');
+  const bd=document.getElementById('mobileBackdrop');
+  if(aside)aside.classList.remove('sidebar-open');
+  if(bd)bd.classList.remove('show');
+}
+
 // ========== 네비게이션 ==========
 function navigateTo(page,sub){
+  try{if(typeof event!=='undefined'&&event&&event.preventDefault)event.preventDefault()}catch{}
+  if(isMobileView())closeMobileSidebar();
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page)?.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -150,11 +168,18 @@ function navigateTo(page,sub){
     if(CURRENT){const fresh=getUsers()[CURRENT.username];if(fresh){CURRENT.partners=fresh.partners||[];ST.set('currentUser',CURRENT)}}
     refreshUserUI();renderPartnerFilter();
   }
-  window.scrollTo(0,0);
-  document.documentElement.scrollTop=0;
-  document.body.scrollTop=0;
-  const ma=document.getElementById('mainArea');if(ma)ma.scrollTop=0;
-  requestAnimationFrame(()=>{window.scrollTo(0,0);document.documentElement.scrollTop=0});
+  const resetScroll=()=>{
+    window.scrollTo(0,0);
+    document.documentElement.scrollTop=0;
+    document.body.scrollTop=0;
+    const ma=document.getElementById('mainArea');if(ma)ma.scrollTop=0;
+    const activePage=document.querySelector('#mainArea>.page.active');
+    if(activePage)activePage.scrollTop=0;
+  };
+  resetScroll();
+  requestAnimationFrame(resetScroll);
+  setTimeout(resetScroll,50);
+  setTimeout(resetScroll,200);
 }
 function navigateSub(page,sub){
   document.querySelectorAll(`#page-${page} .sub-page`).forEach(p=>p.classList.remove('active'));
