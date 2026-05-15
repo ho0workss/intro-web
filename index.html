@@ -70,7 +70,11 @@
     #mobileHeader .mh-btn{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border:none;background:transparent;font-size:20px;cursor:pointer;border-radius:8px;color:inherit}
     #mobileHeader .mh-btn:hover{background:rgba(0,0,0,0.05)}
     [data-theme="dark"] #mobileHeader .mh-btn:hover{background:rgba(255,255,255,0.06)}
-    #mobileHeader .mh-title{flex:1;font-size:18px;font-weight:700;margin:0;padding:0 4px;truncate:true;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #mobileHeader #mobileHeaderLogo{display:inline-flex;align-items:center;padding:6px 8px;border-radius:6px;font-size:18px;font-weight:900;letter-spacing:0.12em;color:inherit;text-decoration:none;cursor:pointer}
+    #mobileHeader #mobileHeaderLogo:hover{background:rgba(0,0,0,0.05)}
+    [data-theme="dark"] #mobileHeader #mobileHeaderLogo:hover{background:rgba(255,255,255,0.06)}
+    #mobileHeader .mh-title{flex:1;font-size:13px;font-weight:500;color:#6b7280;margin:0;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+    [data-theme="dark"] #mobileHeader .mh-title{color:#9ca3af}
     #mobileHeader .mh-badge{position:absolute;top:4px;right:4px;background:#ef4444;color:#fff;font-size:9px;font-weight:bold;border-radius:9999px;min-width:14px;height:14px;padding:0 3px;display:flex;align-items:center;justify-content:center;line-height:1}
     /* 모바일 하단 탭 바 */
     #mobileTabBar{display:flex;position:fixed;bottom:0;left:0;right:0;height:60px;z-index:40;background:#fff;border-top:1px solid #e5e7eb;padding:4px 4px env(safe-area-inset-bottom) 4px}
@@ -314,7 +318,8 @@
   <!-- ★ 모바일 전용 상단 헤더 -->
   <header id="mobileHeader">
     <button onclick="toggleMobileSidebar()" class="mh-btn" aria-label="메뉴">☰</button>
-    <h1 id="mobileHeaderTitle" class="mh-title">홈</h1>
+    <a href="javascript:void(0)" onclick="navigateTo('home')" id="mobileHeaderLogo" class="logo-font" aria-label="홈으로">INTRO</a>
+    <span id="mobileHeaderTitle" class="mh-title"></span>
     <button onclick="toggleNotifDropdown(event)" class="mh-btn relative" aria-label="알림">🔔<span id="mobileNotifBadge" class="mh-badge" style="display:none">0</span></button>
     <button onclick="toggleTheme()" class="mh-btn" aria-label="테마"><span id="theme-icon-m">🌙</span></button>
   </header>
