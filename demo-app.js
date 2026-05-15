@@ -203,7 +203,18 @@ function closeFabMenu(){
 }
 function fabAction(fnName){
   closeFabMenu();
-  try{const fn=window[fnName];if(typeof fn==='function')fn()}catch(e){console.warn('FAB action failed',fnName,e)}
+  // 모달 동작이 확실히 실행되도록 함수 맵 + setTimeout(0)으로 분리
+  const actions={
+    openAnnouncementModal:()=>{if(typeof openAnnouncementModal==='function')openAnnouncementModal()},
+    openLeaveModal:()=>{if(typeof openLeaveModal==='function')openLeaveModal()},
+    openCreateMeetingModal:()=>{if(typeof openCreateMeetingModal==='function')openCreateMeetingModal()},
+    openCreateRoomModal:()=>{if(typeof openCreateRoomModal==='function')openCreateRoomModal()},
+    newAiChat:()=>{navigateTo('chatgpt');setTimeout(()=>{if(typeof newAiChat==='function')newAiChat()},80)},
+  };
+  setTimeout(()=>{
+    try{const fn=actions[fnName];if(fn)fn();else console.warn('FAB action 미정의:',fnName)}
+    catch(e){console.error('FAB action 실패',fnName,e);alert('동작 실패: '+e.message)}
+  },0);
 }
 
 // ========== 네비게이션 ==========

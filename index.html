@@ -102,6 +102,8 @@
     #mobileFabMenu .fab-menu-lbl{white-space:nowrap}
     /* 알림 드롭다운 모바일 위치 */
     #notifDropdown{top:50px!important;right:8px!important;left:auto!important;width:calc(100vw - 16px)!important;max-width:320px}
+    /* 모달은 모바일 셸/사이드바보다 위에 표시 */
+    .fixed.inset-0.z-50{z-index:100!important}
     /* 메신저/ChatGPT 대화 뷰만 풀스크린 오버레이 (목록 뷰는 일반 페이지) */
     #mainArea>#page-messenger.active.mobile-show-chat,
     #mainArea>#page-chatgpt.active.mobile-show-chat{
