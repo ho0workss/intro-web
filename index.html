@@ -49,21 +49,57 @@
   #mobileNavToggle{display:none;position:fixed;top:8px;left:8px;z-index:50;background:#fff;border:1px solid #e5e7eb;border-radius:8px;width:38px;height:38px;align-items:center;justify-content:center;font-size:18px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.08)}
   [data-theme="dark"] #mobileNavToggle{background:#252525;border-color:#363636;color:#e6e6e6}
   #mobileBackdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:25}
+  /* ★ 모바일 상단 헤더 / 하단 탭바 / FAB - 기본 숨김, 모바일에서만 노출 */
+  #mobileHeader{display:none}
+  #mobileTabBar{display:none}
+  #mobileFab{display:none}
   @media (max-width:768px){
-    #dashboard>aside{transform:translateX(-100%);box-shadow:4px 0 20px rgba(0,0,0,0.15)}
+    /* 기존 햄버거 토글 버튼은 이제 새 모바일 헤더의 ☰ 버튼이 대체 → 숨김 */
+    #mobileNavToggle{display:none!important}
+    #dashboard>aside{transform:translateX(-100%);box-shadow:4px 0 20px rgba(0,0,0,0.15);z-index:55}
     #dashboard>aside.sidebar-open{transform:translateX(0)}
-    #mainArea{margin-left:0!important}
-    #mobileNavToggle{display:flex}
+    #mainArea{margin-left:0!important;padding-top:56px!important;padding-bottom:64px!important}
+    #mobileBackdrop{z-index:54}
     #mobileBackdrop.show{display:block}
-    /* 메신저/ChatGPT: 풀스크린 오버레이 + 한 번에 한 패널만 표시 (목록 ↔ 대화 토글) */
-    #mainArea>#page-messenger.active,#mainArea>#page-chatgpt.active{
+    /* 데모바 모바일에선 숨김 (공간 절약) */
+    #demoBar{display:none!important}
+    /* 모바일 상단 헤더 */
+    #mobileHeader{display:flex;position:fixed;top:0;left:0;right:0;height:56px;z-index:40;background:#fff;border-bottom:1px solid #e5e7eb;padding:0 8px;align-items:center;gap:4px;box-shadow:0 1px 2px rgba(0,0,0,0.03)}
+    [data-theme="dark"] #mobileHeader{background:#191919;border-color:#363636}
+    #mobileHeader .mh-btn{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border:none;background:transparent;font-size:20px;cursor:pointer;border-radius:8px;color:inherit}
+    #mobileHeader .mh-btn:hover{background:rgba(0,0,0,0.05)}
+    [data-theme="dark"] #mobileHeader .mh-btn:hover{background:rgba(255,255,255,0.06)}
+    #mobileHeader .mh-title{flex:1;font-size:18px;font-weight:700;margin:0;padding:0 4px;truncate:true;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #mobileHeader .mh-badge{position:absolute;top:4px;right:4px;background:#ef4444;color:#fff;font-size:9px;font-weight:bold;border-radius:9999px;min-width:14px;height:14px;padding:0 3px;display:flex;align-items:center;justify-content:center;line-height:1}
+    /* 모바일 하단 탭 바 */
+    #mobileTabBar{display:flex;position:fixed;bottom:0;left:0;right:0;height:60px;z-index:40;background:#fff;border-top:1px solid #e5e7eb;padding:4px 4px env(safe-area-inset-bottom) 4px}
+    [data-theme="dark"] #mobileTabBar{background:#191919;border-color:#363636}
+    #mobileTabBar .mtab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:transparent;border:none;cursor:pointer;color:#6b7280;font-size:11px;padding:4px 2px;border-radius:8px;position:relative}
+    [data-theme="dark"] #mobileTabBar .mtab{color:#9ca3af}
+    #mobileTabBar .mtab.active{color:#7c3aed;font-weight:600}
+    #mobileTabBar .mtab .mtab-ico{font-size:20px;position:relative;line-height:1}
+    #mobileTabBar .mtab .mtab-lbl{font-size:10px;line-height:1.2}
+    #mobileTabBar .mtab .mtab-badge{position:absolute;top:-4px;right:-10px;background:#ef4444;color:#fff;font-size:9px;font-weight:bold;border-radius:9999px;min-width:16px;height:16px;padding:0 4px;display:flex;align-items:center;justify-content:center;line-height:1}
+    /* 모바일 FAB */
+    #mobileFab{display:flex;position:fixed;bottom:76px;right:16px;width:56px;height:56px;border-radius:9999px;background:#7c3aed;color:#fff;border:none;font-size:28px;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 12px rgba(124,58,237,0.4);z-index:35;font-weight:300;line-height:1;padding-bottom:4px}
+    #mobileFab:hover{background:#6d28d9}
+    #mobileFab.fab-hidden{display:none!important}
+    /* 알림 드롭다운 모바일 위치 */
+    #notifDropdown{top:50px!important;right:8px!important;left:auto!important;width:calc(100vw - 16px)!important;max-width:320px}
+    /* 메신저/ChatGPT 대화 뷰만 풀스크린 오버레이 (목록 뷰는 일반 페이지) */
+    #mainArea>#page-messenger.active.mobile-show-chat,
+    #mainArea>#page-chatgpt.active.mobile-show-chat{
       position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;
       width:100%!important;height:100vh!important;height:100dvh!important;z-index:60!important;background:#fff!important;
       margin:0!important;padding:0!important;overflow:hidden!important
     }
-    [data-theme="dark"] #mainArea>#page-messenger.active,
-    [data-theme="dark"] #mainArea>#page-chatgpt.active{background:#191919!important}
-    #page-messenger>div,#page-chatgpt>div{flex-direction:column!important;height:100vh!important;height:100dvh!important;max-height:100dvh!important}
+    [data-theme="dark"] #mainArea>#page-messenger.active.mobile-show-chat,
+    [data-theme="dark"] #mainArea>#page-chatgpt.active.mobile-show-chat{background:#191919!important}
+    /* 목록 뷰: 모바일 헤더 + 탭바 사이 영역에 맞춤 */
+    #page-messenger.active:not(.mobile-show-chat)>div,
+    #page-chatgpt.active:not(.mobile-show-chat)>div{height:calc(100dvh - 120px)!important;max-height:calc(100dvh - 120px)!important;flex-direction:column!important}
+    /* 대화 뷰: 풀스크린 */
+    #page-messenger.mobile-show-chat>div,#page-chatgpt.mobile-show-chat>div{flex-direction:column!important;height:100vh!important;height:100dvh!important;max-height:100dvh!important}
     #page-messenger .w-72,#page-chatgpt .w-64{width:100%!important;max-width:none;border-right:none;border-bottom:1px solid #e5e7eb;flex:1 1 auto;min-height:0}
     #page-messenger #chatArea,#page-chatgpt #aiChatArea{flex:1 1 auto;min-height:0;height:auto;display:flex;flex-direction:column;overflow:hidden}
     /* 헤더 + 입력 영역은 절대 줄어들지 않도록 */
@@ -262,6 +298,26 @@
 <div id="dashboard" class="hidden" style="display:none">
   <button id="mobileNavToggle" onclick="toggleMobileSidebar()" aria-label="메뉴 열기">☰</button>
   <div id="mobileBackdrop" onclick="closeMobileSidebar()"></div>
+
+  <!-- ★ 모바일 전용 상단 헤더 -->
+  <header id="mobileHeader">
+    <button onclick="toggleMobileSidebar()" class="mh-btn" aria-label="메뉴">☰</button>
+    <h1 id="mobileHeaderTitle" class="mh-title">홈</h1>
+    <button onclick="toggleNotifDropdown(event)" class="mh-btn relative" aria-label="알림">🔔<span id="mobileNotifBadge" class="mh-badge" style="display:none">0</span></button>
+    <button onclick="toggleTheme()" class="mh-btn" aria-label="테마"><span id="theme-icon-m">🌙</span></button>
+  </header>
+
+  <!-- ★ 모바일 전용 하단 탭 바 -->
+  <nav id="mobileTabBar">
+    <button onclick="navigateTo('home')" data-mtab="home" class="mtab"><span class="mtab-ico">🏠</span><span class="mtab-lbl">홈</span></button>
+    <button onclick="navigateTo('messenger')" data-mtab="messenger" class="mtab"><span class="mtab-ico">💬<span id="mobileTabMsgBadge" class="mtab-badge" style="display:none">0</span></span><span class="mtab-lbl">메신저</span></button>
+    <button onclick="navigateTo('meetings')" data-mtab="meetings" class="mtab"><span class="mtab-ico">📅</span><span class="mtab-lbl">회의</span></button>
+    <button onclick="navigateTo('leave')" data-mtab="leave" class="mtab"><span class="mtab-ico">☕</span><span class="mtab-lbl">휴가</span></button>
+    <button onclick="toggleMobileSidebar()" class="mtab" aria-label="더보기"><span class="mtab-ico">⋯</span><span class="mtab-lbl">더보기</span></button>
+  </nav>
+
+  <!-- ★ 모바일 FAB (페이지별 주요 액션) -->
+  <button id="mobileFab" onclick="onMobileFabClick()" aria-label="추가" style="display:none">+</button>
 
   <!-- ★ 사이드바: position:fixed 로 항상 좌측에 고정 (레이아웃 버그 방지) -->
   <aside class="w-64 bg-gray-50 border-r border-gray-200 flex flex-col" style="position:fixed;left:0;top:0;width:16rem;height:100vh;z-index:30">
