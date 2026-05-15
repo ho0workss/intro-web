@@ -156,7 +156,12 @@ function navigateTo(page,sub){
   document.querySelector(`[data-submenu="${page}"]`)?.classList.remove('hidden');
   if(sub)navigateSub(page,sub);
   document.getElementById('notifDropdown').classList.add('hidden');
-  if(page==='messenger'){renderRoomList();loadMessages();if(window.Sync?.isEnabled&&typeof selectRoom==='function')selectRoom(currentRoom);}
+  if(page==='messenger'){
+    renderRoomList();loadMessages();
+    if(window.Sync?.isEnabled&&typeof selectRoom==='function'&&!isMobileView())selectRoom(currentRoom);
+    if(isMobileView())document.getElementById('page-messenger')?.classList.remove('mobile-show-chat');
+  }
+  if(page==='chatgpt'&&isMobileView())document.getElementById('page-chatgpt')?.classList.remove('mobile-show-chat');
   if(page==='meetings')renderMeetings();
   if(page==='leave'){renderLeaveData();renderPastLeaves();}
   if(page==='chatgpt')renderAiList();
@@ -986,7 +991,10 @@ function selectRoom(room){
   document.getElementById('chatTitle').textContent=room;
   setUnread(room,0);
   renderRoomList();loadMessages();updateMessengerNavBadge();
+  if(isMobileView())document.getElementById('page-messenger')?.classList.add('mobile-show-chat');
 }
+function messengerBackToList(){document.getElementById('page-messenger')?.classList.remove('mobile-show-chat')}
+function chatgptBackToList(){document.getElementById('page-chatgpt')?.classList.remove('mobile-show-chat')}
 function loadMessages(){renderMessages(getMessages(currentRoom))}
 function renderMessages(msgs){
   const list=document.getElementById('messageList');if(!list)return;
@@ -1225,6 +1233,7 @@ function newAiChat(){
   chats.unshift(newChat);
   saveAiChats(chats);currentAi=newChat;
   renderAiList();renderAiChat();
+  if(isMobileView())document.getElementById('page-chatgpt')?.classList.add('mobile-show-chat');
   showToast('+','새 채팅 시작','');
 }
 function newAiProject(){
@@ -1476,6 +1485,7 @@ function selectAi(id,parentId){
   }
   currentAi={...target,parentId};
   renderAiChat();
+  if(isMobileView())document.getElementById('page-chatgpt')?.classList.add('mobile-show-chat');
 }
 // ★ 프로젝트 전용 뷰 (대화 목록 + 프롬프트)
 function renderProjectView(projectId){
@@ -1538,6 +1548,7 @@ function renderAiChat(){
   const modelOptions='<option value="">(기본)</option>'+models.map(m=>`<option ${effModel===m.name?'selected':''}>${m.name}</option>`).join('');
   area.innerHTML=`
     <div class="h-14 px-4 border-b border-gray-200 flex items-center gap-3 bg-white">
+      <button onclick="chatgptBackToList()" class="mobile-back-btn p-1 hover-bg rounded text-lg" style="display:none" aria-label="목록으로">←</button>
       <div class="flex-1 min-w-0"><h3 class="font-bold truncate">${escapeHtml(currentAi.name)}</h3><p class="text-xs text-gray-400">${effPrompt?'프롬프트 설정됨':'프롬프트 없음'}</p></div>
       <div class="flex items-center gap-1">
         <span class="text-xs text-gray-500">🤖</span>
