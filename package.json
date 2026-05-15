@@ -1,0 +1,12 @@
+{
+  "name": "intro-intranet",
+  "version": "1.0.0",
+  "description": "INTRO 사내 인트라넷 - 정적 배포 (Vercel)",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve .",
+    "start": "npx serve ."
+  },
+  "keywords": ["intranet", "workspace", "korean", "vercel"],
+  "license": "UNLICENSED"
+}

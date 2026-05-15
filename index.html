@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>INTRO 인트라넷 v5</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { darkMode: ['class', '[data-theme="dark"]'] };</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  *{font-family:'Noto Sans KR','Inter',-apple-system,sans-serif;box-sizing:border-box}
+  .logo-font{font-family:'Inter',sans-serif;font-weight:900;letter-spacing:0.12em}
+  body{background:#fff;color:#37352f;font-size:14px;margin:0}
+  [data-theme="dark"] body,[data-theme="dark"]{background:#191919;color:#e6e6e6}
+  [data-theme="dark"] .bg-white{background:#252525 !important}
+  [data-theme="dark"] .bg-gray-50{background:#1f1f1f !important}
+  [data-theme="dark"] .bg-gray-100{background:#2a2a2a !important}
+  [data-theme="dark"] .bg-gray-200{background:#333 !important}
+  [data-theme="dark"] .bg-gray-800,[data-theme="dark"] .bg-black{background:#000 !important}
+  [data-theme="dark"] .text-gray-900,[data-theme="dark"] .text-gray-800{color:#e6e6e6 !important}
+  [data-theme="dark"] .text-gray-700{color:#cfcfcf !important}
+  [data-theme="dark"] .text-gray-600{color:#b0b0b0 !important}
+  [data-theme="dark"] .text-gray-500{color:#999 !important}
+  [data-theme="dark"] .text-gray-400{color:#888 !important}
+  [data-theme="dark"] .border-gray-100,[data-theme="dark"] .border-gray-200,[data-theme="dark"] .border-gray-300{border-color:#363636 !important}
+  [data-theme="dark"] .divide-gray-50>*+*,[data-theme="dark"] .divide-gray-100>*+*{border-color:#2e2e2e !important}
+  [data-theme="dark"] input,[data-theme="dark"] textarea,[data-theme="dark"] select{background:#2a2a2a;color:#e6e6e6;border-color:#363636}
+  [data-theme="dark"] #loginLogo{background:#000 !important;border-color:#363636 !important}
+  [data-theme="dark"] #loginLogoText{color:#fff !important}
+  [data-theme="dark"] #loginLogoSub{color:#999 !important}
+  [data-theme="dark"] .hover\\:bg-gray-50:hover,[data-theme="dark"] .hover\\:bg-gray-100:hover{background:#2a2a2a !important}
+  ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#d6d6d6;border-radius:4px}
+  [data-theme="dark"] ::-webkit-scrollbar-thumb{background:#444}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1}}.animate-fade-in{animation:fadeIn 0.2s ease forwards}
+  @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}.toast-anim{animation:slideUp 0.3s ease forwards}
+  .page{display:none!important}.page.active{display:block!important}
+  .sub-page{display:none!important}.sub-page.active{display:block!important}
+  /* ★ 레이아웃 리셋 v2 - position:fixed 사이드바 + main 콘텐츠 항상 상단 */
+  html,body{margin:0!important;padding:0!important;height:auto!important}
+  #dashboard{display:block;margin:0;padding:0;position:relative;min-height:100vh}
+  #mainArea{display:block!important;margin:0!important;margin-left:16rem!important;padding:0!important;min-height:100vh!important;width:auto!important;position:relative;background:transparent}
+  #mainArea>.page{margin:0;padding:0}
+  #mainArea>.page.active{display:block!important;width:100%;margin:0;padding:0}
+  #dashboard>aside{position:fixed!important;left:0!important;top:0!important;width:16rem!important;height:100vh!important;z-index:30!important}
+  .nav-item.active{background:#000;color:#fff}
+  [data-theme="dark"] .nav-item.active{background:#fff;color:#000}
+  .sub-nav-item.active{background:rgba(0,0,0,0.06);color:#000;font-weight:600}
+  [data-theme="dark"] .sub-nav-item.active{background:rgba(255,255,255,0.1);color:#fff}
+  .drag-handle{cursor:grab;opacity:0;transition:opacity 0.15s}
+  .drag-row:hover .drag-handle,.notion-block:hover .drag-handle{opacity:1}
+  .drag-over{background:rgba(35,131,226,0.1) !important;border-top:2px solid #2383e2}
+  .sidebar-sub{margin-left:8px;padding-left:8px;border-left:1px solid #e9e8e3}
+  [data-theme="dark"] .sidebar-sub{border-color:#363636}
+  .sheet-row-num{background:#f7f6f3;color:#6f6e6a;width:32px;text-align:center !important;font-size:11px}
+  [data-theme="dark"] .sheet-row-num{background:#2a2a2a}
+  .emoticon{display:inline-block;padding:2px 8px;border-radius:6px;background:#fff;border:1px solid #e5e7eb;cursor:pointer;font-size:14px;margin:2px}
+  .emoticon:hover{background:#f7f6f3;transform:scale(1.05)}
+  [data-theme="dark"] .emoticon{background:#2a2a2a;border-color:#444}
+  .context-menu{position:fixed;background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.15);padding:4px;z-index:100;min-width:180px}
+  [data-theme="dark"] .context-menu{background:#2a2a2a;border-color:#444}
+  .context-menu-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:4px;font-size:13px;cursor:pointer}
+  .context-menu-item:hover{background:#f7f6f3}
+  [data-theme="dark"] .context-menu-item:hover{background:#333}
+  .context-menu-divider{height:1px;background:#e5e7eb;margin:4px 2px}
+  [data-theme="dark"] .context-menu-divider{background:#444}
+  .notion-title{font-size:36px;font-weight:800;line-height:1.2;padding:8px 0;border:none;outline:none;background:transparent;width:100%}
+  [data-theme="dark"] .notion-title{color:#e6e6e6}
+  .hover-bg:hover{background:rgba(0,0,0,0.04)}
+  [data-theme="dark"] .hover-bg:hover{background:rgba(255,255,255,0.04)}
+  .toggle{position:relative;display:inline-block;width:32px;height:18px}
+  .toggle input{opacity:0;width:0;height:0}
+  .toggle-slider{position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:18px;transition:0.2s}
+  .toggle-slider:before{position:absolute;content:"";height:14px;width:14px;left:2px;bottom:2px;background:#fff;border-radius:50%;transition:0.2s}
+  .toggle input:checked+.toggle-slider{background:#000}
+  .toggle input:checked+.toggle-slider:before{transform:translateX(14px)}
+  [data-theme="dark"] .toggle input:checked+.toggle-slider{background:#fff}
+  [data-theme="dark"] .toggle input:checked+.toggle-slider:before{background:#000}
+  .pin-indicator{position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:60%;background:#2383e2;border-radius:0 2px 2px 0}
+  .notion-block{position:relative;display:flex;align-items:flex-start;gap:4px;padding:3px 4px;border-radius:3px;margin:1px 0}
+  .notion-block:hover{background:rgba(0,0,0,0.02)}
+  [data-theme="dark"] .notion-block:hover{background:rgba(255,255,255,0.02)}
+  .block-handle{display:flex;gap:1px;opacity:0;cursor:grab;color:#999;padding-top:6px;font-size:11px;transition:opacity 0.15s;width:14px;text-align:center}
+  .notion-block:hover .block-handle{opacity:1}
+  .block-content{flex:1;outline:none;min-height:1.6em;padding:2px 0;line-height:1.6}
+  .block-content:empty::before{content:attr(data-placeholder);color:#bbb}
+  .block-content[data-type="h1"]{font-size:30px;font-weight:800;line-height:1.2}
+  .block-content[data-type="h2"]{font-size:24px;font-weight:700}
+  .block-content[data-type="h3"]{font-size:18px;font-weight:600}
+  .block-content[data-type="quote"]{border-left:3px solid #999;padding-left:12px;color:#666}
+  .slash-menu{position:absolute;background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.15);padding:6px;z-index:60;max-height:320px;overflow-y:auto;width:280px}
+  [data-theme="dark"] .slash-menu{background:#2a2a2a;border-color:#444}
+  .slash-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;cursor:pointer;font-size:13px}
+  .slash-item:hover{background:#f0f7ff}
+  [data-theme="dark"] .slash-item:hover{background:#1a2733}
+  .slash-icon{width:28px;height:28px;background:#f7f6f3;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+  [data-theme="dark"] .slash-icon{background:#363636}
+  .ms-popup{position:absolute;background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.15);padding:8px;z-index:80;min-width:240px;max-height:400px;overflow-y:auto}
+  [data-theme="dark"] .ms-popup{background:#2a2a2a;border-color:#444}
+  .toast{position:fixed;bottom:24px;right:24px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px 16px;box-shadow:0 10px 25px rgba(0,0,0,0.15);min-width:300px;max-width:400px;z-index:9999;margin-top:8px}
+  [data-theme="dark"] .toast{background:#2a2a2a;border-color:#444}
+  /* 일반 표 */
+  .sheet-table{border-collapse:collapse;width:100%;font-size:13px}
+  .sheet-table th{background:#f7f6f3;border:1px solid #e9e8e3;padding:6px 10px;font-weight:600;text-align:left;color:#37352f}
+  [data-theme="dark"] .sheet-table th{background:#2a2a2a;border-color:#363636;color:#e6e6e6}
+  .sheet-table td{border:1px solid #e9e8e3;padding:6px 10px;background:#fff}
+  [data-theme="dark"] .sheet-table td{border-color:#363636;background:#252525}
+  /* SPREADSHEET 강화 */
+  .sheet-wrap{border:1px solid #d6d6d6;border-radius:6px;background:#fff;margin:8px 0;overflow:hidden}
+  [data-theme="dark"] .sheet-wrap{background:#252525;border-color:#363636}
+  .sheet-toolbar{background:#f7f6f3;padding:4px 6px;display:flex;gap:2px;align-items:center;border-bottom:1px solid #d6d6d6;flex-wrap:wrap}
+  [data-theme="dark"] .sheet-toolbar{background:#2a2a2a;border-color:#363636}
+  .sheet-tb-btn{padding:3px 7px;border-radius:3px;font-size:11px;cursor:pointer;border:1px solid transparent;color:#37352f;background:transparent}
+  [data-theme="dark"] .sheet-tb-btn{color:#e6e6e6}
+  .sheet-tb-btn:hover{background:#fff;border-color:#e5e7eb}
+  [data-theme="dark"] .sheet-tb-btn:hover{background:#363636;border-color:#444}
+  .sheet-formula-bar{display:flex;align-items:center;gap:6px;padding:4px 6px;background:#fff;border-bottom:1px solid #d6d6d6}
+  [data-theme="dark"] .sheet-formula-bar{background:#252525;border-color:#363636}
+  .sheet-cell-ref{font-family:monospace;font-size:11px;background:#f7f6f3;padding:2px 6px;border-radius:3px;min-width:42px;text-align:center}
+  [data-theme="dark"] .sheet-cell-ref{background:#363636}
+  .sheet-formula-input{flex:1;padding:2px 6px;border:1px solid transparent;font-family:monospace;font-size:12px;outline:none;background:transparent}
+  .sheet-formula-input:focus{border-color:#2383e2;background:#fff}
+  [data-theme="dark"] .sheet-formula-input:focus{background:#1a1a1a}
+  .sheet-grid{overflow:auto;max-height:500px;position:relative}
+  .sheet{border-collapse:collapse;table-layout:fixed;font-size:12px}
+  .sheet th{background:#f7f6f3;border:1px solid #c0c0c0;padding:2px 6px;font-weight:500;text-align:center;color:#666;user-select:none;min-width:90px;max-width:90px;height:24px;position:sticky}
+  [data-theme="dark"] .sheet th{background:#2a2a2a;border-color:#444;color:#bbb}
+  .sheet thead th{top:0;z-index:2}
+  .sheet th.row-h{left:0;z-index:1;width:36px;min-width:36px;max-width:36px;cursor:pointer}
+  .sheet th.row-h:hover,.sheet thead th:hover{background:#eaecef}
+  [data-theme="dark"] .sheet th.row-h:hover,[data-theme="dark"] .sheet thead th:hover{background:#363636}
+  .sheet thead th.corner{left:0;z-index:3;cursor:pointer}
+  .sheet td{border:1px solid #d6d6d6;padding:1px 4px;background:#fff;min-width:90px;max-width:90px;height:24px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:cell;font-family:'Inter',sans-serif;user-select:none}
+  [data-theme="dark"] .sheet td{background:#252525;border-color:#444}
+  .sheet td.selected{outline:2px solid #2383e2;outline-offset:-2px;background:#e8f1fd}
+  [data-theme="dark"] .sheet td.selected{background:#1a2733}
+  .sheet td.range-sel{background:#e8f1fd}
+  [data-theme="dark"] .sheet td.range-sel{background:#1a2a3d}
+  .sheet td.editing{outline:2px solid #2383e2;outline-offset:-2px;background:#fff !important;white-space:normal;z-index:5;position:relative;box-shadow:0 2px 8px rgba(0,0,0,0.2);user-select:text}
+  [data-theme="dark"] .sheet td.editing{background:#252525 !important}
+  .sheet td.merged{position:relative}
+  .sheet td.error{color:#dc2626;font-weight:bold}
+  .sheet td.numeric{text-align:right;font-variant-numeric:tabular-nums}
+  .sheet td.bold{font-weight:700}
+  .sheet td.italic{font-style:italic}
+  .sheet td.underline{text-decoration:underline}
+  .sheet td.center{text-align:center}
+  .sheet td.right{text-align:right}
+  .sheet td.bg-yellow{background:#fef3c7 !important}
+  .sheet td.bg-green{background:#d1fae5 !important}
+  .sheet td.bg-blue{background:#dbeafe !important}
+  .sheet td.bg-red{background:#fee2e2 !important}
+  .sheet td.bg-purple{background:#ede9fe !important}
+  .sheet td.bg-pink{background:#fce7f3 !important}
+  .sheet td.fmt-currency::after{content:''}
+  .mention-dd{position:absolute;background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.15);padding:4px;z-index:90;max-height:240px;overflow-y:auto;width:240px}
+  [data-theme="dark"] .mention-dd{background:#2a2a2a;border-color:#444}
+  .mention-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:4px;cursor:pointer;font-size:13px}
+  .mention-item:hover{background:#f0f7ff}
+  [data-theme="dark"] .mention-item:hover{background:#1a2733}
+  .drop-overlay{position:absolute;inset:0;background:rgba(35,131,226,0.1);border:2px dashed #2383e2;border-radius:8px;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:50}
+  .unread-dot{display:inline-flex;align-items:center;justify-content:center;background:#ef4444;color:#fff;font-size:10px;font-weight:bold;border-radius:9999px;min-width:18px;height:18px;padding:0 5px}
+</style>
+</head>
+<body>
+
+<div id="demoBar" class="bg-amber-100 border-b border-amber-200 px-4 py-2 text-xs text-amber-900 flex items-center justify-between" style="position:relative;z-index:50">
+  <span>📌 <strong>v5 데모</strong> · 구글시트 동등 · 휴가 자동차감 · 거래처 관리 · @AI 응답 · 채팅방 우클릭 등</span>
+  <button onclick="document.getElementById('demoBar').remove()" class="px-2">✕</button>
+</div>
+
+<div id="toastContainer"></div>
+
+<!-- ============ 로그인 ============ -->
+<div id="page-login" class="page active" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem">
+  <div style="width:100%;max-width:420px">
+    <div class="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200" id="loginCard">
+      <div id="loginLogo" class="bg-white px-8 py-10 flex flex-col items-center relative border-b border-gray-200">
+        <button onclick="toggleTheme()" class="absolute top-3 right-3 text-gray-400 hover:text-black text-xs px-2 py-1 rounded-lg border border-gray-200"><span id="theme-icon-login">🌙</span></button>
+        <span class="text-black text-5xl logo-font" id="loginLogoText">INTRO</span>
+        <p class="text-gray-500 text-sm mt-2" id="loginLogoSub">사내 인트라넷 워크스페이스</p>
+      </div>
+      <div class="px-8 py-8">
+        <h2 class="text-xl font-bold mb-6 text-center">로그인</h2>
+        <form onsubmit="event.preventDefault();doLogin()" class="space-y-4">
+          <div><label class="block text-sm font-medium text-gray-700 mb-1">아이디</label><input id="loginUsername" type="text" value="intro" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-black" /></div>
+          <div><label class="block text-sm font-medium text-gray-700 mb-1">비밀번호</label><input id="loginPassword" type="password" value="dlsxmfh1!" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-black" /></div>
+          <button type="submit" class="w-full py-2.5 bg-black text-white rounded-lg font-medium text-sm hover:bg-gray-800 mt-2">로그인</button>
+        </form>
+        <div class="mt-6 pt-4 border-t border-gray-100 text-center text-sm text-gray-500">
+          계정이 없으신가요? <button onclick="openRegisterModal()" class="text-black font-semibold hover:underline ml-1">회원가입 신청</button>
+        </div>
+        <div class="mt-4 bg-blue-50 rounded-lg p-3 text-xs text-blue-700"><strong>관리자:</strong> intro / dlsxmfh1!</div>
+        <div class="mt-3 bg-purple-50 rounded-lg p-3 text-xs text-purple-700"><strong>다른 계정:</strong> kim · lee · park (비밀번호: 1234)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 대시보드 ============ -->
+<div id="dashboard" class="hidden" style="display:none">
+
+  <!-- ★ 사이드바: position:fixed 로 항상 좌측에 고정 (레이아웃 버그 방지) -->
+  <aside class="w-64 bg-gray-50 border-r border-gray-200 flex flex-col" style="position:fixed;left:0;top:0;width:16rem;height:100vh;z-index:30">
+    <div class="h-14 px-4 flex items-center border-b border-gray-200 shrink-0 relative">
+      <a href="#" onclick="navigateTo('home')" class="logo-font text-2xl">INTRO</a>
+      <div class="ml-auto flex items-center gap-1">
+        <button onclick="toggleNotifDropdown(event)" class="relative p-1.5 hover-bg rounded text-sm" title="알림">🔔<span id="notifBadge" class="absolute -top-0.5 -right-0.5 unread-dot" style="display:none">0</span></button>
+        <button onclick="toggleTheme()" class="p-1.5 hover-bg rounded text-sm"><span id="theme-icon">🌙</span></button>
+      </div>
+      <div id="notifDropdown" class="hidden absolute top-12 right-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-96 overflow-hidden flex flex-col" style="width:280px">
+        <div class="px-3 py-2 border-b border-gray-200 flex items-center justify-between"><h3 class="font-bold text-sm">🔔 알림</h3><button onclick="markAllRead()" class="text-xs text-blue-600 hover:underline">모두 읽음</button></div>
+        <div class="flex-1 overflow-y-auto" id="notifList"></div>
+      </div>
+    </div>
+    <!-- ★ 사용자 + 로그아웃 (상단 배치) -->
+    <div class="border-b border-gray-200 px-3 py-2 shrink-0">
+      <div class="flex items-center gap-2 mb-1.5">
+        <div id="userAvatar" class="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center text-xs font-bold">관</div>
+        <div class="flex-1 min-w-0">
+          <p id="userName" class="text-sm font-medium truncate">관리자</p>
+          <p id="userDept" class="text-xs text-gray-500 truncate">경영 · 관리자</p>
+        </div>
+        <button onclick="logout()" class="text-xs px-2.5 py-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded border border-red-200 font-medium">Logout</button>
+      </div>
+    </div>
+    <nav class="flex-1 overflow-y-auto px-2 pt-2 pb-3">
+      <a href="#" onclick="navigateTo('home')" data-nav="home" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">🏠</span>홈</a>
+      <a href="#" onclick="navigateTo('messenger')" data-nav="messenger" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">💬</span>메신저</a>
+      <a href="#" onclick="navigateTo('chatgpt')" data-nav="chatgpt" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">🤖</span>ChatGPT</a>
+      <div class="mt-2">
+        <a href="#" onclick="navigateTo('partners','order')" data-nav="partners" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">🤝</span>거래처<span class="ml-auto text-xs text-gray-400">▾</span></a>
+        <div data-submenu="partners" class="hidden sidebar-sub mt-1">
+          <a href="#" onclick="navigateSub('partners','order')" data-subnav="partners-order" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">📋 발주</a>
+          <a href="#" onclick="navigateSub('partners','sales')" data-subnav="partners-sales" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">💵 판매</a>
+          <a href="#" onclick="navigateSub('partners','inventory')" data-subnav="partners-inventory" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">📦 재고</a>
+          <a href="#" onclick="navigateSub('partners','settle')" data-subnav="partners-settle" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">🧾 정산</a>
+        </div>
+      </div>
+      <div>
+        <a href="#" onclick="navigateTo('ecommerce','sales')" data-nav="ecommerce" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">🛍️</span>이커머스<span class="ml-auto text-xs text-gray-400">▾</span></a>
+        <div data-submenu="ecommerce" class="hidden sidebar-sub mt-1">
+          <a href="#" onclick="navigateSub('ecommerce','sales')" data-subnav="ecommerce-sales" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">📈 판매</a>
+          <a href="#" onclick="navigateSub('ecommerce','inventory')" data-subnav="ecommerce-inventory" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">📦 재고</a>
+          <a href="#" onclick="navigateSub('ecommerce','cost')" data-subnav="ecommerce-cost" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">💰 원가/발주</a>
+          <a href="#" onclick="navigateSub('ecommerce','ranking')" data-subnav="ecommerce-ranking" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">🏆 순위</a>
+        </div>
+      </div>
+      <a href="#" onclick="navigateTo('events')" data-nav="events" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">🏷️</span>행사</a>
+      <a href="#" onclick="navigateTo('design')" data-nav="design" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">🎨</span>디자인</a>
+      <a href="#" onclick="navigateTo('ads')" data-nav="ads" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">📣</span>광고</a>
+      <div>
+        <a href="#" onclick="navigateTo('other','links')" data-nav="other" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">⋯</span>기타<span class="ml-auto text-xs text-gray-400">▾</span></a>
+        <div data-submenu="other" class="hidden sidebar-sub mt-1">
+          <a href="#" onclick="navigateSub('other','links')" data-subnav="other-links" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">🔗 링크 모음</a>
+          <a href="#" onclick="navigateSub('other','manual')" data-subnav="other-manual" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">📖 업무 매뉴얼</a>
+          <a href="#" onclick="navigateSub('other','templates')" data-subnav="other-templates" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">📄 문서 서식</a>
+          <a href="#" onclick="navigateSub('other','faq')" data-subnav="other-faq" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">❓ FAQ</a>
+        </div>
+      </div>
+      <div class="mt-3 pt-3 border-t border-gray-200">
+        <a href="#" onclick="navigateTo('settings')" data-nav="settings" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">⚙️</span>설정</a>
+      </div>
+    </nav>
+
+  </aside>
+
+  <!-- 메인 영역: <main> 태그 대신 <div>로 브라우저 기본 스타일 회피 -->
+  <div id="mainArea" class="overflow-x-hidden">
+
+    <!-- 홈 -->
+    <div id="page-home" class="page active">
+      <div class="max-w-5xl mx-auto px-12 py-10">
+        <div class="mb-8"><div class="text-5xl mb-3">🏠</div><h1 class="text-4xl font-extrabold">홈</h1><p class="text-gray-500 text-sm mt-2" id="homeGreeting">좋은 아침이에요 👋</p></div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+          <div onclick="document.querySelector('#announcementList')?.scrollIntoView({behavior:'smooth'})" class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md hover:border-black transition-all"><div class="text-lg mb-1">📣</div><p class="text-2xl font-bold"><span id="annCount">0</span></p><p class="text-xs text-gray-500">공지사항</p></div>
+          <div onclick="navigateTo('leave')" class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md hover:border-black transition-all"><div class="text-lg mb-1">☕</div><p class="text-2xl font-bold" id="todayLeaveCount">0</p><p class="text-xs text-gray-500">오늘 휴가자</p></div>
+          <div onclick="navigateTo('meetings')" class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md hover:border-black transition-all"><div class="text-lg mb-1">📅</div><p class="text-2xl font-bold">4</p><p class="text-xs text-gray-500">예정 회의</p></div>
+        </div>
+
+        <div class="mb-8">
+          <div class="flex items-center justify-between mb-3"><h2 class="text-lg font-bold flex items-center gap-2">📣 공지사항</h2><button onclick="openAnnouncementModal()" class="text-xs text-gray-500 hover:text-black px-2 py-1 rounded hover-bg">+ 새 공지</button></div>
+          <div class="border border-gray-200 rounded-lg divide-y divide-gray-100" id="announcementList"></div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div>
+            <div class="flex items-center justify-between mb-3"><h2 class="text-lg font-bold flex items-center gap-2 cursor-pointer hover:underline" onclick="navigateTo('leave')">☕ 휴가 관리 →</h2><button onclick="openLeaveModal()" class="text-xs text-gray-500 hover:text-black px-2 py-1 rounded hover-bg">+ 신청</button></div>
+            <div class="border border-gray-200 rounded-lg divide-y divide-gray-100" id="homeLeaveList"></div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-3"><h2 class="text-lg font-bold flex items-center gap-2 cursor-pointer hover:underline" onclick="navigateTo('meetings')">📅 회의 →</h2><button onclick="navigateTo('meetings')" class="text-xs text-gray-500 hover:text-black px-2 py-1 rounded hover-bg">+ 추가</button></div>
+            <div class="border border-gray-200 rounded-lg divide-y divide-gray-100">
+              <div class="px-3 py-2.5 cursor-pointer hover-bg" onclick="navigateTo('meeting-detail')"><p class="text-sm font-medium">주간 마케팅 회의</p><p class="text-xs text-gray-500 mt-0.5">📅 5/15 10:00 · 📍 회의실 A</p></div>
+              <div class="px-3 py-2.5 cursor-pointer hover-bg" onclick="navigateTo('meeting-detail')"><p class="text-sm font-medium">신제품 기획 미팅</p><p class="text-xs text-gray-500 mt-0.5">📅 5/16 14:00 · 📍 화상</p></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 휴가 관리 -->
+    <div id="page-leave" class="page">
+      <div class="max-w-6xl mx-auto px-12 py-10">
+        <div class="mb-6"><div class="text-sm text-gray-400 mb-2"><a href="#" onclick="navigateTo('home')" class="hover:underline">홈</a> / 휴가 관리</div><div class="text-5xl mb-3">☕</div><h1 class="text-4xl font-extrabold">휴가 관리</h1></div>
+
+        <!-- 내 휴가 요약 -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6" id="myLeaveSummary"></div>
+
+        <div class="flex items-center gap-2 mb-4">
+          <button onclick="openLeaveModal()" class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium">+ 휴가 신청</button>
+          <span class="text-xs text-gray-500 ml-2">💡 신청 시 잔여 연차에서 자동 차감됩니다</span>
+        </div>
+
+        <!-- 직원별 -->
+        <h3 class="text-sm font-bold mb-2">👥 직원별 연차</h3>
+        <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto mb-6"><table class="sheet-table">
+          <thead><tr><th class="sheet-row-num">#</th><th>직원</th><th>부서</th><th>입사일</th><th>총 연차</th><th>사용</th><th>잔여</th></tr></thead>
+          <tbody id="employeeLeaveBody"></tbody>
+        </table></div>
+
+        <!-- 내 휴가 사용 내역 (★ 신규) -->
+        <h3 class="text-sm font-bold mb-2">📋 내 휴가 사용 내역</h3>
+        <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto mb-6"><table class="sheet-table">
+          <thead><tr><th class="sheet-row-num">#</th><th>유형</th><th>시작일</th><th>종료일</th><th>차감</th><th>사유</th><th>상태</th><th>관리</th></tr></thead>
+          <tbody id="myLeaveBody"></tbody>
+        </table></div>
+
+        <!-- 전체 휴가 신청 내역 -->
+        <h3 class="text-sm font-bold mb-2">📊 전체 휴가 신청 내역</h3>
+        <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto mb-6"><table class="sheet-table">
+          <thead><tr><th class="sheet-row-num">#</th><th>신청자</th><th>유형</th><th>기간</th><th>차감</th><th>상태</th></tr></thead>
+          <tbody id="allLeaveBody"></tbody>
+        </table></div>
+
+        <!-- ★ 과거 휴가 내역 (신규) -->
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-bold">🗂️ 과거 휴가 내역</h3>
+          <div class="flex gap-2 items-center">
+            <select id="pastLeaveYear" onchange="renderPastLeaves()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white"></select>
+            <select id="pastLeaveUser" onchange="renderPastLeaves()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white"><option value="all">전체</option><option value="me">나만</option></select>
+          </div>
+        </div>
+        <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
+          <thead><tr><th class="sheet-row-num">#</th><th>신청자</th><th>유형</th><th>기간</th><th>차감</th><th>사유</th><th>상태</th></tr></thead>
+          <tbody id="pastLeaveBody"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- 회의 -->
+    <div id="page-meetings" class="page">
+      <div class="max-w-5xl mx-auto px-12 py-10">
+        <div class="mb-6"><div class="text-5xl mb-3">📅</div><h1 class="text-4xl font-extrabold">회의</h1></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div onclick="navigateTo('meeting-detail')" class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md"><span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">예정</span><h3 class="font-bold mt-2 mb-1">주간 마케팅 회의</h3><p class="text-xs text-gray-500">📅 5/15 10:00</p></div>
+          <div onclick="navigateTo('meeting-detail')" class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md"><span class="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full">진행중</span><h3 class="font-bold mt-2 mb-1">신제품 기획 미팅</h3><p class="text-xs text-gray-500">📅 5/16 14:00</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 회의 상세 -->
+    <div id="page-meeting-detail" class="page">
+      <div class="max-w-4xl mx-auto px-12 py-10">
+        <div class="text-sm text-gray-400 mb-2"><a href="#" onclick="navigateTo('meetings')" class="hover:underline">회의</a> / 주간 마케팅 회의</div>
+        <div id="templateSelector">
+          <div class="text-5xl mb-3">📅</div>
+          <input class="notion-title" value="주간 마케팅 회의" />
+          <div class="flex gap-3 text-xs text-gray-500 mb-6"><span>📅 5/15 10:00</span><span>📍 회의실 A</span></div>
+          <div class="border border-gray-200 rounded-lg p-6 bg-gray-50">
+            <h3 class="text-base font-bold mb-1">📋 템플릿 선택</h3>
+            <p class="text-xs text-gray-500 mb-4">⋮⋮ 드래그 / + 추가 / <code class="bg-white px-1 rounded">/</code> 명령 메뉴 / <strong>구글시트급 스프레드시트</strong> 지원</p>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <button onclick="useTemplate('default')" class="bg-white border border-gray-200 rounded-lg p-4 text-left hover:shadow-md"><div class="text-2xl mb-2">📝</div><p class="font-semibold text-sm">기본 회의록</p></button>
+              <button onclick="useTemplate('weekly')" class="bg-white border border-gray-200 rounded-lg p-4 text-left hover:shadow-md"><div class="text-2xl mb-2">📊</div><p class="font-semibold text-sm">주간 (+ 시트)</p></button>
+              <button onclick="useTemplate('budget')" class="bg-white border border-gray-200 rounded-lg p-4 text-left hover:shadow-md"><div class="text-2xl mb-2">💰</div><p class="font-semibold text-sm">예산 (+ 시트)</p></button>
+              <button onclick="useTemplate('brainstorm')" class="bg-white border border-gray-200 rounded-lg p-4 text-left hover:shadow-md"><div class="text-2xl mb-2">💡</div><p class="font-semibold text-sm">브레인스토밍</p></button>
+              <button onclick="useTemplate('decision')" class="bg-white border border-gray-200 rounded-lg p-4 text-left hover:shadow-md"><div class="text-2xl mb-2">⚖️</div><p class="font-semibold text-sm">의사결정</p></button>
+              <button onclick="useTemplate('blank')" class="bg-white border border-dashed border-gray-300 rounded-lg p-4 text-left"><div class="text-2xl mb-2">📄</div><p class="font-semibold text-sm">빈 페이지</p></button>
+            </div>
+          </div>
+        </div>
+        <div id="meetingWorkspace" class="hidden">
+          <div class="text-5xl mb-3">📅</div>
+          <input class="notion-title" value="주간 마케팅 회의" />
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-4 text-xs text-blue-800">💡 <strong>블록 에디터</strong>: <code class="bg-white px-1 rounded">/</code> 명령 / 드래그 / 스프레드시트(클릭→타이핑 바로 입력, 30+ 함수)</div>
+          <div id="blockEditor" class="min-h-[400px]"></div>
+        </div>
+        <div id="slashMenu" class="slash-menu hidden"></div>
+      </div>
+    </div>
+
+    <!-- 메신저 -->
+    <div id="page-messenger" class="page">
+      <div class="flex" style="height:calc(100vh - 41px)">
+        <div class="w-72 bg-gray-50 border-r border-gray-200 flex flex-col shrink-0">
+          <div class="p-3 border-b border-gray-200">
+            <div class="flex items-center gap-2 mb-2">
+              <h2 class="font-bold text-base flex-1">💬 메신저</h2>
+              <button onclick="openPopupMessenger()" class="p-1.5 hover-bg rounded text-xs">🪟</button>
+              <button onclick="openCreateRoomModal()" class="p-1.5 hover-bg rounded">+</button>
+            </div>
+            <input placeholder="🔍 검색" class="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-md text-xs" />
+          </div>
+          <div class="flex-1 overflow-y-auto" id="roomListContainer"></div>
+        </div>
+
+        <div class="flex-1 flex flex-col relative" id="chatArea" ondragenter="onChatDragEnter(event)" ondragover="event.preventDefault()" ondragleave="onChatDragLeave(event)" ondrop="onChatDrop(event)">
+          <div id="chatDropOverlay" class="hidden drop-overlay"><div class="bg-white px-6 py-4 rounded-xl shadow-lg text-center"><p class="text-3xl mb-1">📎</p><p class="text-sm font-bold">파일을 놓으세요</p></div></div>
+          <div class="h-14 px-4 border-b border-gray-200 flex items-center gap-3 bg-white shrink-0">
+            <div class="flex-1"><h3 class="font-bold" id="chatTitle">전체 공지방</h3><p class="text-xs text-gray-500">12명 활성</p></div>
+            <button onclick="openPopupMessenger()" class="px-2 py-1 hover-bg rounded text-sm">🪟</button>
+            <button class="px-2 py-1 hover-bg rounded text-sm">🔍</button>
+            <button class="px-2 py-1 hover-bg rounded text-sm">📌</button>
+            <button class="px-2 py-1 hover-bg rounded text-sm">⋯</button>
+          </div>
+          <div class="px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs flex items-center gap-2"><span>📌</span><span class="flex-1 text-amber-900"><strong>공지:</strong> 신규 매뉴얼 5/20까지 확인</span></div>
+          <div id="messageList" class="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50"></div>
+          <div id="emoticonSuggest" class="px-4 py-2 border-t border-gray-200 bg-amber-50 hidden"><div class="flex flex-wrap gap-1" id="emoticonList"></div></div>
+          <div class="border-t border-gray-200 bg-white p-3 relative">
+            <div id="mentionDropdown" class="mention-dd hidden"></div>
+            <div class="flex items-end gap-2 border border-gray-300 rounded-xl px-3 py-2 focus-within:border-black bg-white">
+              <div class="flex gap-0.5">
+                <button onclick="document.getElementById('fileInput').click()" class="p-1.5 hover-bg rounded">📎</button>
+                <button class="p-1.5 hover-bg rounded" onclick="toggleEmoticon()">😊</button>
+                <button onclick="insertChar('@')" class="p-1.5 hover-bg rounded">@</button>
+                <button onclick="openRepeatModal()" class="p-1.5 hover-bg rounded">🔁</button>
+              </div>
+              <textarea id="msgInput" oninput="onMsgInput(this)" onkeydown="onMsgKeyDown(event)" onpaste="onMsgPaste(event)" rows="1" placeholder="메시지 입력... (@AI 또는 @이름, 파일 드래그/붙여넣기)" class="flex-1 px-2 py-1 text-sm resize-none focus:outline-none bg-transparent" style="min-height:24px;max-height:120px"></textarea>
+              <button onclick="sendMsg()" class="px-3 py-1.5 bg-black text-white rounded-lg text-sm shrink-0">➤</button>
+            </div>
+            <input type="file" id="fileInput" multiple class="hidden" onchange="handleFiles(this.files)" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ChatGPT -->
+    <div id="page-chatgpt" class="page">
+      <div class="flex" style="height:calc(100vh - 41px)">
+        <div class="w-64 bg-gray-50 border-r border-gray-200 flex flex-col">
+          <div class="p-3 border-b border-gray-200">
+            <button onclick="newAiChat()" class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800">
+              <span>+</span> 새 채팅
+            </button>
+            <button onclick="newAiProject()" class="w-full mt-2 flex items-center justify-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg text-xs hover-bg">
+              <span>📁</span> 새 프로젝트
+            </button>
+          </div>
+          <div class="flex-1 overflow-y-auto p-2" id="aiList"></div>
+        </div>
+        <div class="flex-1 flex flex-col" id="aiChatArea">
+          <div class="flex-1 flex items-center justify-center text-center p-10 text-gray-400">
+            <div>
+              <div class="text-6xl mb-4">🤖</div>
+              <p class="text-lg font-medium mb-2">ChatGPT에 오신 것을 환영합니다</p>
+              <p class="text-sm">+ 새 채팅 버튼을 눌러 시작하세요</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 거래처 -->
+    <div id="page-partners" class="page">
+      <div class="max-w-7xl mx-auto px-12 py-10">
+        <div class="mb-6"><div class="text-5xl mb-3">🤝</div><h1 class="text-4xl font-extrabold">거래처</h1><p class="text-gray-500 text-sm mt-2" id="partnerHeader">소속 거래처: -</p></div>
+        <!-- ★ 거래처 필터 -->
+        <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 rounded-lg p-3 mb-4 flex flex-wrap items-center gap-2">
+          <span class="text-xs text-gray-500 font-semibold">거래처 선택:</span>
+          <select id="partnerFilter" onchange="changePartnerFilter(this.value)" class="px-3 py-1.5 border border-gray-300 rounded text-sm bg-white"></select>
+          <span class="text-xs text-gray-400 ml-2" id="partnerFilterInfo"></span>
+        </div>
+        <div class="border-b border-gray-200 mb-6 flex gap-1">
+          <button data-subnav="partners-order" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('partners','order')">📋 발주</button>
+          <button data-subnav="partners-sales" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('partners','sales')">💵 판매</button>
+          <button data-subnav="partners-inventory" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('partners','inventory')">📦 재고</button>
+          <button data-subnav="partners-settle" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('partners','settle')">🧾 정산</button>
+        </div>
+        <div id="sub-partners-order" class="sub-page active"><div class="border border-gray-200 rounded-lg overflow-hidden"><div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between"><h3 class="text-sm font-bold">📋 발주</h3><div class="flex gap-2"><button onclick="addPartnerRow('order')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 행</button><button onclick="deletePartnerSelected('order')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div><div class="overflow-x-auto"><table class="sheet-table" id="partner-order-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllRows('order',this.checked)" /></th><th>발주일</th><th>브랜드</th><th>제품</th><th>수량</th><th>단가</th><th>금액</th><th>상태</th></tr></thead><tbody></tbody></table></div></div></div>
+        <div id="sub-partners-sales" class="sub-page"><div class="border border-gray-200 rounded-lg overflow-hidden"><div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between"><h3 class="text-sm font-bold">💵 판매</h3><div class="flex gap-2"><button onclick="addPartnerRow('sales')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 행</button><button onclick="deletePartnerSelected('sales')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div><div class="overflow-x-auto"><table class="sheet-table" id="partner-sales-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllRows('sales',this.checked)" /></th><th>판매일</th><th>제품</th><th>판매처</th><th>수량</th><th>매출</th><th>순매출</th></tr></thead><tbody></tbody></table></div></div></div>
+        <div id="sub-partners-inventory" class="sub-page"><div class="border border-gray-200 rounded-lg overflow-hidden"><div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between"><h3 class="text-sm font-bold">📦 재고</h3><div class="flex gap-2"><button onclick="addPartnerRow('inventory')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 행</button><button onclick="deletePartnerSelected('inventory')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div><div class="overflow-x-auto"><table class="sheet-table" id="partner-inventory-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllRows('inventory',this.checked)" /></th><th>SKU</th><th>제품</th><th>입고</th><th>출고</th><th>현재고</th><th>상태</th></tr></thead><tbody></tbody></table></div></div></div>
+        <div id="sub-partners-settle" class="sub-page"><div class="border border-gray-200 rounded-lg overflow-hidden"><div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between"><h3 class="text-sm font-bold">🧾 정산</h3><div class="flex gap-2"><button onclick="addPartnerRow('settle')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 행</button><button onclick="deletePartnerSelected('settle')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div><div class="overflow-x-auto"><table class="sheet-table" id="partner-settle-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllRows('settle',this.checked)" /></th><th>정산기간</th><th>판매처</th><th>매출</th><th>원가</th><th>마진</th><th>상태</th></tr></thead><tbody></tbody></table></div></div></div>
+      </div>
+    </div>
+
+    <!-- 이커머스 -->
+    <div id="page-ecommerce" class="page">
+      <div class="max-w-6xl mx-auto px-12 py-10">
+        <div class="mb-6"><div class="text-5xl mb-3">🛍️</div><h1 class="text-4xl font-extrabold">이커머스</h1></div>
+        <div class="border-b border-gray-200 mb-6 flex gap-1">
+          <button data-subnav="ecommerce-sales" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('ecommerce','sales')">📈 판매</button>
+          <button data-subnav="ecommerce-inventory" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('ecommerce','inventory')">📦 재고</button>
+          <button data-subnav="ecommerce-cost" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('ecommerce','cost')">💰 원가/발주</button>
+          <button data-subnav="ecommerce-ranking" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('ecommerce','ranking')">🏆 순위</button>
+        </div>
+        <div id="sub-ecommerce-sales" class="sub-page active">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">총 매출</p><p class="text-xl font-bold" id="ecSalesRevenue">₩0</p></div>
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">판매량</p><p class="text-xl font-bold" id="ecSalesQty">0</p></div>
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">SKU 수</p><p class="text-xl font-bold" id="ecSalesSku">0</p></div>
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">평균 단가</p><p class="text-xl font-bold" id="ecSalesAvg">₩0</p></div>
+          </div>
+          <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">📈 판매 현황</h3><div class="flex gap-2"><button onclick="ecAddRow('sales')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 추가</button><button onclick="ecDelRow('sales')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAll('sales',this.checked)" /></th><th>상품</th><th>카테고리</th><th>판매량</th><th>매출</th><th>성장률</th></tr></thead><tbody id="ecSalesBody"></tbody></table></div>
+        </div>
+        <div id="sub-ecommerce-inventory" class="sub-page">
+          <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">📦 재고 현황</h3><div class="flex gap-2"><button onclick="ecAddRow('inventory')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 추가</button><button onclick="ecDelRow('inventory')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAll('inventory',this.checked)" /></th><th>SKU</th><th>제품</th><th>현재고</th><th>최소재고</th><th>상태</th></tr></thead><tbody id="ecInventoryBody"></tbody></table></div>
+        </div>
+        <div id="sub-ecommerce-cost" class="sub-page">
+          <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">💰 원가/마진</h3><div class="flex gap-2"><button onclick="ecAddRow('cost')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 추가</button><button onclick="ecDelRow('cost')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAll('cost',this.checked)" /></th><th>제품</th><th>원가</th><th>판매가</th><th>마진율</th><th>발주 수량</th></tr></thead><tbody id="ecCostBody"></tbody></table></div>
+        </div>
+        <div id="sub-ecommerce-ranking" class="sub-page">
+          <h3 class="text-sm font-bold mb-3">🏆 판매 순위 TOP 10</h3>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table"><thead><tr><th class="sheet-row-num">#</th><th>순위</th><th>제품</th><th>판매량</th><th>매출</th><th>변동</th></tr></thead><tbody id="ecRankingBody"></tbody></table></div>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- 행사 -->
+    <div id="page-events" class="page">
+      <div class="max-w-6xl mx-auto px-12 py-10">
+        <div class="mb-6"><div class="text-5xl mb-3">🏷️</div><h1 class="text-4xl font-extrabold">행사</h1><p class="text-gray-500 text-sm mt-2">프로모션·할인 행사 관리</p></div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">진행중</p><p class="text-xl font-bold text-green-600" id="evActive">1</p></div>
+          <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">예정</p><p class="text-xl font-bold text-blue-600" id="evScheduled">1</p></div>
+          <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">종료</p><p class="text-xl font-bold text-gray-500" id="evEnded">1</p></div>
+          <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">평균 할인율</p><p class="text-xl font-bold">15%</p></div>
+        </div>
+        <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">📋 행사 목록</h3><div class="flex gap-2"><button onclick="addEvent()" class="px-3 py-1 bg-black text-white text-xs rounded">+ 행사 추가</button><button onclick="deleteSelectedEvent()" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div>
+        <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
+          <table class="sheet-table">
+            <thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllEvents(this.checked)" /></th><th>행사명</th><th>시작일</th><th>종료일</th><th>할인율</th><th>대상 상품수</th><th>채널</th><th>상태</th></tr></thead>
+            <tbody id="eventsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 디자인 -->
+    <div id="page-design" class="page">
+      <div class="max-w-6xl mx-auto px-12 py-10">
+        <div class="mb-6"><div class="text-5xl mb-3">🎨</div><h1 class="text-4xl font-extrabold">디자인</h1><p class="text-gray-500 text-sm mt-2">브랜드 자료실 · 시안 보관</p></div>
+        <div class="border-b border-gray-200 mb-6 flex gap-1">
+          <button data-subnav="design-assets" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('design','assets')">📁 브랜드 에셋</button>
+          <button data-subnav="design-mockups" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('design','mockups')">🖼️ 시안</button>
+          <button data-subnav="design-requests" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('design','requests')">📥 의뢰 관리</button>
+        </div>
+        <div id="sub-design-assets" class="sub-page active">
+          <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">브랜드 에셋</h3><button onclick="addDesignAsset()" class="px-3 py-1 bg-black text-white text-xs rounded">⬆ 업로드</button></div>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="designAssetsGrid"></div>
+        </div>
+        <div id="sub-design-mockups" class="sub-page">
+          <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">시안 보관</h3><button class="px-3 py-1 bg-black text-white text-xs rounded">+ 시안 추가</button></div>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md cursor-pointer"><div class="aspect-video bg-gradient-to-br from-purple-200 to-pink-200 flex items-center justify-center text-gray-600 text-xs">🖼️ Preview</div><div class="p-3"><p class="text-sm font-semibold">여름 캠페인 시안 v3</p><p class="text-xs text-gray-500 mt-0.5">김디자인 · 5/12 · v3</p></div></div>
+            <div class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md cursor-pointer"><div class="aspect-video bg-gradient-to-br from-blue-200 to-cyan-200 flex items-center justify-center text-gray-600 text-xs">🖼️ Preview</div><div class="p-3"><p class="text-sm font-semibold">제품 패키지 디자인</p><p class="text-xs text-gray-500 mt-0.5">김디자인 · 5/10 · v2</p></div></div>
+            <div class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md cursor-pointer"><div class="aspect-video bg-gradient-to-br from-amber-200 to-orange-200 flex items-center justify-center text-gray-600 text-xs">🖼️ Preview</div><div class="p-3"><p class="text-sm font-semibold">SNS 카드뉴스</p><p class="text-xs text-gray-500 mt-0.5">김디자인 · 5/08 · v1</p></div></div>
+          </div>
+        </div>
+        <div id="sub-design-requests" class="sub-page">
+          <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">디자인 의뢰 현황</h3><button onclick="addDesignRequest()" class="px-3 py-1 bg-black text-white text-xs rounded">+ 의뢰 등록</button></div>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
+            <table class="sheet-table">
+              <thead><tr><th class="sheet-row-num">#</th><th>의뢰자</th><th>유형</th><th>제목</th><th>마감</th><th>상태</th></tr></thead>
+              <tbody id="designRequestsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 광고 (신규) -->
+    <div id="page-ads" class="page">
+      <div class="max-w-6xl mx-auto px-12 py-10">
+        <div class="mb-6"><div class="text-5xl mb-3">📣</div><h1 class="text-4xl font-extrabold">광고</h1><p class="text-gray-500 text-sm mt-2">디지털 광고 캠페인 통합 관리</p></div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">총 예산</p><p class="text-xl font-bold" id="adsBudget">₩0</p></div>
+          <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">집행 금액</p><p class="text-xl font-bold text-blue-600" id="adsSpent">₩0</p></div>
+          <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">총 노출</p><p class="text-xl font-bold" id="adsImpr">0</p></div>
+          <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">총 클릭 · 평균 CTR</p><p class="text-xl font-bold" id="adsClicks">0</p></div>
+        </div>
+        <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">📋 광고 캠페인</h3><div class="flex gap-2"><button onclick="addAdCampaign()" class="px-3 py-1 bg-black text-white text-xs rounded">+ 캠페인 추가</button><button onclick="deleteSelectedAds()" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div>
+        <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
+          <table class="sheet-table">
+            <thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllAds(this.checked)" /></th><th>캠페인명</th><th>플랫폼</th><th>기간</th><th>예산</th><th>집행</th><th>노출</th><th>클릭</th><th>CTR</th><th>상태</th></tr></thead>
+            <tbody id="adsBody"></tbody>
+          </table>
+        </div>
+        <p class="text-xs text-gray-400 mt-3">💡 셀을 더블클릭하여 편집할 수 있습니다.</p>
+      </div>
+    </div>
+
+    <!-- 기타 (서브메뉴) -->
+    <div id="page-other" class="page">
+      <div class="max-w-5xl mx-auto px-12 py-10">
+        <div class="mb-6"><div class="text-5xl mb-3">⋯</div><h1 class="text-4xl font-extrabold">기타</h1></div>
+        <div class="border-b border-gray-200 mb-6 flex gap-1">
+          <button data-subnav="other-links" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('other','links')">🔗 링크 모음</button>
+          <button data-subnav="other-manual" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('other','manual')">📖 업무 매뉴얼</button>
+          <button data-subnav="other-templates" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('other','templates')">📄 문서 서식</button>
+          <button data-subnav="other-faq" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('other','faq')">❓ FAQ</button>
+        </div>
+        <div id="sub-other-links" class="sub-page active">
+          <div class="flex items-center justify-between mb-3"><h3 class="font-bold">🔗 유용한 링크</h3><button class="px-3 py-1 bg-black text-white text-xs rounded">+ 링크 추가</button></div>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <a href="#" class="border border-gray-200 rounded-lg p-4 hover:shadow-md"><div class="text-2xl mb-2">🔗</div><p class="font-semibold text-sm">사내 위키</p><p class="text-xs text-gray-500">wiki.intro.co.kr</p></a>
+            <a href="#" class="border border-gray-200 rounded-lg p-4 hover:shadow-md"><div class="text-2xl mb-2">📊</div><p class="font-semibold text-sm">매출 대시보드</p><p class="text-xs text-gray-500">실시간 KPI</p></a>
+            <a href="#" class="border border-gray-200 rounded-lg p-4 hover:shadow-md"><div class="text-2xl mb-2">🎨</div><p class="font-semibold text-sm">디자인 시스템</p><p class="text-xs text-gray-500">Figma</p></a>
+            <a href="#" class="border border-gray-200 rounded-lg p-4 hover:shadow-md"><div class="text-2xl mb-2">📚</div><p class="font-semibold text-sm">교육 자료실</p><p class="text-xs text-gray-500">신규 입사자 가이드</p></a>
+            <a href="#" class="border border-gray-200 rounded-lg p-4 hover:shadow-md"><div class="text-2xl mb-2">📅</div><p class="font-semibold text-sm">사내 캘린더</p><p class="text-xs text-gray-500">전사 일정</p></a>
+            <a href="#" class="border border-gray-200 rounded-lg p-4 hover:shadow-md"><div class="text-2xl mb-2">💼</div><p class="font-semibold text-sm">근태 시스템</p><p class="text-xs text-gray-500">출퇴근 기록</p></a>
+          </div>
+        </div>
+        <div id="sub-other-manual" class="sub-page">
+          <div class="flex items-center justify-between mb-3"><h3 class="font-bold">📖 업무 매뉴얼</h3><button class="px-3 py-1 bg-black text-white text-xs rounded">+ 매뉴얼 추가</button></div>
+          <div class="border border-gray-200 rounded-lg divide-y divide-gray-100">
+            <div class="flex items-center gap-3 px-4 py-3 hover-bg cursor-pointer"><div class="w-10 h-10 rounded bg-blue-100 text-blue-700 flex items-center justify-center">📋</div><div class="flex-1"><p class="text-sm font-medium">신규 입사자 온보딩 가이드</p><p class="text-xs text-gray-400">최종 수정: 2026-05-01 · 관리자</p></div><button class="text-gray-400">→</button></div>
+            <div class="flex items-center gap-3 px-4 py-3 hover-bg cursor-pointer"><div class="w-10 h-10 rounded bg-green-100 text-green-700 flex items-center justify-center">💼</div><div class="flex-1"><p class="text-sm font-medium">휴가/근태 신청 절차</p><p class="text-xs text-gray-400">최종 수정: 2026-04-15</p></div><button class="text-gray-400">→</button></div>
+            <div class="flex items-center gap-3 px-4 py-3 hover-bg cursor-pointer"><div class="w-10 h-10 rounded bg-amber-100 text-amber-700 flex items-center justify-center">💰</div><div class="flex-1"><p class="text-sm font-medium">경비 처리 가이드</p><p class="text-xs text-gray-400">최종 수정: 2026-03-20</p></div><button class="text-gray-400">→</button></div>
+            <div class="flex items-center gap-3 px-4 py-3 hover-bg cursor-pointer"><div class="w-10 h-10 rounded bg-purple-100 text-purple-700 flex items-center justify-center">🎨</div><div class="flex-1"><p class="text-sm font-medium">브랜드 가이드라인</p><p class="text-xs text-gray-400">최종 수정: 2026-02-10</p></div><button class="text-gray-400">→</button></div>
+          </div>
+        </div>
+        <div id="sub-other-templates" class="sub-page">
+          <div class="flex items-center justify-between mb-3"><h3 class="font-bold">📄 문서 서식</h3><button class="px-3 py-1 bg-black text-white text-xs rounded">+ 서식 추가</button></div>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md"><div class="text-2xl mb-2">📝</div><p class="font-semibold text-sm">품의서</p><p class="text-xs text-gray-500">HWP, DOCX</p><button class="text-xs text-blue-600 mt-2 hover:underline">⬇ 다운로드</button></div>
+            <div class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md"><div class="text-2xl mb-2">📋</div><p class="font-semibold text-sm">출장 보고서</p><p class="text-xs text-gray-500">DOCX</p><button class="text-xs text-blue-600 mt-2 hover:underline">⬇ 다운로드</button></div>
+            <div class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md"><div class="text-2xl mb-2">💰</div><p class="font-semibold text-sm">경비 정산서</p><p class="text-xs text-gray-500">XLSX</p><button class="text-xs text-blue-600 mt-2 hover:underline">⬇ 다운로드</button></div>
+            <div class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md"><div class="text-2xl mb-2">📄</div><p class="font-semibold text-sm">휴가 신청서</p><p class="text-xs text-gray-500">PDF</p><button class="text-xs text-blue-600 mt-2 hover:underline">⬇ 다운로드</button></div>
+            <div class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md"><div class="text-2xl mb-2">🤝</div><p class="font-semibold text-sm">계약서 (NDA)</p><p class="text-xs text-gray-500">DOCX</p><button class="text-xs text-blue-600 mt-2 hover:underline">⬇ 다운로드</button></div>
+            <div class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md"><div class="text-2xl mb-2">📊</div><p class="font-semibold text-sm">월간 보고서</p><p class="text-xs text-gray-500">PPTX</p><button class="text-xs text-blue-600 mt-2 hover:underline">⬇ 다운로드</button></div>
+          </div>
+        </div>
+        <div id="sub-other-faq" class="sub-page">
+          <div class="flex items-center justify-between mb-3"><h3 class="font-bold">❓ 자주 묻는 질문</h3><button class="px-3 py-1 bg-black text-white text-xs rounded">+ FAQ 추가</button></div>
+          <div class="space-y-2">
+            <details class="border border-gray-200 rounded-lg p-4 cursor-pointer"><summary class="font-medium text-sm">Q. 연차는 어떻게 신청하나요?</summary><p class="mt-2 text-sm text-gray-600">홈 → 휴가 관리 → "+ 휴가 신청" 버튼을 통해 신청할 수 있습니다. 첨부서류(PDF/DOC) 업로드가 필요합니다.</p></details>
+            <details class="border border-gray-200 rounded-lg p-4 cursor-pointer"><summary class="font-medium text-sm">Q. 메신저에서 파일을 어떻게 보내나요?</summary><p class="mt-2 text-sm text-gray-600">메신저 입력창에 파일을 드래그&드롭하거나, 클립보드에서 붙여넣기(Ctrl+V)할 수 있습니다.</p></details>
+            <details class="border border-gray-200 rounded-lg p-4 cursor-pointer"><summary class="font-medium text-sm">Q. 회의록에 표를 추가하려면?</summary><p class="mt-2 text-sm text-gray-600">회의 상세 페이지에서 <code>/</code>를 입력 후 "스프레드시트"를 선택하세요. 구글시트 수준의 함수와 병합 기능이 지원됩니다.</p></details>
+            <details class="border border-gray-200 rounded-lg p-4 cursor-pointer"><summary class="font-medium text-sm">Q. AI 모델을 추가하려면?</summary><p class="mt-2 text-sm text-gray-600">관리자 계정에서 설정 → AI API 설정 메뉴에서 새 모델과 API 키를 추가할 수 있습니다.</p></details>
+            <details class="border border-gray-200 rounded-lg p-4 cursor-pointer"><summary class="font-medium text-sm">Q. 비밀번호를 변경하려면?</summary><p class="mt-2 text-sm text-gray-600">설정 → 프로필 메뉴에서 변경 가능합니다.</p></details>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 설정 -->
+    <div id="page-settings" class="page">
+      <div class="max-w-6xl mx-auto px-12 py-10">
+        <div class="mb-6"><div class="text-5xl mb-3">⚙️</div><h1 class="text-4xl font-extrabold">설정</h1></div>
+        <div class="flex gap-6">
+          <div class="w-52 shrink-0">
+            <nav class="space-y-0.5">
+              <button onclick="switchSettingTab('profile')" data-tab="profile" class="settings-tab w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left bg-gray-100 font-semibold">👤 프로필</button>
+              <button onclick="switchSettingTab('requests')" data-tab="requests" class="settings-tab w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left hover-bg">🛡️ 가입 요청</button>
+              <button onclick="switchSettingTab('members')" data-tab="members" class="settings-tab w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left hover-bg">👥 멤버 관리</button>
+              <button onclick="switchSettingTab('deptrole')" data-tab="deptrole" class="settings-tab w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left hover-bg">🏢 부서·권한 관리</button>
+              <button onclick="switchSettingTab('partnersmgmt')" data-tab="partnersmgmt" class="settings-tab w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left hover-bg">🤝 거래처 관리</button>
+              <button onclick="switchSettingTab('aiapi')" data-tab="aiapi" class="settings-tab w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left hover-bg">🤖 AI API 설정</button>
+            </nav>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div id="tab-profile" class="setting-content">
+              <h2 class="text-lg font-bold mb-5">내 프로필</h2>
+              <div class="flex items-center gap-4 pb-4 border-b border-gray-200 mb-5"><div id="profileAvatar" class="w-16 h-16 bg-black text-white rounded-2xl flex items-center justify-center text-2xl font-bold">관</div><div><p class="font-bold text-lg" id="profileName">관리자</p><p class="text-sm text-gray-500" id="profileMeta">@intro · 관리자 · 경영</p></div></div>
+              <!-- ★ 입사일 입력 (모든 사용자가 본인 입사일 설정 가능) -->
+              <div class="mb-5 grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">📅 입사일</label>
+                  <input id="profileHireDate" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">근속 (자동 계산)</label>
+                  <input id="profileTenure" disabled class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500" />
+                </div>
+              </div>
+              <div class="flex items-center gap-3 mb-5 p-3 border border-gray-200 rounded-lg"><span class="text-sm">🌙 다크 모드</span><label class="toggle ml-auto"><input id="darkToggle" type="checkbox" onchange="toggleTheme()" /><span class="toggle-slider"></span></label></div>
+              <button onclick="saveProfile()" class="px-5 py-2 bg-black text-white rounded-lg text-sm font-medium">저장</button>
+            </div>
+            <div id="tab-requests" class="setting-content hidden"><h2 class="text-lg font-bold mb-5">가입 승인 요청</h2><div id="requestsList" class="space-y-2"></div></div>
+            <div id="tab-members" class="setting-content hidden"><h2 class="text-lg font-bold mb-5">멤버 관리</h2><div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table"><thead><tr><th class="sheet-row-num">#</th><th>이름</th><th>부서</th><th>권한</th><th>매핑 거래처</th><th>관리</th></tr></thead><tbody id="membersList"></tbody></table></div></div>
+            <div id="tab-deptrole" class="setting-content hidden">
+              <!-- ★ 역할(권한) 관리 -->
+              <div class="mb-6">
+                <h2 class="text-lg font-bold mb-2">🔐 역할(권한) 관리</h2>
+                <p class="text-xs text-gray-500 mb-3">새 권한 유형을 추가하고, 각 권한별로 접근 가능한 메뉴/기능을 설정할 수 있습니다.</p>
+                <div class="border border-gray-200 rounded-lg overflow-hidden mb-3 overflow-x-auto">
+                  <table class="sheet-table"><thead><tr><th class="sheet-row-num">#</th><th>역할 ID</th><th>역할명</th><th>설명</th><th>인원수</th><th>접근 권한</th><th>관리</th></tr></thead><tbody id="roleList"></tbody></table>
+                </div>
+                <button onclick="addRole()" class="px-3 py-1.5 bg-black text-white text-xs rounded-lg">+ 새 역할 추가</button>
+              </div>
+              <!-- 부서 관리 -->
+              <h2 class="text-lg font-bold mb-2">🏢 부서 관리</h2>
+              <div class="border border-gray-200 rounded-lg overflow-hidden mb-4 overflow-x-auto">
+                <table class="sheet-table"><thead><tr><th class="sheet-row-num">#</th><th>부서</th><th>인원</th><th>기본 역할</th><th>메뉴 권한</th><th>관리</th></tr></thead><tbody id="deptRoleList"></tbody></table>
+              </div>
+              <button onclick="addDept()" class="px-3 py-1.5 bg-black text-white text-xs rounded-lg">+ 부서 추가</button>
+            </div>
+            <div id="tab-partnersmgmt" class="setting-content hidden">
+              <h2 class="text-lg font-bold mb-2">거래처 관리</h2>
+              <p class="text-xs text-gray-500 mb-4">거래처를 추가/삭제하면 멤버 관리에서 멤버별로 매핑할 수 있습니다.</p>
+              <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto mb-4">
+                <table class="sheet-table"><thead><tr><th class="sheet-row-num">#</th><th>거래처명</th><th>담당자</th><th>연락처</th><th>비고</th><th>관리</th></tr></thead><tbody id="partnerMgmtList"></tbody></table>
+              </div>
+              <button onclick="addPartner()" class="px-3 py-1.5 bg-black text-white text-xs rounded-lg">+ 거래처 추가</button>
+            </div>
+            <div id="tab-aiapi" class="setting-content hidden">
+              <div class="flex items-center justify-between mb-2"><h2 class="text-lg font-bold">🤖 AI API 설정</h2><button onclick="addAiModel()" class="px-3 py-1.5 bg-black text-white text-xs rounded-lg">+ 모델 추가</button></div>
+              <p class="text-xs text-gray-500 mb-5">AI 모델별 API 키를 관리합니다.</p>
+              <div id="aiModelsList" class="space-y-3 mb-6"></div>
+              <h3 class="text-sm font-bold mb-2">기본 모델</h3>
+              <select id="defaultAiModel" class="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white mb-4"></select>
+              <button onclick="saveAiSettings()" class="block px-5 py-2 bg-black text-white rounded-lg text-sm font-medium">저장</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <!-- /mainArea -->
+
+  <button onclick="openFeedback()" class="fixed bottom-6 right-6 bg-black text-white rounded-full px-4 py-3 shadow-lg text-sm font-medium z-40">💬 피드백</button>
+</div>
+
+<!-- ============ MODALS ============ -->
+<div id="announcementModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-2xl shadow-xl w-full max-w-lg"><div class="flex items-center justify-between px-6 py-4 border-b border-gray-200"><h2 class="text-lg font-bold">📣 새 공지</h2><button onclick="closeModal('announcementModal')" class="hover-bg p-1 rounded">✕</button></div><div class="px-6 py-5 space-y-4"><input id="annTitle" placeholder="제목" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /><textarea id="annContent" rows="5" placeholder="내용" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none"></textarea><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs text-gray-600 mb-1">시작</label><input id="annStart" type="datetime-local" value="2026-05-14T09:00" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div><div><label class="block text-xs text-gray-600 mb-1">마감</label><input id="annEnd" type="datetime-local" value="2026-05-30T18:00" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div></div><label class="flex items-center gap-2 text-sm"><input id="annPinned" type="checkbox" class="w-4 h-4 accent-black" /> 📌 상단 고정</label><div class="flex gap-2"><button onclick="closeModal('announcementModal')" class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover-bg">취소</button><button onclick="submitAnnouncement()" class="flex-1 py-2.5 bg-black text-white rounded-lg text-sm">등록</button></div></div></div></div>
+
+<div id="announcementDetail" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-2xl shadow-xl w-full max-w-lg"><div class="flex items-center justify-between px-6 py-4 border-b border-gray-200"><h2 class="text-lg font-bold flex items-center gap-2"><span id="detailPinIcon"></span><span id="detailTitle"></span></h2><button onclick="closeModal('announcementDetail')" class="hover-bg p-1 rounded">✕</button></div><div class="px-6 py-5 space-y-4"><div class="flex items-center gap-3 pb-3 border-b border-gray-100"><div id="detailAvatar" class="w-9 h-9 bg-black text-white rounded-full flex items-center justify-center text-xs font-bold">관</div><div class="flex-1"><p class="text-sm font-medium" id="detailAuthor">관리자</p><p class="text-xs text-gray-500" id="detailCreated"></p></div></div><div class="text-xs text-gray-500 bg-gray-50 rounded-lg p-2.5"><div>📅 시작: <span id="detailStart"></span></div><div>⏰ 마감: <span id="detailEnd"></span></div></div><div class="text-sm whitespace-pre-wrap" id="detailContent"></div><div class="flex gap-2"><button onclick="closeModal('announcementDetail')" class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover-bg">닫기</button><button id="detailDeleteBtn" onclick="deleteAnnouncement()" class="hidden px-4 py-2.5 border border-red-200 text-red-600 rounded-lg text-sm">🗑️ 삭제</button></div></div></div></div>
+
+<div id="leaveModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200"><h2 class="text-lg font-bold">☕ 휴가 신청</h2><button onclick="closeModal('leaveModal')" class="hover-bg p-1 rounded">✕</button></div>
+    <div class="px-6 py-5 space-y-4">
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">유형</label>
+        <select id="leaveType" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+          <option value="연차" data-cost="1">연차 (-1일)</option>
+          <option value="오전 반차" data-cost="0.5">오전 반차 (-0.5일)</option>
+          <option value="오후 반차" data-cost="0.5">오후 반차 (-0.5일)</option>
+          <option value="오전 반반차" data-cost="0.25">오전 반반차 (-0.25일)</option>
+          <option value="오후 반반차" data-cost="0.25">오후 반반차 (-0.25일)</option>
+          <option value="공가" data-cost="0">공가 (-0일)</option>
+          <option value="병가" data-cost="0">병가 (-0일)</option>
+        </select>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="block text-xs text-gray-600 mb-1">시작일</label><input id="leaveStart" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div>
+        <div><label class="block text-xs text-gray-600 mb-1">종료일</label><input id="leaveEnd" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div>
+      </div>
+      <div><label class="block text-xs text-gray-600 mb-1">사유</label><textarea id="leaveReason" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none" placeholder="휴가 사유 (선택)"></textarea></div>
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">📎 첨부파일</label>
+        <div id="leaveDropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover-bg" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="leaveDropFile(event)">
+          <p class="text-2xl mb-1">📂</p><p class="text-xs text-gray-500" id="leaveFileName">PDF, DOC, DOCX, JPG 지원</p>
+        </div>
+      </div>
+      <div class="flex gap-2"><button onclick="closeModal('leaveModal')" class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover-bg">취소</button><button onclick="submitLeave()" class="flex-1 py-2.5 bg-black text-white rounded-lg text-sm">신청</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="approveModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200"><h2 class="text-lg font-bold">🛡️ 가입 승인 - 부서/권한 지정</h2><button onclick="closeModal('approveModal')" class="hover-bg p-1 rounded">✕</button></div>
+    <div class="px-6 py-5 space-y-4">
+      <div id="approveInfo" class="bg-gray-50 rounded-lg p-3 text-sm"></div>
+      <div><label class="block text-xs text-gray-600 mb-1">부서 지정</label><select id="approveDept" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"></select></div>
+      <div><label class="block text-xs text-gray-600 mb-1">권한 지정</label><select id="approveRole" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"></select></div>
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">볼 수 있는 거래처 (멀티 선택)</label>
+        <div id="approvePartnersList" class="max-h-32 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1 bg-gray-50 dark:bg-gray-800"></div>
+      </div>
+      <div class="flex gap-2"><button onclick="closeModal('approveModal')" class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover-bg">취소</button><button onclick="confirmApprove()" class="flex-1 py-2.5 bg-black text-white rounded-lg text-sm">✓ 승인</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="createRoomModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-2xl shadow-xl w-full max-w-md"><div class="flex items-center justify-between px-6 py-4 border-b border-gray-200"><h2 class="text-lg font-bold">💬 채팅방 만들기</h2><button onclick="closeModal('createRoomModal')" class="hover-bg p-1 rounded">✕</button></div><div class="px-6 py-5 space-y-4"><input id="newRoomName" placeholder="채팅방 이름" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /><div class="max-h-52 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1" id="newRoomMembers"></div><div class="flex gap-2"><button onclick="closeModal('createRoomModal')" class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover-bg">취소</button><button onclick="createRoom()" class="flex-1 py-2.5 bg-black text-white rounded-lg text-sm">만들기</button></div></div></div></div>
+
+<div id="repeatModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-2xl shadow-xl w-full max-w-md"><div class="flex items-center justify-between px-6 py-4 border-b border-gray-200"><h2 class="text-lg font-bold">🔁 반복 메시지</h2><button onclick="closeModal('repeatModal')" class="hover-bg p-1 rounded">✕</button></div><div class="px-6 py-5 space-y-4"><textarea rows="2" placeholder="내용" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none"></textarea><select class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"><option>매일</option><option selected>평일 (공휴일 제외)</option></select><input type="time" value="09:00" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /><div class="flex gap-2"><button onclick="closeModal('repeatModal')" class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover-bg">취소</button><button onclick="closeModal('repeatModal');showToast('🔁','반복 설정','')" class="flex-1 py-2.5 bg-black text-white rounded-lg text-sm">설정</button></div></div></div></div>
+
+<div id="aiSettingsModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-2xl shadow-xl w-full max-w-md"><div class="flex items-center justify-between px-6 py-4 border-b border-gray-200"><h2 class="text-lg font-bold" id="aiSettingsTitle">⚙️ 프롬프트 설정</h2><button onclick="closeModal('aiSettingsModal')" class="hover-bg p-1 rounded">✕</button></div><div class="px-6 py-5 space-y-4"><div><label class="block text-xs font-semibold text-gray-700 mb-1">기본 프롬프트 (System Prompt)</label><textarea id="aiChatPrompt" rows="5" placeholder="예: 당신은 마케팅 전문가입니다. 한국어로 답변하세요." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none"></textarea></div><div class="flex gap-2"><button onclick="closeModal('aiSettingsModal')" class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover-bg">취소</button><button onclick="saveAiChatSettings()" class="flex-1 py-2.5 bg-black text-white rounded-lg text-sm">저장</button></div></div></div></div>
+
+<!-- AI 공유 모달 -->
+<div id="aiShareModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-2xl shadow-xl w-full max-w-md"><div class="flex items-center justify-between px-6 py-4 border-b border-gray-200"><h2 class="text-lg font-bold">🔗 대화 공유</h2><button onclick="closeModal('aiShareModal')" class="hover-bg p-1 rounded">✕</button></div><div class="px-6 py-5 space-y-3"><p class="text-xs text-gray-500">아래 링크를 복사하여 공유하세요. 링크를 받은 사람은 이 대화의 흔적(메시지)을 볼 수 있습니다.</p><div class="flex gap-2"><input id="shareLink" readonly class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-xs font-mono bg-gray-50" /><button onclick="copyShareLink()" class="px-3 py-2 bg-black text-white text-xs rounded">📋 복사</button></div><div class="bg-amber-50 border border-amber-200 rounded p-3 text-xs text-amber-900">⚠️ 공유 링크는 누구나 볼 수 있습니다. 민감한 정보가 포함된 경우 주의하세요.</div></div></div></div>
+
+<!-- 프로젝트로 이동 모달 -->
+<div id="moveProjectModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-2xl shadow-xl w-full max-w-md"><div class="flex items-center justify-between px-6 py-4 border-b border-gray-200"><h2 class="text-lg font-bold">📁 프로젝트로 이동</h2><button onclick="closeModal('moveProjectModal')" class="hover-bg p-1 rounded">✕</button></div><div class="px-6 py-5"><div id="moveProjectList" class="space-y-1 mb-3 max-h-60 overflow-y-auto"></div><button onclick="closeModal('moveProjectModal')" class="w-full py-2 border border-gray-300 rounded text-sm hover-bg">취소</button></div></div></div>
+
+<!-- 권한 상세 설정 모달 -->
+<div id="permissionModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-2xl shadow-xl w-full max-w-lg"><div class="flex items-center justify-between px-6 py-4 border-b border-gray-200"><h2 class="text-lg font-bold" id="permModalTitle">🔐 권한 설정</h2><button onclick="closeModal('permissionModal')" class="hover-bg p-1 rounded">✕</button></div><div class="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto"><div><h3 class="text-sm font-bold mb-2">📂 메뉴 가시성 (체크된 메뉴만 보임)</h3><div id="permMenus" class="grid grid-cols-2 gap-2"></div></div><div><h3 class="text-sm font-bold mb-2">⚙️ 기능별 권한</h3><div id="permFeatures" class="space-y-1"></div></div><div class="flex gap-2 pt-3 border-t border-gray-200"><button onclick="closeModal('permissionModal')" class="flex-1 py-2 border border-gray-300 rounded text-sm hover-bg">취소</button><button onclick="savePermissions()" class="flex-1 py-2 bg-black text-white rounded text-sm">저장</button></div></div></div></div>
+
+<div id="messageContextMenu" class="context-menu hidden"></div>
+<div id="roomContextMenu" class="context-menu hidden"></div>
+<div id="cellContextMenu" class="context-menu hidden"></div>
+<div id="multiSelectPopup" class="ms-popup hidden"></div>
+
+<!-- 회원가입 신청 모달 -->
+<div id="registerModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-bold">📝 회원가입 신청</h2>
+      <button onclick="closeModal('registerModal')" class="hover-bg p-1 rounded">✕</button>
+    </div>
+    <div class="px-6 py-5 space-y-3">
+      <div><label class="block text-xs text-gray-600 mb-1">이름 *</label><input id="regName" placeholder="홍길동" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div>
+      <div><label class="block text-xs text-gray-600 mb-1">전화번호 *</label><input id="regPhone" placeholder="010-1234-5678" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div>
+      <div><label class="block text-xs text-gray-600 mb-1">아이디 *</label><input id="regUsername" placeholder="hong" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div>
+      <div><label class="block text-xs text-gray-600 mb-1">비밀번호 *</label><input id="regPassword" type="password" placeholder="6자 이상" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div>
+      <div><label class="block text-xs text-gray-600 mb-1">담당 부서 *</label><select id="regDept" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"></select></div>
+      <div><label class="block text-xs text-gray-600 mb-1">입사일 *</label><input id="regHireDate" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div>
+      <div class="bg-amber-50 border border-amber-200 rounded p-2 text-xs text-amber-900">⚠️ 신청 후 관리자 승인을 받아야 로그인할 수 있습니다.</div>
+      <div class="flex gap-2 pt-1">
+        <button onclick="closeModal('registerModal')" class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover-bg">취소</button>
+        <button onclick="submitRegister()" class="flex-1 py-2.5 bg-black text-white rounded-lg text-sm">신청</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="feedbackModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-2xl shadow-xl w-full max-w-lg"><div class="flex items-center justify-between px-6 py-4 border-b border-gray-200"><h2 class="text-lg font-bold">💬 피드백</h2><button onclick="closeModal('feedbackModal')" class="hover-bg p-1 rounded">✕</button></div><div class="px-6 py-5 space-y-4"><select id="feedbackPage" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"><option>홈</option><option>휴가</option><option>회의</option><option>메신저</option><option>거래처</option><option>설정</option><option>전체</option></select><select id="feedbackType" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"><option>디자인 수정</option><option>기능 추가</option><option>기능 수정</option><option>버그</option></select><textarea id="feedbackContent" rows="6" placeholder="상세 내용" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none"></textarea><div class="flex gap-2"><button onclick="closeModal('feedbackModal')" class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover-bg">닫기</button><button onclick="copyFeedback()" class="flex-1 py-2.5 bg-black text-white rounded-lg text-sm">📋 복사</button></div><p id="copyResult" class="hidden text-xs text-green-600 text-center">✓ 복사됨</p></div></div></div>
+
+<script src="demo-app.js"></script>
+</body>
+</html>
