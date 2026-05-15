@@ -35,7 +35,7 @@
   @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}.toast-anim{animation:slideUp 0.3s ease forwards}
   .page{display:none!important}.page.active{display:block!important}
   #page-login.active{display:flex!important;align-items:center;justify-content:center;min-height:100vh}
-  body:has(#page-login.active) #feedbackBtn,body:has(#page-login.active) #backendStatus{display:none!important}
+  #feedbackBtn,#backendStatus{display:none!important}
   .sub-page{display:none!important}.sub-page.active{display:block!important}
   /* ★ 레이아웃 리셋 v2 - position:fixed 사이드바 + main 콘텐츠 항상 상단 */
   html,body{margin:0!important;padding:0!important;height:auto!important}
@@ -227,7 +227,7 @@
     </div>
     <nav class="flex-1 overflow-y-auto px-2 pt-2 pb-3">
       <a href="#" onclick="navigateTo('home')" data-nav="home" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">🏠</span>홈</a>
-      <a href="#" onclick="navigateTo('messenger')" data-nav="messenger" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">💬</span>메신저</a>
+      <a href="#" onclick="navigateTo('messenger')" data-nav="messenger" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">💬</span><span class="flex-1">메신저</span><span id="messengerNavBadge" class="unread-dot" style="display:none">0</span></a>
       <a href="#" onclick="navigateTo('chatgpt')" data-nav="chatgpt" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">🤖</span>ChatGPT</a>
       <div class="mt-2">
         <a href="#" onclick="navigateTo('partners','order')" data-nav="partners" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">🤝</span>거래처<span class="ml-auto text-xs text-gray-400">▾</span></a>
@@ -274,7 +274,7 @@
       <div class="max-w-5xl mx-auto px-12 py-10">
         <div class="mb-8"><div class="text-5xl mb-3">🏠</div><h1 class="text-4xl font-extrabold">홈</h1><p class="text-gray-500 text-sm mt-2" id="homeGreeting">좋은 아침이에요 👋</p></div>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
-          <div onclick="document.querySelector('#announcementList')?.scrollIntoView({behavior:'smooth'})" class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md hover:border-black transition-all"><div class="text-lg mb-1">📣</div><p class="text-2xl font-bold"><span id="annCount">0</span></p><p class="text-xs text-gray-500">공지사항</p></div>
+          <div onclick="openAnnouncementArchive()" class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md hover:border-black transition-all"><div class="text-lg mb-1">📣</div><p class="text-2xl font-bold"><span id="annCount">0</span></p><p class="text-xs text-gray-500">공지사항</p></div>
           <div onclick="navigateTo('leave')" class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md hover:border-black transition-all"><div class="text-lg mb-1">☕</div><p class="text-2xl font-bold" id="todayLeaveCount">0</p><p class="text-xs text-gray-500">오늘 휴가자</p></div>
           <div onclick="navigateTo('meetings')" class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md hover:border-black transition-all"><div class="text-lg mb-1">📅</div><p class="text-2xl font-bold">4</p><p class="text-xs text-gray-500">예정 회의</p></div>
         </div>
@@ -324,27 +324,28 @@
         <!-- 내 휴가 사용 내역 (★ 신규) -->
         <h3 class="text-sm font-bold mb-2">📋 내 휴가 사용 내역</h3>
         <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto mb-6"><table class="sheet-table">
-          <thead><tr><th class="sheet-row-num">#</th><th>유형</th><th>시작일</th><th>종료일</th><th>차감</th><th>사유</th><th>상태</th><th>관리</th></tr></thead>
+          <thead><tr><th class="sheet-row-num">#</th><th>유형</th><th>시작일</th><th>종료일</th><th>차감</th><th>사유</th><th>관리</th></tr></thead>
           <tbody id="myLeaveBody"></tbody>
         </table></div>
 
         <!-- 전체 휴가 신청 내역 -->
         <h3 class="text-sm font-bold mb-2">📊 전체 휴가 신청 내역</h3>
         <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto mb-6"><table class="sheet-table">
-          <thead><tr><th class="sheet-row-num">#</th><th>신청자</th><th>유형</th><th>기간</th><th>차감</th><th>상태</th></tr></thead>
+          <thead><tr><th class="sheet-row-num">#</th><th>신청자</th><th>유형</th><th>기간</th><th>차감</th></tr></thead>
           <tbody id="allLeaveBody"></tbody>
         </table></div>
 
         <!-- ★ 과거 휴가 내역 (신규) -->
         <div class="flex items-center justify-between mb-2">
           <h3 class="text-sm font-bold">🗂️ 과거 휴가 내역</h3>
-          <div class="flex gap-2 items-center">
+          <div class="flex gap-2 items-center flex-wrap">
             <select id="pastLeaveYear" onchange="renderPastLeaves()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white"></select>
-            <select id="pastLeaveUser" onchange="renderPastLeaves()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white"><option value="all">전체</option><option value="me">나만</option></select>
+            <select id="pastLeaveUser" onchange="renderPastLeaves()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white"></select>
+            <select id="pastLeaveType" onchange="renderPastLeaves()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white"></select>
           </div>
         </div>
         <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
-          <thead><tr><th class="sheet-row-num">#</th><th>신청자</th><th>유형</th><th>기간</th><th>차감</th><th>사유</th><th>상태</th></tr></thead>
+          <thead><tr><th class="sheet-row-num">#</th><th>신청자</th><th>유형</th><th>기간</th><th>차감</th><th>사유</th></tr></thead>
           <tbody id="pastLeaveBody"></tbody>
         </table></div>
       </div>
@@ -729,9 +730,11 @@
 </div>
 
 <!-- ============ MODALS ============ -->
-<div id="announcementModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-2xl shadow-xl w-full max-w-lg"><div class="flex items-center justify-between px-6 py-4 border-b border-gray-200"><h2 class="text-lg font-bold">📣 새 공지</h2><button onclick="closeModal('announcementModal')" class="hover-bg p-1 rounded">✕</button></div><div class="px-6 py-5 space-y-4"><input id="annTitle" placeholder="제목" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /><textarea id="annContent" rows="5" placeholder="내용" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none"></textarea><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs text-gray-600 mb-1">시작</label><input id="annStart" type="datetime-local" value="2026-05-14T09:00" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div><div><label class="block text-xs text-gray-600 mb-1">마감</label><input id="annEnd" type="datetime-local" value="2026-05-30T18:00" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div></div><label class="flex items-center gap-2 text-sm"><input id="annPinned" type="checkbox" class="w-4 h-4 accent-black" /> 📌 상단 고정</label><div class="flex gap-2"><button onclick="closeModal('announcementModal')" class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover-bg">취소</button><button onclick="submitAnnouncement()" class="flex-1 py-2.5 bg-black text-white rounded-lg text-sm">등록</button></div></div></div></div>
+<div id="announcementModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-2xl shadow-xl w-full max-w-lg"><div class="flex items-center justify-between px-6 py-4 border-b border-gray-200"><h2 class="text-lg font-bold" id="annModalTitle">📣 새 공지</h2><button onclick="closeModal('announcementModal')" class="hover-bg p-1 rounded">✕</button></div><div class="px-6 py-5 space-y-4"><input id="annTitle" placeholder="제목" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /><textarea id="annContent" rows="5" placeholder="내용" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none"></textarea><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs text-gray-600 mb-1">시작</label><input id="annStart" type="datetime-local" value="2026-05-14T09:00" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div><div><label class="block text-xs text-gray-600 mb-1">마감</label><input id="annEnd" type="datetime-local" value="2026-05-30T18:00" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div></div><label class="flex items-center gap-2 text-sm"><input id="annPinned" type="checkbox" class="w-4 h-4 accent-black" /> 📌 상단 고정</label><div class="flex gap-2"><button onclick="closeModal('announcementModal')" class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover-bg">취소</button><button id="annSubmitBtn" onclick="submitAnnouncement()" class="flex-1 py-2.5 bg-black text-white rounded-lg text-sm">등록</button></div></div></div></div>
 
-<div id="announcementDetail" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-2xl shadow-xl w-full max-w-lg"><div class="flex items-center justify-between px-6 py-4 border-b border-gray-200"><h2 class="text-lg font-bold flex items-center gap-2"><span id="detailPinIcon"></span><span id="detailTitle"></span></h2><button onclick="closeModal('announcementDetail')" class="hover-bg p-1 rounded">✕</button></div><div class="px-6 py-5 space-y-4"><div class="flex items-center gap-3 pb-3 border-b border-gray-100"><div id="detailAvatar" class="w-9 h-9 bg-black text-white rounded-full flex items-center justify-center text-xs font-bold">관</div><div class="flex-1"><p class="text-sm font-medium" id="detailAuthor">관리자</p><p class="text-xs text-gray-500" id="detailCreated"></p></div></div><div class="text-xs text-gray-500 bg-gray-50 rounded-lg p-2.5"><div>📅 시작: <span id="detailStart"></span></div><div>⏰ 마감: <span id="detailEnd"></span></div></div><div class="text-sm whitespace-pre-wrap" id="detailContent"></div><div class="flex gap-2"><button onclick="closeModal('announcementDetail')" class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover-bg">닫기</button><button id="detailDeleteBtn" onclick="deleteAnnouncement()" class="hidden px-4 py-2.5 border border-red-200 text-red-600 rounded-lg text-sm">🗑️ 삭제</button></div></div></div></div>
+<div id="announcementDetail" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-2xl shadow-xl w-full max-w-lg"><div class="flex items-center justify-between px-6 py-4 border-b border-gray-200"><h2 class="text-lg font-bold flex items-center gap-2"><span id="detailPinIcon"></span><span id="detailTitle"></span></h2><button onclick="closeModal('announcementDetail')" class="hover-bg p-1 rounded">✕</button></div><div class="px-6 py-5 space-y-4"><div class="flex items-center gap-3 pb-3 border-b border-gray-100"><div id="detailAvatar" class="w-9 h-9 bg-black text-white rounded-full flex items-center justify-center text-xs font-bold">관</div><div class="flex-1"><p class="text-sm font-medium" id="detailAuthor">관리자</p><p class="text-xs text-gray-500" id="detailCreated"></p></div></div><div class="text-xs text-gray-500 bg-gray-50 rounded-lg p-2.5"><div>📅 시작: <span id="detailStart"></span></div><div>⏰ 마감: <span id="detailEnd"></span></div></div><div class="text-sm whitespace-pre-wrap" id="detailContent"></div><div class="flex gap-2"><button onclick="closeModal('announcementDetail')" class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover-bg">닫기</button><button id="detailEditBtn" onclick="editAnnouncement()" class="hidden px-4 py-2.5 border border-gray-300 rounded-lg text-sm hover-bg">✏️ 수정</button><button id="detailDeleteBtn" onclick="deleteAnnouncement()" class="hidden px-4 py-2.5 border border-red-200 text-red-600 rounded-lg text-sm">🗑️ 삭제</button></div></div></div></div>
+
+<div id="announcementArchive" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"><div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col"><div class="flex items-center justify-between px-6 py-4 border-b border-gray-200"><h2 class="text-lg font-bold">🗂️ 이전 공지사항</h2><button onclick="closeModal('announcementArchive')" class="hover-bg p-1 rounded">✕</button></div><div class="px-6 py-5 overflow-y-auto flex-1"><div id="archiveList" class="divide-y divide-gray-100"></div></div></div></div>
 
 <div id="leaveModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
   <div class="bg-white rounded-2xl shadow-xl w-full max-w-md">

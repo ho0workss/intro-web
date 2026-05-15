@@ -158,8 +158,11 @@
         window.ST.set('msgs_' + room, all);
         if (window.currentRoom === room && typeof window.renderMessages === 'function') {
           window.renderMessages(all);
+        } else if (msg.username !== window.CURRENT?.username && typeof window.setUnread === 'function' && typeof window.getUnread === 'function') {
+          window.setUnread(room, window.getUnread(room) + 1);
         }
         if (typeof window.renderRoomList === 'function') window.renderRoomList();
+        if (typeof window.updateMessengerNavBadge === 'function') window.updateMessengerNavBadge();
       }, lastId);
     } catch (e) {
       console.warn('[Backend] 메시지 구독 실패:', e.message);
