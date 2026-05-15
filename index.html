@@ -41,8 +41,9 @@
   html,body{margin:0!important;padding:0!important;height:auto!important}
   #dashboard{display:block;margin:0;padding:0;position:relative;min-height:100vh}
   #mainArea{display:block!important;margin:0!important;margin-left:16rem!important;padding:0!important;min-height:100vh!important;width:auto!important;position:relative;background:transparent}
-  #mainArea>.page{margin:0;padding:0}
-  #mainArea>.page.active{display:block!important;width:100%;margin:0;padding:0}
+  #mainArea>.page{margin:0;padding:0;scroll-margin-top:0}
+  #mainArea>.page.active{display:block!important;width:100%;margin:0;padding:0;position:relative;top:0;transform:none}
+  html{scroll-behavior:auto!important}
   #dashboard>aside{position:fixed!important;left:0!important;top:0!important;width:16rem!important;height:100vh!important;z-index:30!important;transition:transform 0.2s ease}
   /* ★ 모바일 반응형 (≤ 768px) */
   #mobileNavToggle{display:none;position:fixed;top:8px;left:8px;z-index:50;background:#fff;border:1px solid #e5e7eb;border-radius:8px;width:38px;height:38px;align-items:center;justify-content:center;font-size:18px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.08)}

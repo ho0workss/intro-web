@@ -145,7 +145,6 @@ function closeMobileSidebar(){
 
 // ========== 네비게이션 ==========
 function navigateTo(page,sub){
-  try{if(typeof event!=='undefined'&&event&&event.preventDefault)event.preventDefault()}catch{}
   if(isMobileView())closeMobileSidebar();
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page)?.classList.add('active');
@@ -169,12 +168,14 @@ function navigateTo(page,sub){
     refreshUserUI();renderPartnerFilter();
   }
   const resetScroll=()=>{
-    window.scrollTo(0,0);
+    window.scrollTo({top:0,left:0,behavior:'instant'});
     document.documentElement.scrollTop=0;
     document.body.scrollTop=0;
     const ma=document.getElementById('mainArea');if(ma)ma.scrollTop=0;
-    const activePage=document.querySelector('#mainArea>.page.active');
-    if(activePage)activePage.scrollTop=0;
+    const dash=document.getElementById('dashboard');if(dash)dash.scrollTop=0;
+    // 활성 페이지를 뷰포트 최상단으로 강제 스크롤
+    const ap=document.getElementById('page-'+page);
+    if(ap&&ap.scrollIntoView)ap.scrollIntoView({block:'start',inline:'nearest',behavior:'instant'});
   };
   resetScroll();
   requestAnimationFrame(resetScroll);
