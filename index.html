@@ -56,7 +56,8 @@
   @media (max-width:768px){
     /* 기존 햄버거 토글 버튼은 이제 새 모바일 헤더의 ☰ 버튼이 대체 → 숨김 */
     #mobileNavToggle{display:none!important}
-    #dashboard>aside{transform:translateX(-100%);box-shadow:4px 0 20px rgba(0,0,0,0.15);z-index:55}
+    #dashboard>aside{transform:translateX(-100%);box-shadow:4px 0 20px rgba(0,0,0,0.15);z-index:55!important;background:#f9fafb!important}
+    [data-theme="dark"] #dashboard>aside{background:#1f1f1f!important}
     #dashboard>aside.sidebar-open{transform:translateX(0)}
     #mainArea{margin-left:0!important;padding-top:56px!important;padding-bottom:64px!important}
     #mobileBackdrop{z-index:54}
