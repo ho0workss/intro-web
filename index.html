@@ -55,8 +55,17 @@
     #mainArea{margin-left:0!important}
     #mobileNavToggle{display:flex}
     #mobileBackdrop.show{display:block}
-    #page-messenger>div{flex-direction:column;height:auto!important}
-    #page-messenger .w-72{width:100%!important;max-width:none;max-height:40vh;border-right:none;border-bottom:1px solid #e5e7eb}
+    /* 메신저/ChatGPT: 한 번에 한 패널만 표시 (목록 ↔ 대화 토글) */
+    #page-messenger>div,#page-chatgpt>div{flex-direction:column;height:calc(100vh - 0px)!important}
+    #page-messenger .w-72,#page-chatgpt .w-64{width:100%!important;max-width:none;border-right:none;border-bottom:1px solid #e5e7eb;flex:1;min-height:0}
+    #page-messenger #chatArea,#page-chatgpt #aiChatArea{flex:1;min-height:0;height:auto}
+    /* 기본: 목록만 보이게, 대화는 숨김 */
+    #page-messenger:not(.mobile-show-chat) #chatArea,
+    #page-chatgpt:not(.mobile-show-chat) #aiChatArea{display:none!important}
+    /* mobile-show-chat 활성 시: 대화만 보이게, 목록 숨김 */
+    #page-messenger.mobile-show-chat .w-72,
+    #page-chatgpt.mobile-show-chat .w-64{display:none!important}
+    .mobile-back-btn{display:inline-flex!important}
     #page-settings .flex.gap-6{flex-direction:column;gap:1rem}
     #page-settings .w-52{width:100%!important}
     #page-settings .w-52 nav{display:flex;flex-wrap:wrap;gap:4px}
@@ -79,7 +88,7 @@
     /* 모달은 더 컴팩트하게 */
     .fixed.inset-0>div{margin:0;max-height:95vh!important}
   }
-  @media (min-width:769px){#mobileBackdrop{display:none!important}}
+  @media (min-width:769px){#mobileBackdrop{display:none!important}.mobile-back-btn{display:none!important}}
   .nav-item.active{background:#000;color:#fff}
   [data-theme="dark"] .nav-item.active{background:#fff;color:#000}
   .sub-nav-item.active{background:rgba(0,0,0,0.06);color:#000;font-weight:600}
@@ -453,6 +462,7 @@
         <div class="flex-1 flex flex-col relative" id="chatArea" ondragenter="onChatDragEnter(event)" ondragover="event.preventDefault()" ondragleave="onChatDragLeave(event)" ondrop="onChatDrop(event)">
           <div id="chatDropOverlay" class="hidden drop-overlay"><div class="bg-white px-6 py-4 rounded-xl shadow-lg text-center"><p class="text-3xl mb-1">📎</p><p class="text-sm font-bold">파일을 놓으세요</p></div></div>
           <div class="h-14 px-4 border-b border-gray-200 flex items-center gap-3 bg-white shrink-0">
+            <button onclick="messengerBackToList()" class="mobile-back-btn p-1 hover-bg rounded text-lg" style="display:none" aria-label="목록으로">←</button>
             <div class="flex-1"><h3 class="font-bold" id="chatTitle">전체 공지방</h3><p class="text-xs text-gray-500">12명 활성</p></div>
             <button onclick="openPopupMessenger()" class="px-2 py-1 hover-bg rounded text-sm">🪟</button>
             <button class="px-2 py-1 hover-bg rounded text-sm">🔍</button>
