@@ -27,7 +27,7 @@ function toggleTheme(){
   const next=cur==='dark'?'light':'dark';
   document.documentElement.setAttribute('data-theme',next);
   const icon=next==='dark'?'☀️':'🌙';
-  document.querySelectorAll('#theme-icon,#theme-icon-login').forEach(e=>e&&(e.textContent=icon));
+  document.querySelectorAll('#theme-icon,#theme-icon-login,#theme-icon-m').forEach(e=>e&&(e.textContent=icon));
   const tg=document.getElementById('darkToggle');if(tg)tg.checked=next==='dark';
   ST.set('theme',next);
 }
@@ -144,10 +144,44 @@ function closeMobileSidebar(){
   if(aside)aside.classList.remove('sidebar-open');
   if(bd)bd.classList.remove('show');
 }
+// ========== 모바일 셸 (헤더/탭바/FAB) ==========
+const MOBILE_PAGE_TITLES={home:'홈',messenger:'메신저',chatgpt:'ChatGPT',meetings:'회의','meeting-detail':'회의',leave:'휴가 관리',partners:'거래처',ecommerce:'이커머스',events:'행사',design:'디자인',ads:'광고',other:'기타',settings:'설정'};
+const MOBILE_FAB_CONFIG={
+  home:{label:'+ 새 공지',action:'openAnnouncementModal()'},
+  leave:{label:'+ 휴가 신청',action:'openLeaveModal()'},
+  meetings:{label:'+ 회의 생성',action:'openCreateMeetingModal()'},
+  messenger:{label:'+ 채팅방',action:'openCreateRoomModal()'},
+  chatgpt:{label:'+ 새 채팅',action:'newAiChat()'},
+};
+function updateMobileShell(page){
+  const t=document.getElementById('mobileHeaderTitle');if(t)t.textContent=MOBILE_PAGE_TITLES[page]||'INTRO';
+  document.querySelectorAll('#mobileTabBar .mtab').forEach(b=>{
+    const m=b.getAttribute('data-mtab');
+    b.classList.toggle('active',m===page);
+  });
+  const fab=document.getElementById('mobileFab');
+  if(fab){
+    const cfg=MOBILE_FAB_CONFIG[page];
+    if(cfg&&isMobileView()){
+      fab.style.display='flex';
+      fab.classList.remove('fab-hidden');
+      fab.setAttribute('data-action',cfg.action);
+    }else{
+      fab.style.display='none';
+    }
+  }
+}
+function onMobileFabClick(){
+  const fab=document.getElementById('mobileFab');
+  const action=fab?.getAttribute('data-action');
+  if(!action)return;
+  try{(new Function(action))()}catch(e){console.warn('FAB action failed',e)}
+}
 
 // ========== 네비게이션 ==========
 function navigateTo(page,sub){
   if(isMobileView())closeMobileSidebar();
+  updateMobileShell(page);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page)?.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -1075,10 +1109,17 @@ CHANNEL.addEventListener('message',(e)=>{
   if(e.data.type==='reload'&&e.data.room===currentRoom)loadMessages();
 });
 function updateMessengerNavBadge(){
-  const badge=document.getElementById('messengerNavBadge');if(!badge)return;
+  const badge=document.getElementById('messengerNavBadge');
   const total=getRooms().reduce((s,r)=>s+(getUnread(r.id)||0),0);
-  if(total>0){badge.textContent=total>99?'99+':total;badge.style.display='inline-flex'}
-  else{badge.style.display='none'}
+  if(badge){
+    if(total>0){badge.textContent=total>99?'99+':total;badge.style.display='inline-flex'}
+    else{badge.style.display='none'}
+  }
+  const mb=document.getElementById('mobileTabMsgBadge');
+  if(mb){
+    if(total>0){mb.textContent=total>99?'99+':total;mb.style.display='flex'}
+    else{mb.style.display='none'}
+  }
 }
 
 // 채팅방 우클릭
@@ -1210,6 +1251,8 @@ function renderNotifications(){
   const badge=document.getElementById('notifBadge');
   badge.textContent=unread;
   badge.style.display=unread===0?'none':'';
+  const mb=document.getElementById('mobileNotifBadge');
+  if(mb){mb.textContent=unread;mb.style.display=unread===0?'none':'flex'}
   document.getElementById('notifList').innerHTML=ns.slice(0,8).map(n=>`<div onclick="onNotifClick(${n.id})" class="${n.read?'':'bg-blue-50'} cursor-pointer px-3 py-2.5 hover-bg border-b border-gray-100"><div class="flex items-start gap-2"><span class="text-base">${n.icon}</span><div class="flex-1 min-w-0"><p class="text-xs font-semibold">${n.title}</p><p class="text-xs text-gray-500 truncate">${escapeHtml(n.content)}</p><p class="text-[10px] text-gray-400 mt-0.5">${n.time}</p></div></div></div>`).join('')||'<p class="text-center text-xs text-gray-400 p-4">알림 없음</p>';
 }
 function toggleNotifDropdown(e){e?.stopPropagation();document.getElementById('notifDropdown').classList.toggle('hidden')}
@@ -1996,7 +2039,7 @@ function copyFeedback(){
 
 // ========== Init ==========
 window.addEventListener('load',()=>{
-  if(ST.get('theme','light')==='dark'){document.documentElement.setAttribute('data-theme','dark');const i=document.getElementById('theme-icon');if(i)i.textContent='☀️';const il=document.getElementById('theme-icon-login');if(il)il.textContent='☀️';const tg=document.getElementById('darkToggle');if(tg)tg.checked=true}
+  if(ST.get('theme','light')==='dark'){document.documentElement.setAttribute('data-theme','dark');const i=document.getElementById('theme-icon');if(i)i.textContent='☀️';const il=document.getElementById('theme-icon-login');if(il)il.textContent='☀️';const im=document.getElementById('theme-icon-m');if(im)im.textContent='☀️';const tg=document.getElementById('darkToggle');if(tg)tg.checked=true}
   const saved=ST.get('currentUser');
   if(saved&&getUser(saved.username)){CURRENT={...getUser(saved.username),username:saved.username};enterDashboard()}
 });
