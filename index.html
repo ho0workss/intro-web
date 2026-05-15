@@ -55,16 +55,31 @@
     #mainArea{margin-left:0!important}
     #mobileNavToggle{display:flex}
     #mobileBackdrop.show{display:block}
-    /* 메신저/ChatGPT: 한 번에 한 패널만 표시 (목록 ↔ 대화 토글) */
-    #page-messenger>div,#page-chatgpt>div{flex-direction:column;height:calc(100vh - 0px)!important}
-    #page-messenger .w-72,#page-chatgpt .w-64{width:100%!important;max-width:none;border-right:none;border-bottom:1px solid #e5e7eb;flex:1;min-height:0}
-    #page-messenger #chatArea,#page-chatgpt #aiChatArea{flex:1;min-height:0;height:auto}
+    /* 메신저/ChatGPT: 풀스크린 오버레이 + 한 번에 한 패널만 표시 (목록 ↔ 대화 토글) */
+    #mainArea>#page-messenger.active,#mainArea>#page-chatgpt.active{
+      position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;
+      width:100%!important;height:100vh!important;height:100dvh!important;z-index:60!important;background:#fff!important;
+      margin:0!important;padding:0!important;overflow:hidden!important
+    }
+    [data-theme="dark"] #mainArea>#page-messenger.active,
+    [data-theme="dark"] #mainArea>#page-chatgpt.active{background:#191919!important}
+    #page-messenger>div,#page-chatgpt>div{flex-direction:column!important;height:100vh!important;height:100dvh!important;max-height:100dvh!important}
+    #page-messenger .w-72,#page-chatgpt .w-64{width:100%!important;max-width:none;border-right:none;border-bottom:1px solid #e5e7eb;flex:1 1 auto;min-height:0}
+    #page-messenger #chatArea,#page-chatgpt #aiChatArea{flex:1 1 auto;min-height:0;height:auto;display:flex;flex-direction:column;overflow:hidden}
+    /* 헤더 + 입력 영역은 절대 줄어들지 않도록 */
+    #page-messenger #chatArea>*:not(#messageList):not(#chatDropOverlay):not(#emoticonSuggest),
+    #page-chatgpt #aiChatArea>*:not(#aiMessages){flex-shrink:0!important}
+    /* 메시지 목록은 flex로 가능한 공간 모두 사용하고 자체 스크롤 */
+    #messageList,#aiMessages{flex:1 1 0!important;min-height:0!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch}
     /* 기본: 목록만 보이게, 대화는 숨김 */
     #page-messenger:not(.mobile-show-chat) #chatArea,
     #page-chatgpt:not(.mobile-show-chat) #aiChatArea{display:none!important}
     /* mobile-show-chat 활성 시: 대화만 보이게, 목록 숨김 */
     #page-messenger.mobile-show-chat .w-72,
     #page-chatgpt.mobile-show-chat .w-64{display:none!important}
+    /* 채팅 뷰에서 햄버거 버튼 숨김 (← 뒤로가기로 대체) */
+    body:has(#page-messenger.active.mobile-show-chat) #mobileNavToggle,
+    body:has(#page-chatgpt.active.mobile-show-chat) #mobileNavToggle{display:none!important}
     .mobile-back-btn{display:inline-flex!important}
     #page-settings .flex.gap-6{flex-direction:column;gap:1rem}
     #page-settings .w-52{width:100%!important}
@@ -450,6 +465,7 @@
         <div class="w-72 bg-gray-50 border-r border-gray-200 flex flex-col shrink-0">
           <div class="p-3 border-b border-gray-200">
             <div class="flex items-center gap-2 mb-2">
+              <button onclick="toggleMobileSidebar()" class="mobile-back-btn p-1.5 hover-bg rounded text-base" style="display:none" aria-label="메뉴">☰</button>
               <h2 class="font-bold text-base flex-1">💬 메신저</h2>
               <button onclick="openPopupMessenger()" class="p-1.5 hover-bg rounded text-xs">🪟</button>
               <button onclick="openCreateRoomModal()" class="p-1.5 hover-bg rounded">+</button>
@@ -495,6 +511,7 @@
       <div class="flex" style="height:calc(100vh - 41px)">
         <div class="w-64 bg-gray-50 border-r border-gray-200 flex flex-col">
           <div class="p-3 border-b border-gray-200">
+            <button onclick="toggleMobileSidebar()" class="mobile-back-btn w-full mb-2 flex items-center justify-center gap-2 px-3 py-1.5 border border-gray-300 rounded-lg text-xs hover-bg" style="display:none" aria-label="메뉴">☰ 메뉴</button>
             <button onclick="newAiChat()" class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800">
               <span>+</span> 새 채팅
             </button>
