@@ -1,111 +1,170 @@
-# 🚀 배포 가이드 (3분 컷)
+# 🚀 Vercel Postgres + 실시간 동기화 배포 가이드
 
-## 사전 준비
-- [GitHub 계정](https://github.com)
-- [Vercel 계정](https://vercel.com) (GitHub로 로그인 추천)
-- [Git 설치](https://git-scm.com/downloads)
+이 가이드는 **Vercel Postgres + Blob + 실시간 SSE**로 진짜 멀티 유저 협업이 되는 인트라넷을 배포합니다.
 
----
+## 준비물
+- ✅ GitHub 저장소: https://github.com/ho0workss/intro-web (이미 푸시됨)
+- ⏳ **Vercel Pro 계정** ($20/월) - Postgres/Blob/Serverless 함수 시간 늘리려면 필수
+- ⏳ Git 설치
 
-## 1️⃣ GitHub 저장소 만들기 (1분)
-
-1. https://github.com/new 접속
-2. **Repository name**: `intro-intranet` (원하는 이름)
-3. **Public** 또는 **Private** 선택 (사내용이면 Private 추천)
-4. **Add a README file** 체크 ❌ (이미 있음)
-5. **Create repository** 클릭
-
-생성된 저장소 URL 복사 (예: `https://github.com/USERNAME/intro-intranet.git`)
+> 💡 Hobby(무료) 플랜으로도 작동하지만 함수 실행시간 10초 제한이 있어 실시간 SSE는 짧아집니다.
 
 ---
 
-## 2️⃣ 파일 푸시 (1분)
+## 1️⃣ Vercel 프로젝트 생성
 
-PowerShell 또는 터미널에서 이 `deploy/` 폴더로 이동 후:
+1. https://vercel.com/new → GitHub의 `intro-web` 저장소 Import
+2. **설정 그대로** (vercel.json이 처리):
+   - Framework: `Other`
+   - Build/Output/Install Command: **비워둠**
+3. **Deploy** 클릭 → 정적 사이트로 1차 배포 완료 (백엔드는 아직 작동 안 함)
 
+---
+
+## 2️⃣ Vercel Postgres 데이터베이스 연결
+
+1. 프로젝트 대시보드 → 상단 **Storage** 탭
+2. **Create Database** → **Postgres** 선택
+3. 데이터베이스 이름 입력 (예: `intro-db`) → **Create**
+4. 자동으로 환경변수 `POSTGRES_URL` 등이 프로젝트에 주입됩니다
+5. **Continue** 후 **Connect Project** 확인
+
+> 자동 환경변수: `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, `POSTGRES_URL_NO_SSL`, 등
+
+---
+
+## 3️⃣ Vercel Blob 스토리지 연결 (파일 업로드용)
+
+1. 같은 **Storage** 탭 → **Create Database** → **Blob** 선택
+2. 이름 입력 (예: `intro-files`) → **Create**
+3. 자동으로 `BLOB_READ_WRITE_TOKEN` 환경변수가 추가됩니다
+
+---
+
+## 4️⃣ 초기화 키 환경변수 설정
+
+DB 스키마 초기화는 비밀키로 보호됩니다.
+
+1. 프로젝트 **Settings** → **Environment Variables**
+2. 새 변수 추가:
+   - Key: `INIT_KEY`
+   - Value: 강력한 무작위 문자열 (예: `super-secret-2026-abc123xyz`)
+   - Environment: **Production, Preview, Development** 모두 체크
+3. **Save**
+
+---
+
+## 5️⃣ 재배포 (환경변수 반영)
+
+1. 프로젝트 대시보드 → **Deployments** 탭
+2. 최근 배포의 ⋯ 메뉴 → **Redeploy** 클릭
+3. 약 30~60초 후 완료
+
+또는 로컬에서 빈 커밋 푸시:
 ```bash
-# Git 초기화 & 커밋
-git init
-git add .
-git commit -m "INTRO 사내 인트라넷 초기 배포"
-git branch -M main
-
-# GitHub 연결 (URL을 본인의 것으로 바꾸세요!)
-git remote add origin https://github.com/YOUR_USERNAME/intro-intranet.git
-git push -u origin main
-```
-
-❓ **인증 오류 발생 시**: GitHub의 [Personal Access Token](https://github.com/settings/tokens) 발급 후 비밀번호 대신 사용.
-
----
-
-## 3️⃣ Vercel 배포 (1분)
-
-1. https://vercel.com/new 접속
-2. **Import Git Repository** → 방금 만든 `intro-intranet` 선택 → **Import**
-3. 설정 화면 — **그대로 두기** (`vercel.json`이 모두 처리):
-   - Framework Preset: `Other`
-   - Root Directory: `./`
-   - Build Command: *(비워둠)*
-   - Output Directory: *(비워둠)*
-4. **Deploy** 클릭
-5. 약 30초 대기 → 🎉 **배포 완료**!
-
-발급된 URL을 사내 구성원에게 공유하세요. 예: `https://intro-intranet.vercel.app`
-
----
-
-## 4️⃣ 커스텀 도메인 (선택사항)
-
-Vercel 대시보드 → 프로젝트 → **Settings → Domains** → 회사 도메인 추가
-예: `intranet.yourcompany.com` → CNAME `cname.vercel-dns.com`
-
----
-
-## 5️⃣ 업데이트 배포
-
-이후 변경사항이 있을 때:
-```bash
-git add .
-git commit -m "기능 업데이트"
+cd deploy
+git commit --allow-empty -m "redeploy with env vars"
 git push
 ```
-→ Vercel이 자동으로 재배포 (약 30초)
 
 ---
 
-## ⚠️ 알아두기
+## 6️⃣ DB 스키마 초기화 (한 번만)
 
-- **데이터 저장 위치**: 각 사용자의 **브라우저 localStorage** (서버 X)
-- **사용자 간 데이터 공유 X**: A 사용자의 메시지는 B 사용자에게 보이지 않음
-- **동일 브라우저의 여러 탭/팝업**: `BroadcastChannel`로 실시간 동기화 OK
-- **실제 사내 협업 시스템으로 확장하려면**: Supabase/Firebase 같은 백엔드 연동 필요
+배포된 URL에 다음 경로로 접속 (`YOUR_INIT_KEY`를 5단계에서 설정한 값으로 변경):
 
----
+```
+https://YOUR-PROJECT.vercel.app/api/init?key=YOUR_INIT_KEY
+```
 
-## 🆘 문제 해결
+브라우저에 다음과 같은 JSON이 보이면 성공:
+```json
+{ "ok": true, "count": 9, "results": [...] }
+```
 
-### "Vercel 배포가 실패해요"
-- Vercel 설정에서 Framework Preset이 **Other**로 되어있는지 확인
-- Build Command, Output Directory를 **비워둠** 확인
-- 로그를 확인 → `vercel.json`에 오타가 있는지 점검
-
-### "배포는 됐는데 화면이 비어있어요"
-- 브라우저 콘솔(F12)에서 JavaScript 오류 확인
-- Tailwind CDN이 차단되었는지 (사내 방화벽) 확인
-- 시크릿/익명 모드에서 다시 접속해보기
-
-### "데이터가 다 날아갔어요"
-- 브라우저 캐시/쿠키 삭제 시 localStorage도 삭제됩니다
-- 시크릿 모드에서는 닫는 즉시 데이터 소실
-- 영구 보관은 **백엔드 연동** 필요
+이때 자동 생성되는 것:
+- ✅ users, rooms, messages, announcements, leaves, signup_requests, partners, sessions 테이블
+- ✅ 기본 관리자 계정 `intro` / `dlsxmfh1!`
+- ✅ 기본 채팅방 `전체 공지방`
 
 ---
 
-## 📞 도움이 필요하면
+## 7️⃣ 사용 시작!
 
-- 백엔드(Supabase) 연동 가이드 요청
-- 추가 기능 개발 요청
-- 디자인 수정 요청
+배포 URL 접속 → `intro` / `dlsxmfh1!` 로 로그인:
 
-각각 별도로 요청해주세요.
+화면 좌측 하단에 🟢 **백엔드 연동 (실시간)** 인디케이터가 표시되면 성공.
+
+이제:
+- 메시지를 보내면 **다른 사용자에게 실시간 전송** (SSE)
+- 공지/휴가/사용자 데이터가 **DB에 영구 저장**
+- 파일 첨부는 **Vercel Blob**에 업로드되어 다른 사용자가 다운로드 가능
+- 회원가입 → 관리자 승인 → 즉시 로그인 가능
+
+---
+
+## 8️⃣ 추가 사용자 가입
+
+신규 직원이 가입하는 방법:
+1. 배포 URL 접속 → **회원가입 신청** 클릭
+2. 이름, 전화번호, 아이디, 비밀번호, 부서, 입사일 입력 → 신청
+3. 관리자(`intro`)가 로그인 → 설정 → 가입 승인 → 부서/권한/거래처 매핑 후 승인
+4. 신규 직원이 발급받은 아이디/비밀번호로 로그인
+
+---
+
+## 🔧 문제 해결
+
+### "Failed to fetch /api/init"
+- INIT_KEY 환경변수가 안 들어갔거나 재배포가 안 됐습니다 → 5단계 다시
+- Vercel 함수 로그 확인: 프로젝트 대시보드 → **Logs**
+
+### "백엔드 연동" 인디케이터가 ⚫ 로컬 모드로 표시됨
+- 토큰이 없거나 만료됨 → 다시 로그인
+- 콘솔(F12)에서 `Sync.isEnabled` 확인
+
+### 메시지가 실시간으로 안 보임
+- SSE 함수 실행시간 제한 (Hobby: 10초 / Pro: 30초)
+- 자동 재연결 코드가 있으나 네트워크 따라 지연 가능
+- 콘솔에서 EventSource 오류 확인
+
+### "Postgres connection error"
+- Storage 탭에서 DB가 프로젝트에 정확히 연결되어 있는지 확인
+- 환경변수 `POSTGRES_URL`이 자동 주입되었는지 Settings에서 확인
+
+### 함수 시간 초과 (504)
+- Vercel Hobby는 10초 제한 → Pro 업그레이드 ($20/월) 권장
+
+---
+
+## 💰 예상 비용 (30명 사내 사용 기준)
+
+| 항목 | Hobby 무료 | Pro $20/월 |
+|---|---|---|
+| 함수 시간 | 100 GB-Hours | 1,000 GB-Hours |
+| Postgres | 60h 컴퓨팅 / 256MB | 100h / 256MB (확장 가능) |
+| Blob | 1GB | 100GB |
+| 함수 실행 | 10초 제한 | 60초 제한 (실시간 SSE 길어짐) |
+| 권장 사용자 수 | 5~10명 | 30~100명 |
+
+---
+
+## 📝 보안 권장사항
+
+1. **INIT_KEY 보호**: 한 번 초기화 후 환경변수를 삭제하거나 더 복잡한 값으로 교체
+2. **데이터베이스 백업**: Vercel 대시보드 → Storage → Postgres → Backup 설정
+3. **HTTPS 강제**: Vercel은 기본적으로 HTTPS 적용됨
+4. **세션 만료**: 기본 7일 (DB의 `sessions.expires_at` 변경 가능)
+5. **비밀번호**: 신규 가입은 bcrypt 해시되어 저장됨
+
+---
+
+## 🆘 백엔드 끄기 (localStorage로만 사용)
+
+브라우저 콘솔(F12)에서:
+```javascript
+localStorage.removeItem('intro_api_token');
+location.reload();
+```
+
+자동으로 로컬 모드로 폴백됩니다.

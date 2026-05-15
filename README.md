@@ -1,108 +1,32 @@
 # INTRO 사내 인트라넷
 
-Next.js 없이 동작하는 **순수 정적 HTML/JS** 사내 인트라넷 워크스페이스.
+Vercel Postgres + Blob + 실시간 SSE로 동작하는 풀스택 사내 인트라넷.
 
 ## ✨ 주요 기능
 
 - **🏠 홈**: 공지사항, 휴가 관리 요약, 회의 일정
-- **☕ 휴가 관리**: 입사일 기반 자동 연차 계산, 자동 차감, 과거/현재 내역
-- **📅 회의 워크스페이스**: 노션 스타일 블록 에디터 + **구글시트급 스프레드시트** (30+ 함수, 셀 병합, 행/열 삽입, 글자색, 드래그 범위 선택)
-- **💬 메신저**: 실시간 메시지 동기화(`BroadcastChannel`), 폴더, 드래그&드롭 순서 변경, @멘션, @AI 호출, 우클릭 메뉴, 별도 팝업창
+- **☕ 휴가 관리**: 입사일 기반 연차 자동 계산, 자동 차감, 과거/현재 내역
+- **📅 회의 워크스페이스**: 노션 스타일 블록 에디터 + 구글시트급 스프레드시트 (30+ 함수, 셀 병합, 행/열 삽입, 글자색, Ctrl+클릭 다중 참조)
+- **💬 메신저**: **Postgres + SSE 실시간 동기화**, 폴더, 드래그&드롭 순서 변경, @멘션, @AI 호출, 우클릭 메뉴, 별도 팝업창
 - **🤖 ChatGPT**: 프로젝트(폴더) + 일반 대화, 드래그로 이동, 시스템 프롬프트/모델 설정, 공유 링크 생성
 - **🤝 거래처**: 멤버별 매핑된 거래처만 표시, 필터, 발주/판매/재고/정산
 - **🛍️ 이커머스 / 🏷️ 행사 / 🎨 디자인 / 📣 광고**: 추가/삭제/편집 가능한 데이터 테이블
-- **⚙️ 설정**: 멤버 관리, 부서·역할 권한, 거래처 관리, AI API 설정, **커스텀 역할 추가**
+- **⚙️ 설정**: 멤버 관리, 부서·역할 권한, 거래처 관리, AI API 설정, 커스텀 역할 추가
 - **🔐 인증**: 로그인 / 회원가입 신청(관리자 승인) / 다크 모드
-- **💾 영구 저장**: 모든 데이터 `localStorage`에 자동 저장
+- **💾 저장**: Vercel Postgres (백엔드 활성) 또는 localStorage 폴백
 
 ---
 
-## 🚀 빠른 시작 (로컬)
+## 🚀 빠른 시작
 
-### 옵션 1: 브라우저에서 직접 열기
-```bash
-# Windows
-start index.html
+### 옵션 A: 풀스택 (실시간 동기화) - 권장
+→ **[DEPLOY.md](./DEPLOY.md)** 참조: Vercel Postgres + Blob 셋업
 
-# macOS
-open index.html
-
-# Linux
-xdg-open index.html
-```
-
-### 옵션 2: 로컬 서버 (권장)
+### 옵션 B: 로컬 데모 (백엔드 없이)
 ```bash
 npx serve .
-# 또는
-python -m http.server 8000
 ```
-브라우저에서 `http://localhost:8000` 접속.
-
-### 기본 계정
-| 아이디 | 비밀번호 | 권한 |
-|---|---|---|
-| `intro` | `dlsxmfh1!` | 관리자 |
-| `kim` | `1234` | 매니저 (디자인) |
-| `lee` | `1234` | 멤버 (마케팅) |
-| `park` | `1234` | 멤버 (개발) |
-
----
-
-## 🌐 GitHub + Vercel 배포
-
-### 1단계: GitHub 저장소 생성
-
-```bash
-# 이 deploy 폴더에서 시작
-cd /path/to/deploy
-
-# Git 초기화
-git init
-git add .
-git commit -m "INTRO 사내 인트라넷 - 초기 배포"
-
-# GitHub에 비어있는 저장소를 만든 후 (예: intro-intranet)
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/intro-intranet.git
-git push -u origin main
-```
-
-### 2단계: Vercel 연결 (가장 쉬운 방법)
-
-1. https://vercel.com 접속 후 **GitHub로 로그인**
-2. **Add New... → Project** 클릭
-3. GitHub 저장소 `intro-intranet` 선택 → **Import**
-4. 설정 화면에서 **그대로 두고** (vercel.json이 모든 것을 처리):
-   - Framework Preset: **Other**
-   - Build Command: **비워두기**
-   - Output Directory: **비워두기**
-   - Install Command: **비워두기**
-5. **Deploy** 클릭
-6. 약 30초 후 배포 완료 → `https://intro-intranet.vercel.app` 같은 URL 발급
-
-### 3단계: 사용자 공유
-
-- 회사 구성원에게 배포된 URL을 공유
-- **각자 브라우저에 데이터가 저장되며**, 동일 브라우저 내에서는 새로고침해도 데이터 유지
-- 메인 창 ↔ 팝업 메신저 창은 `BroadcastChannel`로 실시간 동기화 (동일 사용자 다중 탭)
-
----
-
-## ⚠️ 단일 브라우저 데모 vs 진짜 멀티유저
-
-이 정적 배포는 **각 사용자의 브라우저에 데이터가 저장**되는 데모입니다.
-> A 사용자가 보낸 메시지는 B 사용자에게 실시간 전송되지 않습니다.
-> 모든 데이터는 사용자별로 독립적입니다.
-
-**진짜 사내 협업 시스템**으로 만들려면:
-- 백엔드 (Supabase / Firebase / 자체 서버)
-- 실시간 동기화 (WebSocket / Realtime)
-- 파일 스토리지 (S3 / Supabase Storage)
-- 인증 (OAuth / JWT)
-- 데이터베이스 (PostgreSQL / MongoDB)
-
-연동 가이드는 별도로 요청해주세요.
+http://localhost:3000 접속 → `intro` / `dlsxmfh1!`
 
 ---
 
@@ -110,26 +34,98 @@ git push -u origin main
 
 ```
 deploy/
-├── index.html              ← 메인 진입점 (=demo.html)
-├── demo-app.js             ← 모든 비즈니스 로직 (3000+줄)
-├── messenger-popup.html    ← 별도 팝업 메신저 창
-├── vercel.json             ← Vercel 정적 배포 설정
-├── package.json            ← 메타데이터
+├── index.html              ← 메인 진입점
+├── demo-app.js             ← 프론트엔드 비즈니스 로직 (3000+줄)
+├── sync.js                 ← 백엔드 API 클라이언트
+├── bridge.js               ← demo-app ↔ 백엔드 브릿지 (자동 동기화)
+├── messenger-popup.html    ← 별도 팝업 메신저
+├── api/
+│   ├── init.js             ← DB 스키마 초기화 (GET ?key=)
+│   ├── auth.js             ← 로그인/회원가입/로그아웃 (POST)
+│   ├── messages.js         ← 메시지 CRUD
+│   ├── stream.js           ← 실시간 SSE 엔드포인트
+│   ├── announcements.js    ← 공지사항 CRUD
+│   ├── leaves.js           ← 휴가 신청/조회
+│   ├── users.js            ← 사용자 관리
+│   ├── requests.js         ← 가입 요청 승인/거절
+│   └── upload.js           ← Vercel Blob 파일 업로드
+├── lib/
+│   ├── db.js               ← Postgres 클라이언트
+│   └── schema.sql          ← DB 스키마
+├── vercel.json             ← Vercel 배포 설정 (functions + headers)
+├── package.json            ← @vercel/postgres, @vercel/blob, bcryptjs
+├── .env.example            ← 환경변수 템플릿
 ├── .gitignore
-└── README.md               ← 이 파일
+├── README.md               ← 이 파일
+├── DEPLOY.md               ← 상세 배포 가이드
+├── push-to-github.ps1
+└── push-to-github.sh
 ```
 
 ---
 
 ## 🛠️ 기술 스택
 
-- **HTML5** + **Tailwind CSS (CDN)** + **Vanilla JavaScript**
-- 외부 의존성: Tailwind CDN, Google Fonts (Noto Sans KR)
-- 데이터: 브라우저 `localStorage`
-- 실시간(동일 브라우저 다중 탭): `BroadcastChannel API`
+### 프론트엔드
+- HTML5 + Tailwind CSS (CDN) + Vanilla JavaScript
+- 외부 라이브러리: Tailwind CDN, Noto Sans KR
+
+### 백엔드 (Vercel)
+- **Vercel Postgres** (Neon) - 모든 영구 데이터
+- **Vercel Blob** - 파일 첨부 저장소
+- **Serverless Functions** (Node.js 18+) - API 라우트
+- **SSE (Server-Sent Events)** - 실시간 메시지 전송
+- **bcryptjs** - 비밀번호 해싱
+- **세션 토큰** - 7일 만료, DB에 저장
+
+### 데이터 흐름
+```
+[브라우저]
+   ↓ login/POST /api/auth?action=login
+[Vercel Function] → [Postgres: users, sessions]
+   ↓ token 반환
+[브라우저 localStorage에 token 저장]
+
+[메시지 전송] → POST /api/messages → Postgres: messages
+[실시간 수신] → SSE /api/stream → 풀링 → 새 메시지 푸시
+```
+
+---
+
+## 🔄 백엔드 모드 vs 로컬 모드
+
+화면 좌측 하단 인디케이터:
+- 🟢 **백엔드 연동 (실시간)**: Postgres에 데이터 저장, 사용자 간 실시간 동기화
+- ⚫ **로컬 모드**: localStorage에 저장, 단일 브라우저만 작동
+
+브릿지(`bridge.js`)가 자동으로 모드를 감지하고 동작합니다.
+백엔드 호출 실패 시 자동으로 localStorage로 폴백되어 끊김 없이 사용 가능.
+
+---
+
+## 🔧 로컬 개발
+
+### Vercel CLI 설치
+```bash
+npm i -g vercel
+```
+
+### 환경변수 받아오기
+```bash
+vercel link  # 프로젝트 연결
+vercel env pull .env.local  # 환경변수 다운로드
+```
+
+### 로컬 실행 (서버리스 함수 포함)
+```bash
+npm install
+npm run dev  # vercel dev
+```
+
+http://localhost:3000
 
 ---
 
 ## 📝 라이선스
 
-내부 사용 전용. 외부 공개/판매 금지.
+내부 사용 전용.
