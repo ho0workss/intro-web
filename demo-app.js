@@ -147,13 +147,14 @@ function closeMobileSidebar(){
 // ========== 모바일 셸 (헤더/탭바/FAB) ==========
 const MOBILE_PAGE_TITLES={home:'홈',messenger:'메신저',chatgpt:'ChatGPT',meetings:'회의','meeting-detail':'회의',leave:'휴가 관리',partners:'거래처',ecommerce:'이커머스',events:'행사',design:'디자인',ads:'광고',other:'기타',settings:'설정'};
 const MOBILE_FAB_CONFIG={
-  home:{label:'+ 새 공지',action:'openAnnouncementModal()'},
-  leave:{label:'+ 휴가 신청',action:'openLeaveModal()'},
-  meetings:{label:'+ 회의 생성',action:'openCreateMeetingModal()'},
-  messenger:{label:'+ 채팅방',action:'openCreateRoomModal()'},
-  chatgpt:{label:'+ 새 채팅',action:'newAiChat()'},
+  home:{action:'__menu__'},
+  leave:{action:'openLeaveModal()'},
+  meetings:{action:'openCreateMeetingModal()'},
+  messenger:{action:'openCreateRoomModal()'},
+  chatgpt:{action:'newAiChat()'},
 };
 function updateMobileShell(page){
+  closeFabMenu();
   const t=document.getElementById('mobileHeaderTitle');if(t)t.textContent=MOBILE_PAGE_TITLES[page]||'INTRO';
   document.querySelectorAll('#mobileTabBar .mtab').forEach(b=>{
     const m=b.getAttribute('data-mtab');
@@ -175,7 +176,29 @@ function onMobileFabClick(){
   const fab=document.getElementById('mobileFab');
   const action=fab?.getAttribute('data-action');
   if(!action)return;
+  if(action==='__menu__'){toggleFabMenu();return}
   try{(new Function(action))()}catch(e){console.warn('FAB action failed',e)}
+}
+function toggleFabMenu(){
+  const menu=document.getElementById('mobileFabMenu');
+  const bd=document.getElementById('mobileFabBackdrop');
+  const fab=document.getElementById('mobileFab');
+  if(!menu)return;
+  const open=menu.classList.toggle('show');
+  if(open){menu.style.display='flex';bd.style.display='block';bd.classList.add('show');fab?.classList.add('fab-open')}
+  else{closeFabMenu()}
+}
+function closeFabMenu(){
+  const menu=document.getElementById('mobileFabMenu');
+  const bd=document.getElementById('mobileFabBackdrop');
+  const fab=document.getElementById('mobileFab');
+  if(menu){menu.classList.remove('show');menu.style.display='none'}
+  if(bd){bd.classList.remove('show');bd.style.display='none'}
+  fab?.classList.remove('fab-open');
+}
+function fabAction(fnName){
+  closeFabMenu();
+  try{const fn=window[fnName];if(typeof fn==='function')fn()}catch(e){console.warn('FAB action failed',fnName,e)}
 }
 
 // ========== 네비게이션 ==========
