@@ -910,6 +910,14 @@ function addPartnerRow(t){
   const d=getPartnerData(t);const r={};
   const cc=document.querySelectorAll(`#partner-${t}-table thead th`).length-1;
   for(let j=1;j<=cc;j++)r['col'+j]='';
+  // 발주(order): 첫 컬럼(발주일)에 오늘 날짜 YY-MM-DD 자동 입력
+  if(t==='order'){
+    const now=new Date();
+    const yy=String(now.getFullYear()).slice(-2);
+    const mm=String(now.getMonth()+1).padStart(2,'0');
+    const dd=String(now.getDate()).padStart(2,'0');
+    r.col1=`${yy}-${mm}-${dd}`;
+  }
   // ★ 현재 필터의 partner를 자동 태깅
   if(currentPartnerFilter&&currentPartnerFilter!=='all')r.partner=currentPartnerFilter;
   else if(CURRENT?.partners?.[0])r.partner=CURRENT.partners[0];
