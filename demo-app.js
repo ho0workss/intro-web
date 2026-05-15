@@ -129,6 +129,8 @@ function roleLabel(r){return r==='admin'?'관리자':r==='manager'?'매니저':'
 
 // ========== 모바일 사이드바 토글 ==========
 function isMobileView(){return window.innerWidth<=768}
+// ★ 브라우저 자동 스크롤 복원 비활성화 (콘텐츠 하단 표시 이슈 방지)
+if(typeof history!=='undefined'&&'scrollRestoration' in history)history.scrollRestoration='manual';
 function toggleMobileSidebar(){
   const aside=document.querySelector('#dashboard>aside');
   const bd=document.getElementById('mobileBackdrop');
@@ -168,19 +170,23 @@ function navigateTo(page,sub){
     refreshUserUI();renderPartnerFilter();
   }
   const resetScroll=()=>{
-    window.scrollTo({top:0,left:0,behavior:'instant'});
+    try{window.scrollTo(0,0)}catch{}
     document.documentElement.scrollTop=0;
     document.body.scrollTop=0;
     const ma=document.getElementById('mainArea');if(ma)ma.scrollTop=0;
     const dash=document.getElementById('dashboard');if(dash)dash.scrollTop=0;
-    // 활성 페이지를 뷰포트 최상단으로 강제 스크롤
+    // 활성 페이지 강제 정렬: getBoundingClientRect 기반으로 정확히 0으로 보정
     const ap=document.getElementById('page-'+page);
-    if(ap&&ap.scrollIntoView)ap.scrollIntoView({block:'start',inline:'nearest',behavior:'instant'});
+    if(ap){
+      const rect=ap.getBoundingClientRect();
+      if(rect.top!==0)window.scrollBy(0,rect.top);
+    }
   };
   resetScroll();
   requestAnimationFrame(resetScroll);
-  setTimeout(resetScroll,50);
-  setTimeout(resetScroll,200);
+  setTimeout(resetScroll,30);
+  setTimeout(resetScroll,100);
+  setTimeout(resetScroll,300);
 }
 function navigateSub(page,sub){
   document.querySelectorAll(`#page-${page} .sub-page`).forEach(p=>p.classList.remove('active'));
