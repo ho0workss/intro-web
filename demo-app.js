@@ -59,7 +59,12 @@ function enterDashboard(){
   // ★ 가입승인 카드는 메인홈에서 제거되었으므로 참조 안 함 (이전 JS 에러로 인해 후속 렌더링 중단되던 문제 수정)
   const h=new Date().getHours();
   document.getElementById('homeGreeting').textContent=(h<12?'좋은 아침이에요':h<18?'좋은 오후예요':'좋은 저녁이에요')+', '+CURRENT.name+'님 👋';
-  navigateTo('home');
+  // URL hash에서 초기 페이지 복원 (예: #/leave → leave 페이지로)
+  const initial=parseHashRoute();
+  const initPage=initial.page||'home';
+  try{history.replaceState({page:initPage,sub:initial.sub},'','#/'+initPage+(initial.sub?'/'+initial.sub:''))}catch{}
+  __navInternal=true;
+  try{navigateTo(initPage,initial.sub)}finally{__navInternal=false}
   renderAnnouncements();renderNotifications();renderHomeLeave();renderHomePending();
   renderLeaveData();renderPastLeaves();initPartnerTables();initAiModels();renderRequests();renderRoles();renderMembers();renderDeptRole();renderPartnerMgmt();
   renderAds();renderEvents();renderDesign();renderEcommerce();loadProfileForm();
@@ -202,7 +207,37 @@ function fabAction(fnName){
 }
 
 // ========== 네비게이션 ==========
+// History API 연동: 뒤로가기/앞으로가기 지원
+let __navInternal=false;
+function parseHashRoute(){
+  const h=(location.hash||'').replace(/^#\/?/,'');
+  if(!h)return {page:null,sub:null};
+  const parts=h.split('/');
+  return {page:parts[0]||null,sub:parts[1]||null};
+}
+window.addEventListener('popstate',(e)=>{
+  // 로그인 상태 아니면 무시
+  if(!CURRENT)return;
+  let page='home',sub=null;
+  if(e.state&&e.state.page){page=e.state.page;sub=e.state.sub}
+  else{const r=parseHashRoute();page=r.page||'home';sub=r.sub}
+  __navInternal=true;
+  try{navigateTo(page,sub)}finally{__navInternal=false}
+});
 function navigateTo(page,sub){
+  // 히스토리에 push (popstate에서 호출된 경우 skip)
+  if(!__navInternal){
+    try{
+      const url='#/'+page+(sub?'/'+sub:'');
+      const state={page,sub};
+      if(history.state&&history.state.page===page&&history.state.sub===sub){
+        // 동일 페이지 재진입: replaceState로 중복 방지
+        history.replaceState(state,'',url);
+      }else{
+        history.pushState(state,'',url);
+      }
+    }catch{}
+  }
   if(isMobileView())closeMobileSidebar();
   updateMobileShell(page);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
