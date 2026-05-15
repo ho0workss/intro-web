@@ -63,7 +63,8 @@ function enterDashboard(){
   renderAnnouncements();renderNotifications();renderHomeLeave();renderHomePending();
   renderLeaveData();renderPastLeaves();initPartnerTables();initAiModels();renderRequests();renderRoles();renderMembers();renderDeptRole();renderPartnerMgmt();
   renderAds();renderEvents();renderDesign();renderEcommerce();loadProfileForm();
-  updateMessengerNavBadge();
+  updateMessengerNavBadge();renderMeetings();startMeetingAlarmChecker();
+  setTimeout(()=>{if(window.Sync?.isEnabled&&typeof selectRoom==='function')selectRoom(currentRoom)},500);
   setTimeout(()=>showToast('👋','환영합니다',CURRENT.name+'님'),200);
 }
 // ========== 회원가입 신청 (로그인 화면) ==========
@@ -136,7 +137,8 @@ function navigateTo(page,sub){
   document.querySelector(`[data-submenu="${page}"]`)?.classList.remove('hidden');
   if(sub)navigateSub(page,sub);
   document.getElementById('notifDropdown').classList.add('hidden');
-  if(page==='messenger'){renderRoomList();loadMessages();}
+  if(page==='messenger'){renderRoomList();loadMessages();if(window.Sync?.isEnabled&&typeof selectRoom==='function')selectRoom(currentRoom);}
+  if(page==='meetings')renderMeetings();
   if(page==='leave'){renderLeaveData();renderPastLeaves();}
   if(page==='chatgpt')renderAiList();
   if(page==='ads')renderAds();
@@ -149,6 +151,10 @@ function navigateTo(page,sub){
     refreshUserUI();renderPartnerFilter();
   }
   window.scrollTo(0,0);
+  document.documentElement.scrollTop=0;
+  document.body.scrollTop=0;
+  const ma=document.getElementById('mainArea');if(ma)ma.scrollTop=0;
+  requestAnimationFrame(()=>{window.scrollTo(0,0);document.documentElement.scrollTop=0});
 }
 function navigateSub(page,sub){
   document.querySelectorAll(`#page-${page} .sub-page`).forEach(p=>p.classList.remove('active'));
@@ -1760,6 +1766,147 @@ function renderPastLeaves(){
   const tf=typeSel.value;if(tf&&tf!=='all')leaves=leaves.filter(l=>l.type===tf);
   if(leaves.length===0){body.innerHTML='<tr><td colspan="6" class="text-center text-gray-400 py-4">조건에 맞는 휴가 내역이 없습니다.</td></tr>';return}
   body.innerHTML=leaves.map((l,i)=>`<tr><td class="sheet-row-num">${i+1}</td><td>${l.name}</td><td><span class="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700">${l.type}</span></td><td>${l.start} ~ ${l.end}</td><td>${l.cost===0?'미차감':'-'+l.cost+'일'}</td><td class="text-xs text-gray-500">${escapeHtml(l.reason||'-')}</td></tr>`).join('');
+}
+
+// ========== 회의 ==========
+function getMeetings(){return ST.get('meetings',[])}
+function saveMeetings(m){ST.set('meetings',m)}
+function meetingStartTs(m){return new Date(m.date+'T'+m.time+':00').getTime()}
+function renderMeetings(){
+  const list=document.getElementById('meetingsList');if(!list)return;
+  const meetings=getMeetings().slice().sort((a,b)=>meetingStartTs(a)-meetingStartTs(b));
+  const legacy=document.getElementById('meetingsLegacy');
+  if(meetings.length===0){
+    list.innerHTML='<div class="col-span-full border border-dashed border-gray-300 rounded-lg p-8 text-center text-gray-400 text-sm">생성된 회의가 없습니다. 우측 상단의 "+ 회의 생성" 버튼을 눌러주세요.</div>';
+    if(legacy)legacy.style.display='';
+    return;
+  }
+  if(legacy)legacy.style.display='none';
+  const now=Date.now();
+  list.innerHTML=meetings.map(m=>{
+    const ts=meetingStartTs(m);
+    const status=ts<now-3600000?'종료':ts<now?'진행중':'예정';
+    const sc=status==='예정'?'bg-blue-50 text-blue-700':status==='진행중'?'bg-green-50 text-green-700':'bg-gray-100 text-gray-500';
+    const users=getUsers();
+    const names=(m.attendees||[]).map(u=>users[u]?.name||u).slice(0,4);
+    const more=(m.attendees||[]).length>4?` 외 ${(m.attendees||[]).length-4}명`:'';
+    const isAttendee=(m.attendees||[]).includes(CURRENT.username);
+    const canDelete=m.creator===CURRENT.username||CURRENT.role==='admin';
+    return `<div class="border border-gray-200 rounded-lg p-4 hover:shadow-md cursor-pointer relative" onclick="navigateTo('meeting-detail')">
+      <div class="flex items-start justify-between gap-2 mb-2">
+        <span class="text-xs ${sc} px-2 py-0.5 rounded-full">${status}</span>
+        ${canDelete?`<button onclick="event.stopPropagation();deleteMeeting(${m.id})" class="text-xs text-red-400 hover:text-red-600">✕</button>`:''}
+      </div>
+      <h3 class="font-bold mt-1 mb-1">${escapeHtml(m.title)}${isAttendee?' <span class="text-xs text-amber-500">★</span>':''}</h3>
+      <p class="text-xs text-gray-500">📅 ${m.date.substring(5)} ${m.time}${m.location?' · 📍 '+escapeHtml(m.location):''}</p>
+      <p class="text-xs text-gray-400 mt-1">👥 ${names.join(', ')}${more}</p>
+    </div>`;
+  }).join('');
+}
+function openCreateMeetingModal(){
+  document.getElementById('meetingTitle').value='';
+  document.getElementById('meetingLocation').value='';
+  const today=new Date();
+  const yyyy=today.getFullYear(),mm=String(today.getMonth()+1).padStart(2,'0'),dd=String(today.getDate()).padStart(2,'0');
+  document.getElementById('meetingDate').value=`${yyyy}-${mm}-${dd}`;
+  document.getElementById('meetingTime').value='10:00';
+  const users=getUsers();
+  document.getElementById('meetingAttendeesList').innerHTML=Object.entries(users).map(([k,u])=>`<label class="flex items-center gap-2 px-2 py-1 hover-bg rounded text-sm cursor-pointer"><input type="checkbox" class="meetingAttendeeChk w-4 h-4 accent-black" value="${k}" ${k===CURRENT.username?'checked disabled':''} /><span>${escapeHtml(u.name)} <span class="text-xs text-gray-400">· ${escapeHtml(u.dept)}</span></span></label>`).join('');
+  openModal('createMeetingModal');
+}
+function submitMeeting(){
+  const title=document.getElementById('meetingTitle').value.trim();
+  const date=document.getElementById('meetingDate').value;
+  const time=document.getElementById('meetingTime').value;
+  const location=document.getElementById('meetingLocation').value.trim();
+  if(!title||!date||!time){alert('제목, 날짜, 시간을 입력하세요');return}
+  const attendees=Array.from(document.querySelectorAll('.meetingAttendeeChk:checked')).map(c=>c.value);
+  if(!attendees.includes(CURRENT.username))attendees.unshift(CURRENT.username);
+  const meeting={id:Date.now(),title,date,time,location,attendees,creator:CURRENT.username,createdAt:new Date().toISOString(),alerted10:false,alertedInvite:[CURRENT.username]};
+  const meetings=getMeetings();meetings.push(meeting);saveMeetings(meetings);
+  // 생성자 본인의 알림 로그
+  const users=getUsers();
+  const inviteeNames=attendees.filter(u=>u!==CURRENT.username).map(u=>users[u]?.name||u);
+  if(inviteeNames.length>0)addNotif({type:'meeting-invite',icon:'📅',title:'회의 생성',content:`${title} · ${date} ${time} · 초대: ${inviteeNames.join(', ')}`,target:'meetings'});
+  closeModal('createMeetingModal');renderMeetings();
+  showToast('📅','회의 생성',title+' · '+attendees.length+'명 초대');
+}
+function deleteMeeting(id){
+  if(!confirm('회의를 삭제하시겠습니까?'))return;
+  const m=getMeetings().find(x=>x.id===id);if(!m)return;
+  if(m.creator!==CURRENT.username&&CURRENT.role!=='admin'){alert('삭제 권한이 없습니다');return}
+  saveMeetings(getMeetings().filter(x=>x.id!==id));
+  renderMeetings();showToast('🗑️','회의 삭제',m.title);
+}
+let meetingAlarmTimer=null;
+function startMeetingAlarmChecker(){
+  if(meetingAlarmTimer)clearInterval(meetingAlarmTimer);
+  const check=()=>{
+    if(!CURRENT)return;
+    const now=Date.now();
+    const meetings=getMeetings();let dirty=false;
+    meetings.forEach(m=>{
+      if(!(m.attendees||[]).includes(CURRENT.username))return;
+      // 1차 알림: 참석자가 처음 보는 회의 (자기 사용자명이 alertedInvite에 없을 때)
+      if(!m.alertedInvite)m.alertedInvite=[m.creator];
+      if(!m.alertedInvite.includes(CURRENT.username)){
+        m.alertedInvite.push(CURRENT.username);dirty=true;
+        const users=getUsers();const creator=users[m.creator]?.name||m.creator;
+        addNotif({type:'meeting-invite',icon:'📅',title:'회의 초대',content:`${creator}님이 회의에 초대: ${m.title} · ${m.date} ${m.time}`,target:'meetings'});
+        showToast('📅','회의 초대',m.title);
+      }
+      // 10분 전 팝업 알람
+      if(m.alerted10)return;
+      const diff=meetingStartTs(m)-now;
+      if(diff>0&&diff<=10*60*1000){
+        m.alerted10=true;dirty=true;
+        const mins=Math.max(1,Math.round(diff/60000));
+        showToast('⏰','회의 시작 임박',`${m.title} · ${mins}분 후 시작`);
+        addNotif({type:'meeting-alarm',icon:'⏰',title:'회의 시작 10분 전',content:`${m.title} · ${m.time}${m.location?' @ '+m.location:''}`,target:'meetings'});
+        try{if(typeof Notification!=='undefined'&&Notification.permission==='granted'){new Notification('회의 시작 임박: '+m.title,{body:`${mins}분 후 시작${m.location?' · '+m.location:''}`})}}catch{}
+      }
+    });
+    if(dirty)saveMeetings(meetings);
+  };
+  check();
+  meetingAlarmTimer=setInterval(check,30000);
+  try{if(typeof Notification!=='undefined'&&Notification.permission==='default')Notification.requestPermission()}catch{}
+}
+
+// ========== 멤버 생성 ==========
+function openCreateMemberModal(){
+  document.getElementById('newMemberName').value='';
+  document.getElementById('newMemberUsername').value='';
+  document.getElementById('newMemberPw').value='1234';
+  const today=new Date();const yyyy=today.getFullYear(),mm=String(today.getMonth()+1).padStart(2,'0'),dd=String(today.getDate()).padStart(2,'0');
+  document.getElementById('newMemberHireDate').value=`${yyyy}-${mm}-${dd}`;
+  document.getElementById('newMemberLeave').value='15';
+  const depts=getDepartments();
+  document.getElementById('newMemberDept').innerHTML=depts.map(d=>`<option value="${escapeHtml(d.name)}">${escapeHtml(d.name)}</option>`).join('');
+  const roles=getRoles();
+  document.getElementById('newMemberRole').innerHTML=roles.map(r=>`<option value="${r.id}" ${r.id==='member'?'selected':''}>${escapeHtml(r.name)}</option>`).join('');
+  const partners=getPartners();
+  document.getElementById('newMemberPartnersList').innerHTML=partners.length===0?'<p class="text-xs text-gray-400 text-center py-2">등록된 거래처 없음</p>':partners.map(p=>`<label class="flex items-center gap-2 px-2 py-1 hover-bg rounded text-xs cursor-pointer"><input type="checkbox" class="newMemberPartnerChk w-4 h-4 accent-black" value="${escapeHtml(p.name)}" /><span>${escapeHtml(p.name)}</span></label>`).join('');
+  openModal('createMemberModal');
+}
+function submitNewMember(){
+  const name=document.getElementById('newMemberName').value.trim();
+  const username=document.getElementById('newMemberUsername').value.trim();
+  const pw=document.getElementById('newMemberPw').value;
+  const dept=document.getElementById('newMemberDept').value;
+  const role=document.getElementById('newMemberRole').value;
+  const hireDate=document.getElementById('newMemberHireDate').value;
+  const totalLeave=parseInt(document.getElementById('newMemberLeave').value)||0;
+  const partners=Array.from(document.querySelectorAll('.newMemberPartnerChk:checked')).map(c=>c.value);
+  if(!name||!username||!pw){alert('이름, 아이디, 비밀번호를 입력하세요');return}
+  if(!/^[a-zA-Z0-9_]+$/.test(username)){alert('아이디는 영문, 숫자, _만 사용 가능합니다');return}
+  const users=getUsers();
+  if(users[username]){alert('이미 존재하는 아이디입니다');return}
+  users[username]={name,dept,role,pw,hireDate,totalLeave,usedLeave:0,partners};
+  saveUsers(users);
+  closeModal('createMemberModal');
+  renderMembers();renderDeptRole();
+  showToast('👤','멤버 생성',name+' (@'+username+')');
 }
 
 // ========== Helpers ==========
