@@ -169,17 +169,21 @@ function navigateTo(page,sub){
     if(CURRENT){const fresh=getUsers()[CURRENT.username];if(fresh){CURRENT.partners=fresh.partners||[];ST.set('currentUser',CURRENT)}}
     refreshUserUI();renderPartnerFilter();
   }
+  // ★ 활성 페이지를 mainArea의 첫 자식으로 이동시켜 DOM 순서 leftover 공간 문제 차단
+  const ap=document.getElementById('page-'+page);
+  const ma=document.getElementById('mainArea');
+  if(ap&&ma&&ma.firstElementChild!==ap){
+    try{ma.insertBefore(ap,ma.firstChild)}catch{}
+  }
   const resetScroll=()=>{
     try{window.scrollTo(0,0)}catch{}
     document.documentElement.scrollTop=0;
     document.body.scrollTop=0;
-    const ma=document.getElementById('mainArea');if(ma)ma.scrollTop=0;
+    if(ma)ma.scrollTop=0;
     const dash=document.getElementById('dashboard');if(dash)dash.scrollTop=0;
-    // 활성 페이지 강제 정렬: getBoundingClientRect 기반으로 정확히 0으로 보정
-    const ap=document.getElementById('page-'+page);
     if(ap){
       const rect=ap.getBoundingClientRect();
-      if(rect.top!==0)window.scrollBy(0,rect.top);
+      if(rect.top<-1||rect.top>1)window.scrollBy(0,rect.top);
     }
   };
   resetScroll();
@@ -187,6 +191,21 @@ function navigateTo(page,sub){
   setTimeout(resetScroll,30);
   setTimeout(resetScroll,100);
   setTimeout(resetScroll,300);
+  // 진단: 콘솔에 활성 페이지 위치 출력 (사용자가 캡처해서 보낼 수 있도록)
+  setTimeout(()=>{
+    if(!ap)return;
+    const r=ap.getBoundingClientRect();
+    const ma=document.getElementById('mainArea');
+    const mr=ma?ma.getBoundingClientRect():null;
+    console.log(`[INTRO Layout][${page}]`,JSON.stringify({
+      scrollY:window.scrollY,
+      docH:document.documentElement.scrollHeight,
+      vpH:window.innerHeight,
+      pageTop:Math.round(r.top),pageH:Math.round(r.height),
+      mainTop:mr?Math.round(mr.top):null,mainH:mr?Math.round(mr.height):null,
+      bodyH:Math.round(document.body.getBoundingClientRect().height)
+    }));
+  },400);
 }
 function navigateSub(page,sub){
   document.querySelectorAll(`#page-${page} .sub-page`).forEach(p=>p.classList.remove('active'));
