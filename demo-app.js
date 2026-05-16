@@ -1800,20 +1800,37 @@ function saveAiSettings(){const def=document.getElementById('defaultAiModel').va
 
 // ========== 광고 ==========
 function getAds(){return ST.get('ads',[
-  {id:1,name:'네이버 쇼핑 광고',platform:'네이버',start:'2026-05-01',end:'2026-05-31',budget:500000,spent:380000,impr:45230,clicks:1823,status:'진행중'},
-  {id:2,name:'카카오 디스플레이',platform:'카카오',start:'2026-04-01',end:'2026-04-30',budget:300000,spent:300000,impr:32100,clicks:842,status:'종료'},
-  {id:3,name:'인스타그램 피드',platform:'인스타그램',start:'2026-05-10',end:'2026-05-25',budget:200000,spent:120000,impr:18750,clicks:634,status:'진행중'},
-  {id:4,name:'구글 검색 광고',platform:'구글',start:'2026-06-01',end:'2026-06-30',budget:400000,spent:0,impr:0,clicks:0,status:'예정'}
+  {id:1,name:'쇼핑검색 - 메인',platform:'네이버 SA',account:'A몰 SA계정',start:'2026-05-01',end:'2026-05-31',budget:500000,spent:380000,impr:45230,clicks:1823,status:'진행중'},
+  {id:2,name:'쇼핑검색 - 서브',platform:'네이버 SA',account:'B몰 SA계정',start:'2026-05-01',end:'2026-05-31',budget:300000,spent:210000,impr:28100,clicks:910,status:'진행중'},
+  {id:3,name:'GFA 브랜딩',platform:'네이버 GFA',account:'A몰 GFA',start:'2026-05-01',end:'2026-05-31',budget:600000,spent:412000,impr:128400,clicks:1650,status:'진행중'},
+  {id:4,name:'GFA 리타겟팅',platform:'네이버 GFA',account:'B몰 GFA',start:'2026-05-10',end:'2026-05-25',budget:250000,spent:180000,impr:52300,clicks:870,status:'진행중'},
+  {id:5,name:'카카오 디스플레이',platform:'카카오',account:'본사 모먼트',start:'2026-04-01',end:'2026-04-30',budget:300000,spent:300000,impr:32100,clicks:842,status:'종료'},
+  {id:6,name:'인스타그램 피드',platform:'인스타그램',account:'Meta 광고계정#1',start:'2026-05-10',end:'2026-05-25',budget:200000,spent:120000,impr:18750,clicks:634,status:'진행중'},
+  {id:7,name:'페이스북 리타겟',platform:'페이스북',account:'Meta 광고계정#2',start:'2026-05-12',end:'2026-05-26',budget:150000,spent:88000,impr:14200,clicks:520,status:'진행중'},
+  {id:8,name:'구글 검색 광고',platform:'구글',account:'Google Ads 본사',start:'2026-06-01',end:'2026-06-30',budget:400000,spent:0,impr:0,clicks:0,status:'예정'}
 ])}
 function saveAds(a){ST.set('ads',a)}
 function renderAds(){
   const all=getAds();
-  // 플랫폼 필터 적용 (값은 platform key, 표시는 한글 이름)
+  // 플랫폼 매핑: 표시명 → API 키
+  const PLATFORM_KEYS={'네이버 SA':'naver_sa','네이버 GFA':'naver_gfa','네이버':'naver_sa','카카오':'kakao_moment','구글':'google_ads','인스타그램':'meta_ads','페이스북':'meta_ads'};
   const pf=document.getElementById('adsPlatformFilter')?.value||'all';
-  const PLATFORM_KEYS={'네이버':'naver_sa','카카오':'kakao_moment','구글':'google_ads','인스타그램':'meta_ads','페이스북':'meta_ads'};
-  const ads=pf==='all'?all:all.filter(a=>(PLATFORM_KEYS[a.platform]||'etc')===pf);
+  const af=document.getElementById('adsAccountFilter')?.value||'all';
+  // 계정 필터 옵션 갱신
+  const accSel=document.getElementById('adsAccountFilter');
+  if(accSel){
+    const candidates=pf==='all'?all:all.filter(a=>(PLATFORM_KEYS[a.platform]||'etc')===pf);
+    const fromAds=[...new Set(candidates.map(a=>`${PLATFORM_KEYS[a.platform]||'etc'}|${a.account||'(기본)'}`))];
+    const fromSettings=getActiveAccounts('ads').filter(a=>pf==='all'||a.platformKey===pf).map(a=>`${a.platformKey}|${a.label}`);
+    const allAcc=[...new Set([...fromAds,...fromSettings])].sort();
+    const prev=accSel.value;
+    accSel.innerHTML='<option value="all">전체 계정</option>'+allAcc.map(k=>{const [p,l]=k.split('|');const pname={naver_sa:'네이버 SA',naver_gfa:'네이버 GFA',kakao_moment:'카카오',google_ads:'구글',meta_ads:'Meta'}[p]||p;return `<option value="${escapeHtml(k)}">${pname} · ${escapeHtml(l)}</option>`}).join('');
+    if([...accSel.options].some(o=>o.value===prev))accSel.value=prev;
+  }
+  let ads=pf==='all'?all:all.filter(a=>(PLATFORM_KEYS[a.platform]||'etc')===pf);
+  if(af!=='all'){const [afp,afl]=af.split('|');ads=ads.filter(a=>(PLATFORM_KEYS[a.platform]||'etc')===afp&&(a.account||'(기본)')===afl);}
   const body=document.getElementById('adsBody');if(!body)return;
-  if(ads.length===0){body.innerHTML='<tr><td colspan="10" class="text-center text-gray-400 py-4">선택한 플랫폼의 캠페인이 없습니다.</td></tr>';
+  if(ads.length===0){body.innerHTML='<tr><td colspan="11" class="text-center text-gray-400 py-4">조건에 맞는 캠페인이 없습니다.</td></tr>';
     document.getElementById('adsBudget')&&(document.getElementById('adsBudget').textContent='₩0');
     document.getElementById('adsSpent')&&(document.getElementById('adsSpent').textContent='₩0');
     document.getElementById('adsImpr')&&(document.getElementById('adsImpr').textContent='0');
@@ -1823,7 +1840,7 @@ function renderAds(){
   body.innerHTML=ads.map((a,i)=>{
     const ctr=a.impr>0?((a.clicks/a.impr)*100).toFixed(2):'0';
     const statusColor=a.status==='진행중'?'bg-green-50 text-green-700':a.status==='예정'?'bg-blue-50 text-blue-700':'bg-gray-100 text-gray-500';
-    return `<tr><td class="sheet-row-num"><input type="checkbox" class="adChk" data-id="${a.id}" /></td><td contenteditable oninput="updAd(${a.id},'name',this.textContent)">${a.name}</td><td contenteditable oninput="updAd(${a.id},'platform',this.textContent)">${a.platform}</td><td>${a.start} ~ ${a.end}</td><td contenteditable oninput="updAd(${a.id},'budget',this.textContent)">₩${a.budget.toLocaleString()}</td><td contenteditable oninput="updAd(${a.id},'spent',this.textContent)">₩${a.spent.toLocaleString()}</td><td contenteditable oninput="updAd(${a.id},'impr',this.textContent)">${a.impr.toLocaleString()}</td><td contenteditable oninput="updAd(${a.id},'clicks',this.textContent)">${a.clicks.toLocaleString()}</td><td class="text-blue-600 font-semibold">${ctr}%</td><td><span class="text-xs px-2 py-0.5 rounded ${statusColor}">${a.status}</span></td></tr>`;
+    return `<tr><td class="sheet-row-num"><input type="checkbox" class="adChk" data-id="${a.id}" /></td><td contenteditable oninput="updAd(${a.id},'name',this.textContent)">${a.name}</td><td contenteditable oninput="updAd(${a.id},'platform',this.textContent)">${a.platform}</td><td contenteditable oninput="updAd(${a.id},'account',this.textContent)" class="text-xs">${escapeHtml(a.account||'(기본)')}</td><td>${a.start} ~ ${a.end}</td><td contenteditable oninput="updAd(${a.id},'budget',this.textContent)">₩${a.budget.toLocaleString()}</td><td contenteditable oninput="updAd(${a.id},'spent',this.textContent)">₩${a.spent.toLocaleString()}</td><td contenteditable oninput="updAd(${a.id},'impr',this.textContent)">${a.impr.toLocaleString()}</td><td contenteditable oninput="updAd(${a.id},'clicks',this.textContent)">${a.clicks.toLocaleString()}</td><td class="text-blue-600 font-semibold">${ctr}%</td><td><span class="text-xs px-2 py-0.5 rounded ${statusColor}">${a.status}</span></td></tr>`;
   }).join('');
   // 요약 카드
   const totalBudget=ads.reduce((s,a)=>s+a.budget,0);
@@ -1836,7 +1853,7 @@ function renderAds(){
   document.getElementById('adsImpr')&&(document.getElementById('adsImpr').textContent=totalImpr.toLocaleString());
   document.getElementById('adsClicks')&&(document.getElementById('adsClicks').textContent=totalClicks.toLocaleString()+' · '+avgCtr+'%');
 }
-function addAdCampaign(){const ads=getAds();ads.push({id:Date.now(),name:'새 캠페인',platform:'네이버',start:new Date().toISOString().split('T')[0],end:new Date().toISOString().split('T')[0],budget:0,spent:0,impr:0,clicks:0,status:'예정'});saveAds(ads);renderAds();showToast('+','캠페인 추가','')}
+function addAdCampaign(){const ads=getAds();ads.push({id:Date.now(),name:'새 캠페인',platform:'네이버 SA',account:'(기본)',start:new Date().toISOString().split('T')[0],end:new Date().toISOString().split('T')[0],budget:0,spent:0,impr:0,clicks:0,status:'예정'});saveAds(ads);renderAds();showToast('+','캠페인 추가','')}
 function deleteSelectedAds(){const ids=Array.from(document.querySelectorAll('.adChk:checked')).map(c=>parseInt(c.dataset.id));if(ids.length===0){alert('선택하세요');return}if(!confirm(ids.length+'개 삭제?'))return;saveAds(getAds().filter(a=>!ids.includes(a.id)));renderAds();showToast('🗑️','삭제됨','')}
 function toggleAllAds(c){document.querySelectorAll('.adChk').forEach(x=>x.checked=c)}
 function updAd(id,k,v){const ads=getAds();const a=ads.find(x=>x.id===id);if(a){if(['budget','spent','impr','clicks'].includes(k))a[k]=parseInt(v.replace(/[^\d]/g,''))||0;else a[k]=v;saveAds(ads)}}
@@ -1927,12 +1944,14 @@ const EC_STATUS_LABELS={paid:{l:'결제완료',c:'bg-blue-50 text-blue-700'},pre
 const COURIER_LIST=['CJ대한통운','한진택배','롯데택배','우체국택배','로젠택배','쿠팡로지스틱스','한국통운'];
 function getEcOrders(){
   return ST.get('ec_orders',[
-    {id:1,platform:'naver',orderNo:'2026-05-16-N0001',orderDate:'2026-05-16',product:'선크림 SPF50+',qty:2,customer:'홍길동',addr:'서울시 강남구 테헤란로 123',phone:'010-1234-5678',status:'preparing',courier:'',tracking:''},
-    {id:2,platform:'coupang',orderNo:'C-26051600002',orderDate:'2026-05-16',product:'클렌징 폼',qty:1,customer:'김영희',addr:'경기도 성남시 분당구 정자동',phone:'010-2345-6789',status:'paid',courier:'',tracking:''},
-    {id:3,platform:'cafe24',orderNo:'CF26051500003',orderDate:'2026-05-15',product:'토너 세트',qty:1,customer:'이철수',addr:'부산시 해운대구 마린시티1로',phone:'010-3456-7890',status:'shipped',courier:'CJ대한통운',tracking:'1234567890'},
-    {id:4,platform:'11st',orderNo:'11ST-26051500004',orderDate:'2026-05-15',product:'프리미엄 보습 크림',qty:3,customer:'박지영',addr:'대구시 수성구 동대구로',phone:'010-4567-8901',status:'delivered',courier:'한진택배',tracking:'5566778899'},
-    {id:5,platform:'gmarket',orderNo:'GM26051600005',orderDate:'2026-05-16',product:'스킨케어 세트',qty:1,customer:'최민수',addr:'인천시 연수구 송도동',phone:'010-5678-9012',status:'paid',courier:'',tracking:''},
-    {id:6,platform:'naver',orderNo:'2026-05-16-N0006',orderDate:'2026-05-16',product:'선크림 SPF50+',qty:1,customer:'정수연',addr:'광주시 서구 상무대로',phone:'010-6789-0123',status:'preparing',courier:'',tracking:''}
+    {id:1,platform:'naver',accountLabel:'A몰 메인',orderNo:'2026-05-16-N0001',orderDate:'2026-05-16',product:'선크림 SPF50+',qty:2,customer:'홍길동',addr:'서울시 강남구 테헤란로 123',phone:'010-1234-5678',status:'preparing',courier:'',tracking:''},
+    {id:2,platform:'coupang',accountLabel:'본사 계정',orderNo:'C-26051600002',orderDate:'2026-05-16',product:'클렌징 폼',qty:1,customer:'김영희',addr:'경기도 성남시 분당구 정자동',phone:'010-2345-6789',status:'paid',courier:'',tracking:''},
+    {id:3,platform:'cafe24',accountLabel:'공식몰',orderNo:'CF26051500003',orderDate:'2026-05-15',product:'토너 세트',qty:1,customer:'이철수',addr:'부산시 해운대구 마린시티1로',phone:'010-3456-7890',status:'shipped',courier:'CJ대한통운',tracking:'1234567890'},
+    {id:4,platform:'11st',accountLabel:'기본 계정',orderNo:'11ST-26051500004',orderDate:'2026-05-15',product:'프리미엄 보습 크림',qty:3,customer:'박지영',addr:'대구시 수성구 동대구로',phone:'010-4567-8901',status:'delivered',courier:'한진택배',tracking:'5566778899'},
+    {id:5,platform:'gmarket',accountLabel:'본사 ESM',orderNo:'GM26051600005',orderDate:'2026-05-16',product:'스킨케어 세트',qty:1,customer:'최민수',addr:'인천시 연수구 송도동',phone:'010-5678-9012',status:'paid',courier:'',tracking:''},
+    {id:6,platform:'naver',accountLabel:'B몰 서브',orderNo:'2026-05-16-N0006',orderDate:'2026-05-16',product:'선크림 SPF50+',qty:1,customer:'정수연',addr:'광주시 서구 상무대로',phone:'010-6789-0123',status:'preparing',courier:'',tracking:''},
+    {id:7,platform:'naver',accountLabel:'C몰 (할인전용)',orderNo:'2026-05-16-N0007',orderDate:'2026-05-16',product:'스킨케어 세트 (특가)',qty:2,customer:'장미라',addr:'세종시 가람로',phone:'010-7890-1234',status:'paid',courier:'',tracking:''},
+    {id:8,platform:'coupang',accountLabel:'자회사 계정',orderNo:'C-26051600008',orderDate:'2026-05-16',product:'클렌징 폼',qty:5,customer:'한지원',addr:'서울시 마포구 양화로',phone:'010-8901-2345',status:'preparing',courier:'',tracking:''}
   ]);
 }
 function saveEcOrders(d){ST.set('ec_orders',d)}
@@ -1948,9 +1967,21 @@ function renderEcOrders(){
   document.getElementById('ecOrdersDelivered').textContent=cnt.delivered;
   // 필터
   const pf=document.getElementById('ecOrdersPlatformFilter')?.value||'all';
+  const af=document.getElementById('ecOrdersAccountFilter')?.value||'all';
   const sf=document.getElementById('ecOrdersStatusFilter')?.value||'all';
+  // 계정 필터 옵션 갱신 (주문 + 등록 계정 합집합)
+  const accSel=document.getElementById('ecOrdersAccountFilter');
+  if(accSel){
+    const fromOrders=[...new Set(orders.filter(o=>pf==='all'||o.platform===pf).map(o=>`${o.platform}|${o.accountLabel||'(기본)'}`))];
+    const fromSettings=getActiveAccounts('ecommerce').filter(a=>pf==='all'||a.platformKey===pf).map(a=>`${a.platformKey}|${a.label}`);
+    const allAcc=[...new Set([...fromOrders,...fromSettings])].sort();
+    const prev=accSel.value;
+    accSel.innerHTML='<option value="all">전체 계정</option>'+allAcc.map(k=>{const [p,l]=k.split('|');return `<option value="${escapeHtml(k)}">${EC_PLATFORM_NAMES[p]||p} · ${escapeHtml(l)}</option>`}).join('');
+    if([...accSel.options].some(o=>o.value===prev))accSel.value=prev;
+  }
   let list=orders;
   if(pf!=='all')list=list.filter(o=>o.platform===pf);
+  if(af!=='all'){const [afp,afl]=af.split('|');list=list.filter(o=>o.platform===afp&&(o.accountLabel||'(기본)')===afl);}
   if(sf!=='all')list=list.filter(o=>o.status===sf);
   if(list.length===0){body.innerHTML='<tr><td colspan="12" class="text-center text-gray-400 py-4">조건에 맞는 주문이 없습니다.</td></tr>';return}
   const courierOpts=COURIER_LIST.map(c=>`<option value="${c}">${c}</option>`).join('');
@@ -1958,7 +1989,7 @@ function renderEcOrders(){
     const st=EC_STATUS_LABELS[o.status]||{l:o.status,c:'bg-gray-100'};
     return `<tr>
       <td class="sheet-row-num"><input type="checkbox" class="ecOrderChk" data-id="${o.id}" /></td>
-      <td><span class="text-xs px-2 py-0.5 rounded bg-gray-100">${EC_PLATFORM_NAMES[o.platform]||o.platform}</span></td>
+      <td><span class="text-xs px-2 py-0.5 rounded bg-gray-100">${EC_PLATFORM_NAMES[o.platform]||o.platform}</span><div class="text-[10px] text-gray-500 mt-0.5">${escapeHtml(o.accountLabel||'(기본)')}</div></td>
       <td class="font-mono text-xs">${escapeHtml(o.orderNo)}</td>
       <td>${o.orderDate}</td>
       <td>${escapeHtml(o.product)}</td>
@@ -2034,14 +2065,23 @@ function printEcWaybills(){
 }
 async function syncEcOrders(){
   // 실제 API 연동 자리. 현재는 목업.
-  showToast('🔄','동기화 시뮬레이션','API 키 등록 시 실연동 가능');
-  // 새 목업 주문 1건 랜덤 추가
+  // 활성화된 이커머스 계정이 있으면 그 중 랜덤하게 1건 가져오는 형태로 시뮬레이션
+  const activeAccs=getActiveAccounts('ecommerce').filter(a=>a.enabled);
   const d=getEcOrders();
-  const platforms=Object.keys(EC_PLATFORM_NAMES);
-  const platform=platforms[Math.floor(Math.random()*platforms.length)];
   const today=new Date();const yy=String(today.getFullYear()).slice(-2);const mm=String(today.getMonth()+1).padStart(2,'0');const dd=String(today.getDate()).padStart(2,'0');
+  let platform,accountLabel;
+  if(activeAccs.length>0){
+    const picked=activeAccs[Math.floor(Math.random()*activeAccs.length)];
+    platform=picked.platformKey;accountLabel=picked.label;
+    showToast('🔄',`${EC_PLATFORM_NAMES[platform]||platform} 동기화`,picked.label+' · 신규 주문 1건');
+  }else{
+    const platforms=Object.keys(EC_PLATFORM_NAMES);
+    platform=platforms[Math.floor(Math.random()*platforms.length)];
+    accountLabel='(미등록 계정)';
+    showToast('🔄','동기화 시뮬레이션','설정 ▸ API 연동에서 계정 추가 시 실연동');
+  }
   d.unshift({
-    id:Date.now(),platform,orderNo:`MOCK-${yy}${mm}${dd}-${Math.floor(Math.random()*9000+1000)}`,
+    id:Date.now(),platform,accountLabel,orderNo:`MOCK-${yy}${mm}${dd}-${Math.floor(Math.random()*9000+1000)}`,
     orderDate:`20${yy}-${mm}-${dd}`,product:'신규 주문 상품',qty:Math.floor(Math.random()*3)+1,
     customer:'신규고객'+Math.floor(Math.random()*100),addr:'주소 정보',phone:'010-0000-0000',
     status:'paid',courier:'',tracking:''
@@ -2049,36 +2089,91 @@ async function syncEcOrders(){
   saveEcOrders(d);renderEcOrders();
 }
 async function syncAdsPerformance(){
-  showToast('🔄','광고 성과 동기화','API 키 등록 시 실연동 (현재 목업)');
+  const activeAccs=getActiveAccounts('ads').filter(a=>a.enabled);
+  if(activeAccs.length===0){
+    showToast('🔄','광고 성과 동기화','등록된 계정 없음 (설정 ▸ API 연동에서 추가)');
+    return;
+  }
+  // 활성 계정의 캠페인 성과를 시뮬레이션으로 ±5% 변동
+  const ads=getAds();
+  ads.forEach(a=>{
+    if(a.status==='진행중'){
+      a.spent=Math.round(a.spent*(1+(Math.random()*0.1-0.05)));
+      a.impr=Math.round(a.impr*(1+(Math.random()*0.1-0.05)));
+      a.clicks=Math.round(a.clicks*(1+(Math.random()*0.1-0.05)));
+    }
+  });
+  saveAds(ads);renderAds();
+  showToast('🔄','광고 성과 동기화',`${activeAccs.length}개 계정 갱신`);
 }
 
-// ========== 외부 API 연동 설정 (이커머스/광고) ==========
+// ========== 외부 API 연동 설정 (이커머스/광고) - 다중 계정 ==========
 const EXT_API_PROVIDERS=[
-  {id:'naver_store',name:'네이버 스마트스토어',cat:'ecommerce',fields:[{k:'clientId',l:'Client ID'},{k:'clientSecret',l:'Client Secret'}]},
-  {id:'coupang',name:'쿠팡 Wing',cat:'ecommerce',fields:[{k:'accessKey',l:'Access Key'},{k:'secretKey',l:'Secret Key'},{k:'vendorId',l:'Vendor ID'}]},
-  {id:'cafe24',name:'카페24',cat:'ecommerce',fields:[{k:'mallId',l:'Mall ID'},{k:'clientId',l:'Client ID'},{k:'clientSecret',l:'Client Secret'}]},
-  {id:'11st',name:'11번가',cat:'ecommerce',fields:[{k:'apiKey',l:'API Key'}]},
-  {id:'gmarket',name:'G마켓 / 옥션 (ESM)',cat:'ecommerce',fields:[{k:'esmId',l:'ESM ID'},{k:'apiKey',l:'API Key'}]},
-  {id:'naver_sa',name:'네이버 검색광고',cat:'ads',fields:[{k:'apiKey',l:'API Key'},{k:'secretKey',l:'Secret Key'},{k:'customerId',l:'Customer ID'}]},
-  {id:'kakao_moment',name:'카카오 모먼트',cat:'ads',fields:[{k:'apiKey',l:'REST API Key'},{k:'adAccountId',l:'광고계정 ID'}]},
-  {id:'google_ads',name:'Google Ads',cat:'ads',fields:[{k:'developerToken',l:'Developer Token'},{k:'clientId',l:'Client ID'},{k:'clientSecret',l:'Client Secret'},{k:'refreshToken',l:'Refresh Token'}]},
-  {id:'meta_ads',name:'Meta Ads (Facebook/Instagram)',cat:'ads',fields:[{k:'accessToken',l:'Access Token'},{k:'adAccountId',l:'광고계정 ID'}]},
-  {id:'goodsflow',name:'굿스플로 (통합 택배 송장)',cat:'shipping',fields:[{k:'apiKey',l:'API Key'}]},
+  {id:'naver_store',name:'네이버 스마트스토어',cat:'ecommerce',platformKey:'naver',fields:[{k:'clientId',l:'Client ID'},{k:'clientSecret',l:'Client Secret'}]},
+  {id:'coupang',name:'쿠팡 Wing',cat:'ecommerce',platformKey:'coupang',fields:[{k:'accessKey',l:'Access Key'},{k:'secretKey',l:'Secret Key'},{k:'vendorId',l:'Vendor ID'}]},
+  {id:'cafe24',name:'카페24',cat:'ecommerce',platformKey:'cafe24',fields:[{k:'mallId',l:'Mall ID'},{k:'clientId',l:'Client ID'},{k:'clientSecret',l:'Client Secret'}]},
+  {id:'11st',name:'11번가',cat:'ecommerce',platformKey:'11st',fields:[{k:'apiKey',l:'API Key'}]},
+  {id:'gmarket',name:'G마켓 / 옥션 (ESM)',cat:'ecommerce',platformKey:'gmarket',fields:[{k:'esmId',l:'ESM ID'},{k:'apiKey',l:'API Key'}]},
+  {id:'naver_sa',name:'네이버 검색광고 (SA)',cat:'ads',platformKey:'naver_sa',fields:[{k:'apiKey',l:'API Key'},{k:'secretKey',l:'Secret Key'},{k:'customerId',l:'Customer ID'}]},
+  {id:'naver_gfa',name:'네이버 GFA (디스플레이 광고)',cat:'ads',platformKey:'naver_gfa',fields:[{k:'apiKey',l:'API Key'},{k:'secretKey',l:'Secret Key'},{k:'adAccountId',l:'광고계정 ID'}]},
+  {id:'kakao_moment',name:'카카오 모먼트',cat:'ads',platformKey:'kakao_moment',fields:[{k:'apiKey',l:'REST API Key'},{k:'adAccountId',l:'광고계정 ID'}]},
+  {id:'google_ads',name:'Google Ads',cat:'ads',platformKey:'google_ads',fields:[{k:'developerToken',l:'Developer Token'},{k:'clientId',l:'Client ID'},{k:'clientSecret',l:'Client Secret'},{k:'refreshToken',l:'Refresh Token'}]},
+  {id:'meta_ads',name:'Meta Ads (Facebook/Instagram)',cat:'ads',platformKey:'meta_ads',fields:[{k:'accessToken',l:'Access Token'},{k:'adAccountId',l:'광고계정 ID'}]},
+  {id:'goodsflow',name:'굿스플로 (통합 택배 송장)',cat:'shipping',platformKey:'goodsflow',fields:[{k:'apiKey',l:'API Key'}]},
 ];
-function getExtApiSettings(){return ST.get('extApiSettings',{})}
+function getExtApiSettings(){
+  const raw=ST.get('extApiSettings',{});
+  // 구버전 호환: 단일 계정 → accounts 배열로 마이그레이션
+  let migrated=false;
+  EXT_API_PROVIDERS.forEach(p=>{
+    if(!raw[p.id])raw[p.id]={accounts:[]};
+    else if(!Array.isArray(raw[p.id].accounts)){
+      const old=raw[p.id];
+      const hasData=p.fields.some(f=>old[f.k]);
+      raw[p.id]={accounts: hasData ? [{id:p.id+'_1',label:p.name,enabled:!!old.enabled,...Object.fromEntries(p.fields.map(f=>[f.k,old[f.k]||'']))}] : []};
+      migrated=true;
+    }
+  });
+  if(migrated)ST.set('extApiSettings',raw);
+  return raw;
+}
 function saveExtApiSettings(){
   const all=getExtApiSettings();
   EXT_API_PROVIDERS.forEach(p=>{
-    const block=all[p.id]||{};
-    p.fields.forEach(f=>{
-      const el=document.getElementById(`extapi-${p.id}-${f.k}`);
-      if(el)block[f.k]=el.value;
+    const accounts=all[p.id].accounts||[];
+    accounts.forEach(acc=>{
+      const labelEl=document.getElementById(`extapi-${acc.id}-label`);
+      if(labelEl)acc.label=labelEl.value||p.name;
+      acc.enabled=!!document.getElementById(`extapi-${acc.id}-enabled`)?.checked;
+      p.fields.forEach(f=>{
+        const el=document.getElementById(`extapi-${acc.id}-${f.k}`);
+        if(el)acc[f.k]=el.value;
+      });
     });
-    block.enabled=!!document.getElementById(`extapi-${p.id}-enabled`)?.checked;
-    all[p.id]=block;
+    all[p.id].accounts=accounts;
   });
   ST.set('extApiSettings',all);
-  showToast('💾','API 설정 저장','로컬에 저장됨');
+  showToast('💾','API 설정 저장','전체 계정 저장됨');
+}
+function addExtApiAccount(providerId){
+  const all=getExtApiSettings();
+  const p=EXT_API_PROVIDERS.find(x=>x.id===providerId);if(!p)return;
+  const accounts=all[providerId].accounts||[];
+  const newAcc={id:`${providerId}_${Date.now()}`,label:`${p.name} #${accounts.length+1}`,enabled:false};
+  p.fields.forEach(f=>newAcc[f.k]='');
+  accounts.push(newAcc);
+  all[providerId].accounts=accounts;
+  ST.set('extApiSettings',all);
+  renderExtApiSettings();
+  showToast('➕','계정 추가됨','저장 후 동기화 가능');
+}
+function delExtApiAccount(providerId,accountId){
+  if(!confirm('이 계정을 삭제하시겠습니까?'))return;
+  const all=getExtApiSettings();
+  all[providerId].accounts=(all[providerId].accounts||[]).filter(a=>a.id!==accountId);
+  ST.set('extApiSettings',all);
+  renderExtApiSettings();
+  showToast('🗑','계정 삭제됨','');
 }
 function renderExtApiSettings(){
   const list=document.getElementById('extApiList');if(!list)return;
@@ -2091,21 +2186,44 @@ function renderExtApiSettings(){
       <h3 class="text-sm font-bold mb-3">${catNames[cat]||cat}</h3>
       <div class="space-y-3">
         ${ps.map(p=>{
-          const s=settings[p.id]||{};
-          return `<details class="border border-gray-100 rounded p-3" ${s.enabled?'open':''}>
-            <summary class="flex items-center gap-2 cursor-pointer text-sm font-medium">
-              <input type="checkbox" id="extapi-${p.id}-enabled" ${s.enabled?'checked':''} onclick="event.stopPropagation()" class="w-4 h-4 accent-black" />
-              <span>${p.name}</span>
-              <span class="ml-auto text-xs text-gray-400">${s.enabled?'활성':'비활성'}</span>
-            </summary>
-            <div class="mt-3 space-y-2">
-              ${p.fields.map(f=>`<div><label class="block text-xs text-gray-600 mb-1">${f.l}</label><input id="extapi-${p.id}-${f.k}" type="text" value="${escapeHtml(s[f.k]||'')}" placeholder="${f.l} 입력" class="w-full px-3 py-1.5 border border-gray-300 rounded text-xs font-mono bg-white" /></div>`).join('')}
+          const accounts=(settings[p.id]?.accounts)||[];
+          const enabledCnt=accounts.filter(a=>a.enabled).length;
+          return `<div class="border border-gray-100 rounded-lg p-3">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-sm font-medium">${p.name}</span>
+              <span class="text-xs text-gray-400">${accounts.length}개 계정${enabledCnt?` · ${enabledCnt}개 활성`:''}</span>
+              <button onclick="addExtApiAccount('${p.id}')" class="ml-auto text-xs px-2 py-1 bg-black text-white rounded">+ 계정 추가</button>
             </div>
-          </details>`;
+            ${accounts.length===0?'<p class="text-xs text-gray-400 py-2 text-center">등록된 계정이 없습니다. [+ 계정 추가]로 시작하세요.</p>':accounts.map(acc=>`
+              <details class="border border-gray-100 rounded p-2 mb-2 bg-gray-50" ${acc.enabled?'open':''}>
+                <summary class="flex items-center gap-2 cursor-pointer text-xs">
+                  <input type="checkbox" id="extapi-${acc.id}-enabled" ${acc.enabled?'checked':''} onclick="event.stopPropagation()" class="w-3.5 h-3.5 accent-black" />
+                  <strong>${escapeHtml(acc.label||p.name)}</strong>
+                  <span class="ml-auto text-gray-400">${acc.enabled?'활성':'비활성'}</span>
+                  <button onclick="event.preventDefault();event.stopPropagation();delExtApiAccount('${p.id}','${acc.id}')" class="text-red-500 hover:text-red-700" title="삭제">🗑</button>
+                </summary>
+                <div class="mt-2 space-y-2">
+                  <div><label class="block text-xs text-gray-600 mb-1">계정 별칭</label><input id="extapi-${acc.id}-label" type="text" value="${escapeHtml(acc.label||'')}" placeholder="예: A몰 메인스토어" class="w-full px-2 py-1 border border-gray-300 rounded text-xs bg-white" /></div>
+                  ${p.fields.map(f=>`<div><label class="block text-xs text-gray-600 mb-1">${f.l}</label><input id="extapi-${acc.id}-${f.k}" type="text" value="${escapeHtml(acc[f.k]||'')}" placeholder="${f.l} 입력" class="w-full px-2 py-1 border border-gray-300 rounded text-xs font-mono bg-white" /></div>`).join('')}
+                </div>
+              </details>
+            `).join('')}
+          </div>`;
         }).join('')}
       </div>
     </div>
   `).join('');
+}
+// 활성 계정 조회 헬퍼
+function getActiveAccounts(cat){
+  const settings=getExtApiSettings();
+  const result=[];
+  EXT_API_PROVIDERS.filter(p=>!cat||p.cat===cat).forEach(p=>{
+    (settings[p.id]?.accounts||[]).forEach(acc=>{
+      result.push({providerId:p.id,providerName:p.name,platformKey:p.platformKey,accountId:acc.id,label:acc.label||p.name,enabled:!!acc.enabled});
+    });
+  });
+  return result;
 }
 
 // ========== 과거 휴가 내역 ==========
