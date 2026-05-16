@@ -1984,7 +1984,7 @@ function ecSalesResetFilter(){
 function renderEcommerce(){
   _populateEcSalesFilterOpts();
   const sales=getEcSalesFiltered();
-  document.getElementById('ecSalesBody')&&(document.getElementById('ecSalesBody').innerHTML=sales.length===0?'<tr><td colspan="6" class="text-center text-gray-400 py-4">조건에 맞는 판매 기록이 없습니다.</td></tr>':sales.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(s=>`<tr><td class="sheet-row-num"><input type="checkbox" class="ecChk-sales" data-id="${s.id}" /></td><td contenteditable oninput="updEc('sales',${s.id},'date',this.textContent)">${s.date}</td><td contenteditable oninput="updEc('sales',${s.id},'brand',this.textContent)">${escapeHtml(s.brand||'')}</td><td contenteditable oninput="updEc('sales',${s.id},'product',this.textContent)">${escapeHtml(s.product||'')}</td><td contenteditable oninput="updEc('sales',${s.id},'qty',this.textContent)">${s.qty}</td><td contenteditable oninput="updEc('sales',${s.id},'revenue',this.textContent)">₩${(s.revenue||0).toLocaleString()}</td></tr>`).join(''));
+  document.getElementById('ecSalesBody')&&(document.getElementById('ecSalesBody').innerHTML=sales.length===0?'<tr><td colspan="6" class="text-center text-gray-400 py-4">조건에 맞는 판매 기록이 없습니다.</td></tr>':sales.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(s=>`<tr><td class="sheet-row-num"><input type="checkbox" class="ecChk-sales" data-id="${s.id}" /></td><td contenteditable oninput="updEc('sales',${s.id},'date',this.textContent)" class="font-mono text-xs">${fmtDateYY(s.date)}</td><td contenteditable oninput="updEc('sales',${s.id},'brand',this.textContent)">${escapeHtml(s.brand||'')}</td><td contenteditable oninput="updEc('sales',${s.id},'product',this.textContent)">${escapeHtml(s.product||'')}</td><td contenteditable oninput="updEc('sales',${s.id},'qty',this.textContent)">${s.qty}</td><td contenteditable oninput="updEc('sales',${s.id},'revenue',this.textContent)">₩${(s.revenue||0).toLocaleString()}</td></tr>`).join(''));
   const totalRev=sales.reduce((s,x)=>s+(x.revenue||0),0),totalQty=sales.reduce((s,x)=>s+(x.qty||0),0);
   const uniqueSku=new Set(sales.map(s=>s.product)).size;
   document.getElementById('ecSalesRevenue')&&(document.getElementById('ecSalesRevenue').textContent='₩'+totalRev.toLocaleString());
@@ -2010,7 +2010,7 @@ function ecAddRow(t){
 }
 function ecDelRow(t){const ids=Array.from(document.querySelectorAll('.ecChk-'+t+':checked')).map(c=>parseInt(c.dataset.id));if(ids.length===0){alert('선택하세요');return}if(!confirm('삭제?'))return;saveEcData(t,getEcData(t).filter(x=>!ids.includes(x.id)));renderEcommerce();showToast('🗑️','삭제됨','')}
 function ecToggleAll(t,c){document.querySelectorAll('.ecChk-'+t).forEach(x=>x.checked=c)}
-function updEc(t,id,k,v){const d=getEcData(t);const x=d.find(y=>y.id===id);if(x){if(['qty','revenue','stock','min','cost','price','orderQty'].includes(k))x[k]=parseFloat(v.replace(/[^\d.-]/g,''))||0;else x[k]=v;saveEcData(t,d)}}
+function updEc(t,id,k,v){const d=getEcData(t);const x=d.find(y=>y.id===id);if(x){if(['qty','revenue','stock','min','cost','price','orderQty'].includes(k))x[k]=parseFloat(v.replace(/[^\d.-]/g,''))||0;else if(k==='date')x[k]=parseDateYY(v);else x[k]=v;saveEcData(t,d)}}
 
 // ========== 이커머스 판매 분석 ==========
 function openEcSalesAnalysis(){
@@ -2105,21 +2105,26 @@ function runEcSalesAnalysis(){
 
 // ========== 이커머스: 주문/출고 (목업) ==========
 const EC_PLATFORM_NAMES={naver:'네이버',coupang:'쿠팡',cafe24:'카페24','11st':'11번가',gmarket:'G마켓',etc:'기타'};
-const EC_STATUS_LABELS={paid:{l:'결제완료',c:'bg-blue-50 text-blue-700'},preparing:{l:'출고대기',c:'bg-amber-50 text-amber-700'},shipped:{l:'배송중',c:'bg-purple-50 text-purple-700'},delivered:{l:'배송완료',c:'bg-green-50 text-green-700'}};
-const COURIER_LIST=['CJ대한통운','한진택배','롯데택배','우체국택배','로젠택배','쿠팡로지스틱스','한국통운'];
+const EC_STATUS_LABELS={paid:{l:'결제완료',c:'bg-blue-50 text-blue-700'},preparing:{l:'출고대기',c:'bg-amber-50 text-amber-700'},shipped:{l:'배송중',c:'bg-purple-50 text-purple-700'},delivered:{l:'배송완료',c:'bg-green-50 text-green-700'},cancelled:{l:'취소',c:'bg-red-50 text-red-600'}};
+const COURIER_DEFAULT=['CJ대한통운','한진택배','롯데택배','우체국택배','로젠택배','쿠팡로지스틱스','한국통운'];
+function getCourierList(){return ST.get('courier_list_v2',COURIER_DEFAULT.slice())}
+function saveCourierList(arr){ST.set('courier_list_v2',arr)}
+// 날짜 포맷 헬퍼: '2026-05-16' ↔ '26-05-16'
+function fmtDateYY(s){if(!s||typeof s!=='string')return s||'';const m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[1].slice(2)}-${m[2]}-${m[3]}`:s;}
+function parseDateYY(s){if(!s)return s;s=s.trim();const m=s.match(/^(\d{2})-(\d{2})-(\d{2})$/);if(m){const y=parseInt(m[1]);return `${y<70?2000+y:1900+y}-${m[2]}-${m[3]}`}const m2=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m2?s:s;}
 function getEcOrders(){
-  return ST.get('ec_orders',[
-    {id:1,platform:'naver',accountLabel:'A몰 메인',orderNo:'2026-05-16-N0001',orderDate:'2026-05-16',product:'선크림 SPF50+',qty:2,customer:'홍길동',addr:'서울시 강남구 테헤란로 123',phone:'010-1234-5678',status:'preparing',courier:'',tracking:''},
-    {id:2,platform:'coupang',accountLabel:'본사 계정',orderNo:'C-26051600002',orderDate:'2026-05-16',product:'클렌징 폼',qty:1,customer:'김영희',addr:'경기도 성남시 분당구 정자동',phone:'010-2345-6789',status:'paid',courier:'',tracking:''},
-    {id:3,platform:'cafe24',accountLabel:'공식몰',orderNo:'CF26051500003',orderDate:'2026-05-15',product:'토너 세트',qty:1,customer:'이철수',addr:'부산시 해운대구 마린시티1로',phone:'010-3456-7890',status:'shipped',courier:'CJ대한통운',tracking:'1234567890'},
-    {id:4,platform:'11st',accountLabel:'기본 계정',orderNo:'11ST-26051500004',orderDate:'2026-05-15',product:'프리미엄 보습 크림',qty:3,customer:'박지영',addr:'대구시 수성구 동대구로',phone:'010-4567-8901',status:'delivered',courier:'한진택배',tracking:'5566778899'},
-    {id:5,platform:'gmarket',accountLabel:'본사 ESM',orderNo:'GM26051600005',orderDate:'2026-05-16',product:'스킨케어 세트',qty:1,customer:'최민수',addr:'인천시 연수구 송도동',phone:'010-5678-9012',status:'paid',courier:'',tracking:''},
-    {id:6,platform:'naver',accountLabel:'B몰 서브',orderNo:'2026-05-16-N0006',orderDate:'2026-05-16',product:'선크림 SPF50+',qty:1,customer:'정수연',addr:'광주시 서구 상무대로',phone:'010-6789-0123',status:'preparing',courier:'',tracking:''},
-    {id:7,platform:'naver',accountLabel:'C몰 (할인전용)',orderNo:'2026-05-16-N0007',orderDate:'2026-05-16',product:'스킨케어 세트 (특가)',qty:2,customer:'장미라',addr:'세종시 가람로',phone:'010-7890-1234',status:'paid',courier:'',tracking:''},
-    {id:8,platform:'coupang',accountLabel:'자회사 계정',orderNo:'C-26051600008',orderDate:'2026-05-16',product:'클렌징 폼',qty:5,customer:'한지원',addr:'서울시 마포구 양화로',phone:'010-8901-2345',status:'preparing',courier:'',tracking:''}
+  return ST.get('ec_orders_v2',[
+    {id:1,platform:'naver',accountLabel:'A몰 메인',orderNo:'2026-05-16-N0001',orderDate:'2026-05-16',product:'선크림 SPF50+',option:'50ml / 1+1',qty:2,customer:'홍길동',zipcode:'06236',addr:'서울시 강남구 테헤란로 123',phone:'010-1234-5678',status:'preparing',courier:'',tracking:''},
+    {id:2,platform:'coupang',accountLabel:'본사 계정',orderNo:'C-26051600002',orderDate:'2026-05-16',product:'클렌징 폼',option:'대용량 200ml',qty:1,customer:'김영희',zipcode:'13561',addr:'경기도 성남시 분당구 정자동',phone:'010-2345-6789',status:'paid',courier:'',tracking:''},
+    {id:3,platform:'cafe24',accountLabel:'공식몰',orderNo:'CF26051500003',orderDate:'2026-05-15',product:'토너 세트',option:'순한 / 200ml×2',qty:1,customer:'이철수',zipcode:'48095',addr:'부산시 해운대구 마린시티1로',phone:'010-3456-7890',status:'shipped',courier:'CJ대한통운',tracking:'1234567890'},
+    {id:4,platform:'11st',accountLabel:'기본 계정',orderNo:'11ST-26051500004',orderDate:'2026-05-15',product:'프리미엄 보습 크림',option:'리뉴얼 / 80ml',qty:3,customer:'박지영',zipcode:'42104',addr:'대구시 수성구 동대구로',phone:'010-4567-8901',status:'delivered',courier:'한진택배',tracking:'5566778899'},
+    {id:5,platform:'gmarket',accountLabel:'본사 ESM',orderNo:'GM26051600005',orderDate:'2026-05-16',product:'스킨케어 세트',option:'5종 풀세트',qty:1,customer:'최민수',zipcode:'21984',addr:'인천시 연수구 송도동',phone:'010-5678-9012',status:'paid',courier:'',tracking:''},
+    {id:6,platform:'naver',accountLabel:'B몰 서브',orderNo:'2026-05-16-N0006',orderDate:'2026-05-16',product:'선크림 SPF50+',option:'50ml / 단품',qty:1,customer:'정수연',zipcode:'61949',addr:'광주시 서구 상무대로',phone:'010-6789-0123',status:'preparing',courier:'',tracking:''},
+    {id:7,platform:'naver',accountLabel:'C몰 (할인전용)',orderNo:'2026-05-16-N0007',orderDate:'2026-05-16',product:'스킨케어 세트 (특가)',option:'간편 3종',qty:2,customer:'장미라',zipcode:'30100',addr:'세종시 가람로',phone:'010-7890-1234',status:'paid',courier:'',tracking:''},
+    {id:8,platform:'coupang',accountLabel:'자회사 계정',orderNo:'C-26051600008',orderDate:'2026-05-16',product:'클렌징 폼',option:'기획 5+1',qty:5,customer:'한지원',zipcode:'04031',addr:'서울시 마포구 양화로',phone:'010-8901-2345',status:'preparing',courier:'',tracking:''}
   ]);
 }
-function saveEcOrders(d){ST.set('ec_orders',d)}
+function saveEcOrders(d){ST.set('ec_orders_v2',d)}
 function renderEcOrders(){
   const body=document.getElementById('ecOrdersBody');if(!body)return;
   const orders=getEcOrders();
@@ -2148,25 +2153,34 @@ function renderEcOrders(){
   if(pf!=='all')list=list.filter(o=>o.platform===pf);
   if(af!=='all'){const [afp,afl]=af.split('|');list=list.filter(o=>o.platform===afp&&(o.accountLabel||'(기본)')===afl);}
   if(sf!=='all')list=list.filter(o=>o.status===sf);
-  if(list.length===0){body.innerHTML='<tr><td colspan="12" class="text-center text-gray-400 py-4">조건에 맞는 주문이 없습니다.</td></tr>';return}
-  const courierOpts=COURIER_LIST.map(c=>`<option value="${c}">${c}</option>`).join('');
+  if(list.length===0){body.innerHTML='<tr><td colspan="14" class="text-center text-gray-400 py-4">조건에 맞는 주문이 없습니다.</td></tr>';_refreshEcOrderTemplateSel();return}
+  const courierOpts=getCourierList().map(c=>`<option value="${c}">${c}</option>`).join('');
+  const statusOpts=Object.entries(EC_STATUS_LABELS).map(([k,v])=>`<option value="${k}">${v.l}</option>`).join('');
   body.innerHTML=list.map(o=>{
     const st=EC_STATUS_LABELS[o.status]||{l:o.status,c:'bg-gray-100'};
     return `<tr>
       <td class="sheet-row-num"><input type="checkbox" class="ecOrderChk" data-id="${o.id}" /></td>
       <td><span class="text-xs px-2 py-0.5 rounded bg-gray-100">${EC_PLATFORM_NAMES[o.platform]||o.platform}</span><div class="text-[10px] text-gray-500 mt-0.5">${escapeHtml(o.accountLabel||'(기본)')}</div></td>
       <td class="font-mono text-xs">${escapeHtml(o.orderNo)}</td>
-      <td>${o.orderDate}</td>
+      <td class="font-mono text-xs">${fmtDateYY(o.orderDate)}</td>
       <td>${escapeHtml(o.product)}</td>
+      <td class="text-xs text-gray-600">${escapeHtml(o.option||'-')}</td>
       <td class="text-center">${o.qty}</td>
       <td>${escapeHtml(o.customer)}</td>
+      <td class="font-mono text-xs">${escapeHtml(o.zipcode||'-')}</td>
       <td class="text-xs text-gray-600 max-w-xs truncate" title="${escapeHtml(o.addr)}">${escapeHtml(o.addr)}</td>
-      <td><span class="text-xs px-2 py-0.5 rounded ${st.c}">${st.l}</span></td>
+      <td><select onchange="changeEcOrderStatus(${o.id},this.value)" class="text-xs border rounded px-1 py-0.5 ${st.c}">${statusOpts.replace('value="'+o.status+'"','value="'+o.status+'" selected')}</select></td>
       <td><select onchange="updEcOrder(${o.id},'courier',this.value)" class="text-xs border rounded px-1 py-0.5 bg-white"><option value="">선택</option>${courierOpts.replace('value="'+o.courier+'"','value="'+o.courier+'" selected')}</select></td>
       <td><input value="${escapeHtml(o.tracking||'')}" oninput="updEcOrder(${o.id},'tracking',this.value)" placeholder="송장번호" class="text-xs border rounded px-2 py-0.5 w-32 bg-white font-mono" /></td>
       <td>${o.status==='preparing'||o.status==='paid'?`<button onclick="shipEcOrder(${o.id})" class="text-xs px-2 py-0.5 bg-black text-white rounded">출고</button>`:o.status==='shipped'?`<button onclick="deliverEcOrder(${o.id})" class="text-xs px-2 py-0.5 bg-green-600 text-white rounded">완료</button>`:'-'}</td>
     </tr>`;
   }).join('');
+  _refreshEcOrderTemplateSel();
+}
+function changeEcOrderStatus(id,newStatus){
+  const d=getEcOrders();const o=d.find(x=>x.id===id);if(!o)return;
+  o.status=newStatus;saveEcOrders(d);renderEcOrders();
+  showToast('🔄','상태 변경',`${o.customer} → ${EC_STATUS_LABELS[newStatus]?.l||newStatus}`);
 }
 function updEcOrder(id,key,val){
   const d=getEcOrders();const o=d.find(x=>x.id===id);
@@ -2198,6 +2212,133 @@ function bulkShipEcOrders(){
   saveEcOrders(d);renderEcOrders();
   showToast('📦','일괄 출고',`성공 ${ok}건${fail?' / 송장 누락 '+fail+'건':''}`);
 }
+// ----- 택배사 관리 -----
+function openCourierMgmtModal(){renderCourierList();openModal('courierMgmtModal');}
+function renderCourierList(){
+  const box=document.getElementById('courierListBox');if(!box)return;
+  const list=getCourierList();
+  box.innerHTML=list.length===0?'<p class="text-xs text-gray-400 text-center py-3">등록된 택배사가 없습니다.</p>':list.map((c,i)=>`<div class="flex items-center gap-2 px-2 py-1.5 border border-gray-200 rounded text-xs"><span class="flex-1">${escapeHtml(c)}</span><button onclick="delCourier(${i})" class="text-red-500 hover:text-red-700">🗑</button></div>`).join('');
+}
+function addCourier(){
+  const inp=document.getElementById('newCourierName');const name=inp.value.trim();
+  if(!name){inp.focus();return}
+  const list=getCourierList();
+  if(list.includes(name)){alert('이미 등록된 택배사입니다');return}
+  list.push(name);saveCourierList(list);inp.value='';renderCourierList();renderEcOrders();
+  showToast('+','택배사 추가',name);
+}
+function delCourier(idx){
+  const list=getCourierList();
+  if(!confirm(`'${list[idx]}' 을(를) 삭제하시겠습니까?`))return;
+  list.splice(idx,1);saveCourierList(list);renderCourierList();renderEcOrders();
+  showToast('🗑','택배사 삭제','');
+}
+
+// ----- 엑셀 양식 관리 -----
+const EC_ORDER_ALL_COLUMNS=[
+  {k:'platform',l:'플랫폼'},{k:'accountLabel',l:'계정'},
+  {k:'orderNo',l:'주문번호'},{k:'orderDate',l:'주문일'},
+  {k:'product',l:'상품'},{k:'option',l:'옵션'},{k:'qty',l:'수량'},
+  {k:'customer',l:'주문자'},{k:'zipcode',l:'우편번호'},{k:'addr',l:'주소'},{k:'phone',l:'전화번호'},
+  {k:'status',l:'상태'},{k:'courier',l:'택배사'},{k:'tracking',l:'송장번호'}
+];
+const EC_ORDER_TEMPLATES_DEFAULT=[
+  {id:'tpl_all',name:'전체',columns:EC_ORDER_ALL_COLUMNS.map(c=>c.k),builtin:true},
+  {id:'tpl_ship',name:'출고용',columns:['orderNo','product','option','qty','customer','zipcode','addr','phone','courier','tracking'],builtin:true},
+  {id:'tpl_waybill',name:'송장용',columns:['orderNo','customer','zipcode','addr','phone','product','option','qty'],builtin:true}
+];
+function getEcOrderTemplates(){return ST.get('ec_order_templates',EC_ORDER_TEMPLATES_DEFAULT.slice())}
+function saveEcOrderTemplates(t){ST.set('ec_order_templates',t)}
+function _refreshEcOrderTemplateSel(){
+  const sel=document.getElementById('ecOrdersTemplateSel');if(!sel)return;
+  const prev=sel.value;
+  const tpls=getEcOrderTemplates();
+  sel.innerHTML=tpls.map(t=>`<option value="${t.id}">${escapeHtml(t.name)} (${t.columns.length}컬럼)</option>`).join('');
+  if([...sel.options].some(o=>o.value===prev))sel.value=prev;
+}
+function openOrderTemplateModal(){
+  renderOrderTemplateList();renderNewTemplateCols();
+  document.getElementById('newTemplateName').value='';
+  openModal('orderTemplateModal');
+}
+function renderOrderTemplateList(){
+  const box=document.getElementById('orderTemplateList');if(!box)return;
+  const tpls=getEcOrderTemplates();
+  box.innerHTML=tpls.map(t=>{
+    const colLabels=t.columns.map(k=>EC_ORDER_ALL_COLUMNS.find(c=>c.k===k)?.l||k).join(', ');
+    return `<div class="border border-gray-200 rounded p-2">
+      <div class="flex items-center gap-2">
+        <strong class="text-sm">${escapeHtml(t.name)}</strong>
+        <span class="text-xs text-gray-400">${t.columns.length}컬럼${t.builtin?' · 기본':''}</span>
+        ${t.builtin?'':`<button onclick="delOrderTemplate('${t.id}')" class="ml-auto text-red-500 hover:text-red-700 text-sm">🗑</button>`}
+      </div>
+      <p class="text-xs text-gray-500 mt-1">${escapeHtml(colLabels)}</p>
+    </div>`;
+  }).join('');
+}
+function renderNewTemplateCols(){
+  const box=document.getElementById('newTemplateCols');if(!box)return;
+  box.innerHTML=EC_ORDER_ALL_COLUMNS.map(c=>`<label class="flex items-center gap-1.5 text-xs"><input type="checkbox" class="newTplCol" value="${c.k}" class="w-3.5 h-3.5 accent-black" /><span>${c.l}</span></label>`).join('');
+}
+function addOrderTemplate(){
+  const name=document.getElementById('newTemplateName').value.trim();
+  if(!name){alert('양식 이름을 입력하세요');return}
+  const cols=Array.from(document.querySelectorAll('.newTplCol:checked')).map(c=>c.value);
+  if(cols.length===0){alert('최소 1개 이상의 컬럼을 선택하세요');return}
+  const tpls=getEcOrderTemplates();
+  tpls.push({id:'tpl_'+Date.now(),name,columns:cols});
+  saveEcOrderTemplates(tpls);renderOrderTemplateList();_refreshEcOrderTemplateSel();
+  document.getElementById('newTemplateName').value='';
+  document.querySelectorAll('.newTplCol:checked').forEach(c=>c.checked=false);
+  showToast('+','양식 추가',name);
+}
+function delOrderTemplate(id){
+  const tpls=getEcOrderTemplates();const t=tpls.find(x=>x.id===id);if(!t)return;
+  if(t.builtin){alert('기본 양식은 삭제할 수 없습니다');return}
+  if(!confirm(`'${t.name}' 양식을 삭제하시겠습니까?`))return;
+  saveEcOrderTemplates(tpls.filter(x=>x.id!==id));
+  renderOrderTemplateList();_refreshEcOrderTemplateSel();showToast('🗑','양식 삭제','');
+}
+
+// ----- CSV 다운로드 (UTF-8 BOM, 엑셀 호환) -----
+function downloadCSV(filename,rows){
+  const esc=v=>{const s=v==null?'':String(v);return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s};
+  const csv=rows.map(r=>r.map(esc).join(',')).join('\r\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url)},100);
+}
+function downloadEcOrdersExcel(){
+  const tplId=document.getElementById('ecOrdersTemplateSel')?.value;
+  const tpl=getEcOrderTemplates().find(t=>t.id===tplId)||getEcOrderTemplates()[0];
+  if(!tpl){alert('양식을 선택하세요');return}
+  // 필터된 주문 사용 (체크된 게 있으면 선택분만, 아니면 필터 결과 전체)
+  const checked=Array.from(document.querySelectorAll('.ecOrderChk:checked')).map(c=>parseInt(c.dataset.id));
+  const orders=getEcOrders();
+  const pf=document.getElementById('ecOrdersPlatformFilter')?.value||'all';
+  const af=document.getElementById('ecOrdersAccountFilter')?.value||'all';
+  const sf=document.getElementById('ecOrdersStatusFilter')?.value||'all';
+  let list=orders;
+  if(checked.length>0)list=list.filter(o=>checked.includes(o.id));
+  else{
+    if(pf!=='all')list=list.filter(o=>o.platform===pf);
+    if(af!=='all'){const [afp,afl]=af.split('|');list=list.filter(o=>o.platform===afp&&(o.accountLabel||'(기본)')===afl);}
+    if(sf!=='all')list=list.filter(o=>o.status===sf);
+  }
+  if(list.length===0){alert('내보낼 주문이 없습니다');return}
+  const header=tpl.columns.map(k=>EC_ORDER_ALL_COLUMNS.find(c=>c.k===k)?.l||k);
+  const body=list.map(o=>tpl.columns.map(k=>{
+    if(k==='platform')return EC_PLATFORM_NAMES[o.platform]||o.platform;
+    if(k==='orderDate')return fmtDateYY(o.orderDate);
+    if(k==='status')return EC_STATUS_LABELS[o.status]?.l||o.status;
+    return o[k]??'';
+  }));
+  const today=new Date().toISOString().slice(2,10);
+  downloadCSV(`주문_${tpl.name}_${today}.csv`,[header,...body]);
+  showToast('📥','엑셀 다운로드',`${tpl.name} · ${list.length}건`);
+}
+
 function printEcWaybills(){
   const ids=Array.from(document.querySelectorAll('.ecOrderChk:checked')).map(c=>parseInt(c.dataset.id));
   if(ids.length===0){alert('주문을 선택하세요');return}
@@ -2216,8 +2357,9 @@ function printEcWaybills(){
   ${list.map(o=>`<div class="label">
     <h3>${EC_PLATFORM_NAMES[o.platform]||o.platform} · ${o.orderNo}</h3>
     <div class="row"><strong>받는분:</strong>${escapeHtml(o.customer)} (${escapeHtml(o.phone||'-')})</div>
+    <div class="row"><strong>우편번호:</strong>${escapeHtml(o.zipcode||'-')}</div>
     <div class="row"><strong>주소:</strong>${escapeHtml(o.addr)}</div>
-    <div class="row"><strong>상품:</strong>${escapeHtml(o.product)} × ${o.qty}</div>
+    <div class="row"><strong>상품:</strong>${escapeHtml(o.product)}${o.option?' / '+escapeHtml(o.option):''} × ${o.qty}</div>
     <div class="row"><strong>택배사:</strong>${escapeHtml(o.courier||'(미지정)')}</div>
     <div class="tracking">${escapeHtml(o.tracking||'송장번호 미입력')}</div>
   </div>`).join('')}
@@ -2248,7 +2390,7 @@ async function syncEcOrders(){
   d.unshift({
     id:Date.now(),platform,accountLabel,orderNo:`MOCK-${yy}${mm}${dd}-${Math.floor(Math.random()*9000+1000)}`,
     orderDate:`20${yy}-${mm}-${dd}`,product:'신규 주문 상품',qty:Math.floor(Math.random()*3)+1,
-    customer:'신규고객'+Math.floor(Math.random()*100),addr:'주소 정보',phone:'010-0000-0000',
+    customer:'신규고객'+Math.floor(Math.random()*100),zipcode:String(Math.floor(Math.random()*89999+10000)),addr:'주소 정보',phone:'010-0000-0000',option:'기본 옵션',
     status:'paid',courier:'',tracking:''
   });
   saveEcOrders(d);renderEcOrders();

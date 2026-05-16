@@ -703,17 +703,21 @@
               <option value="preparing">출고대기</option>
               <option value="shipped">배송중</option>
               <option value="delivered">배송완료</option>
+              <option value="cancelled">취소</option>
             </select>
             <button onclick="syncEcOrders()" class="px-3 py-1 bg-blue-600 text-white text-xs rounded">🔄 플랫폼 동기화</button>
             <button onclick="bulkShipEcOrders()" class="px-3 py-1 bg-black text-white text-xs rounded">📦 일괄 출고</button>
             <button onclick="printEcWaybills()" class="px-3 py-1 border border-gray-300 text-xs rounded">🖨 송장 출력</button>
-            <span class="text-xs text-gray-400 ml-auto">💡 다중 계정은 설정 ▸ API 연동에서 추가</span>
+            <button onclick="openCourierMgmtModal()" class="px-3 py-1 border border-gray-300 text-xs rounded">🚚 택배사 관리</button>
+            <select id="ecOrdersTemplateSel" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white"></select>
+            <button onclick="downloadEcOrdersExcel()" class="px-3 py-1 bg-green-600 text-white text-xs rounded">📥 엑셀 다운로드</button>
+            <button onclick="openOrderTemplateModal()" class="px-3 py-1 border border-gray-300 text-xs rounded" title="엑셀 양식 추가/삭제">📋 양식 관리</button>
           </div>
           <!-- 주문 테이블 -->
           <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
             <thead><tr>
               <th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAllOrders(this.checked)" /></th>
-              <th>플랫폼/계정</th><th>주문번호</th><th>주문일</th><th>상품</th><th>수량</th><th>주문자</th><th>주소</th><th>상태</th><th>택배사</th><th>송장번호</th><th>관리</th>
+              <th>플랫폼/계정</th><th>주문번호</th><th>주문일</th><th>상품</th><th>옵션</th><th>수량</th><th>주문자</th><th>우편번호</th><th>주소</th><th>상태</th><th>택배사</th><th>송장번호</th><th>관리</th>
             </tr></thead>
             <tbody id="ecOrdersBody"></tbody>
           </table></div>
@@ -1076,6 +1080,48 @@
       </div>
       <!-- 결과 -->
       <div id="ecAnResult" class="text-xs text-gray-400 text-center py-8">[▶ 분석 실행]을 눌러 결과를 확인하세요.</div>
+    </div>
+  </div>
+</div>
+
+<!-- 택배사 관리 모달 -->
+<div id="courierMgmtModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-bold">🚚 택배사 관리</h2>
+      <button onclick="closeModal('courierMgmtModal')" class="hover-bg p-1 rounded">✕</button>
+    </div>
+    <div class="p-5">
+      <div class="flex gap-2 mb-3">
+        <input id="newCourierName" type="text" placeholder="택배사 이름 입력" class="flex-1 px-3 py-1.5 border border-gray-300 rounded text-xs" />
+        <button onclick="addCourier()" class="px-3 py-1.5 bg-black text-white text-xs rounded">+ 추가</button>
+      </div>
+      <div id="courierListBox" class="space-y-1 max-h-80 overflow-y-auto"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 엑셀 양식 관리 모달 -->
+<div id="orderTemplateModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
+      <h2 class="text-lg font-bold">📋 엑셀 양식 관리</h2>
+      <button onclick="closeModal('orderTemplateModal')" class="hover-bg p-1 rounded">✕</button>
+    </div>
+    <div class="p-5 space-y-4">
+      <!-- 기존 양식 목록 -->
+      <div>
+        <h3 class="text-sm font-bold mb-2">등록된 양식</h3>
+        <div id="orderTemplateList" class="space-y-2"></div>
+      </div>
+      <!-- 새 양식 추가 -->
+      <div class="border-t pt-4">
+        <h3 class="text-sm font-bold mb-2">+ 새 양식 추가</h3>
+        <input id="newTemplateName" type="text" placeholder="양식 이름 (예: 출고용 / 정산용)" class="w-full px-3 py-1.5 border border-gray-300 rounded text-xs mb-2" />
+        <p class="text-xs text-gray-500 mb-2">포함할 컬럼을 선택하세요:</p>
+        <div id="newTemplateCols" class="grid grid-cols-2 gap-1 mb-3"></div>
+        <button onclick="addOrderTemplate()" class="px-4 py-1.5 bg-black text-white text-xs rounded">양식 추가</button>
+      </div>
     </div>
   </div>
 </div>
