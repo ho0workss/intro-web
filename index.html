@@ -658,8 +658,22 @@
             <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">SKU 수</p><p class="text-xl font-bold" id="ecSalesSku">0</p></div>
             <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">평균 단가</p><p class="text-xl font-bold" id="ecSalesAvg">₩0</p></div>
           </div>
-          <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">📈 판매 현황</h3><div class="flex gap-2"><button onclick="ecAddRow('sales')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 추가</button><button onclick="ecDelRow('sales')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div>
-          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAll('sales',this.checked)" /></th><th>상품</th><th>카테고리</th><th>판매량</th><th>매출</th><th>성장률</th></tr></thead><tbody id="ecSalesBody"></tbody></table></div>
+          <!-- 필터 -->
+          <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3 flex flex-wrap items-center gap-2">
+            <span class="text-xs text-gray-500 font-semibold">필터:</span>
+            <input type="date" id="ecSalesFrom" onchange="renderEcommerce()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white" />
+            <span class="text-xs text-gray-400">~</span>
+            <input type="date" id="ecSalesTo" onchange="renderEcommerce()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white" />
+            <select id="ecSalesBrandFilter" onchange="renderEcommerce()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white"><option value="all">전체 브랜드</option></select>
+            <select id="ecSalesProductFilter" onchange="renderEcommerce()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white"><option value="all">전체 제품</option></select>
+            <button onclick="ecSalesResetFilter()" class="px-2 py-1 border border-gray-300 text-xs rounded">초기화</button>
+            <div class="ml-auto flex gap-2">
+              <button onclick="openEcSalesAnalysis()" class="px-3 py-1 bg-blue-600 text-white text-xs rounded">📊 분석</button>
+              <button onclick="ecAddRow('sales')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 추가</button>
+              <button onclick="ecDelRow('sales')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button>
+            </div>
+          </div>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAll('sales',this.checked)" /></th><th>일자</th><th>브랜드</th><th>제품</th><th>판매량</th><th>매출</th></tr></thead><tbody id="ecSalesBody"></tbody></table></div>
         </div>
         <div id="sub-ecommerce-orders" class="sub-page">
           <!-- KPI 카드 -->
@@ -1015,6 +1029,53 @@
         <button onclick="closeModal('createMeetingModal')" class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover-bg">취소</button>
         <button onclick="submitMeeting()" class="flex-1 py-2.5 bg-black text-white rounded-lg text-sm">생성</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- 이커머스 판매 분석 모달 -->
+<div id="ecSalesAnalysisModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
+      <h2 class="text-lg font-bold">📊 판매 분석 · 기간/제품 비교</h2>
+      <button onclick="closeModal('ecSalesAnalysisModal')" class="hover-bg p-1 rounded">✕</button>
+    </div>
+    <div class="p-6 space-y-4">
+      <!-- 기간 설정 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="border border-blue-200 bg-blue-50 rounded-lg p-3">
+          <p class="text-xs font-bold text-blue-700 mb-2">📅 기간 A</p>
+          <div class="flex items-center gap-2">
+            <input type="date" id="ecAnAFrom" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white" />
+            <span class="text-xs">~</span>
+            <input type="date" id="ecAnATo" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white" />
+          </div>
+        </div>
+        <div class="border border-amber-200 bg-amber-50 rounded-lg p-3">
+          <p class="text-xs font-bold text-amber-700 mb-2">📅 기간 B (비교 대상)</p>
+          <div class="flex items-center gap-2">
+            <input type="date" id="ecAnBFrom" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white" />
+            <span class="text-xs">~</span>
+            <input type="date" id="ecAnBTo" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white" />
+          </div>
+        </div>
+      </div>
+      <!-- 옵션 -->
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs text-gray-500 font-semibold">집계 기준:</span>
+        <select id="ecAnGroupBy" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white">
+          <option value="product">제품별</option>
+          <option value="brand">브랜드별</option>
+          <option value="total">전체 합계</option>
+        </select>
+        <button onclick="runEcSalesAnalysis()" class="px-3 py-1 bg-blue-600 text-white text-xs rounded">▶ 분석 실행</button>
+        <div class="ml-auto flex gap-1">
+          <button onclick="setEcAnPreset('thisWeek')" class="px-2 py-1 border border-gray-300 text-xs rounded">이번주 vs 지난주</button>
+          <button onclick="setEcAnPreset('thisMonth')" class="px-2 py-1 border border-gray-300 text-xs rounded">이번달 vs 지난달</button>
+        </div>
+      </div>
+      <!-- 결과 -->
+      <div id="ecAnResult" class="text-xs text-gray-400 text-center py-8">[▶ 분석 실행]을 눌러 결과를 확인하세요.</div>
     </div>
   </div>
 </div>

@@ -1911,32 +1911,197 @@ function addDesignRequest(){const title=prompt('의뢰 제목:');if(!title)retur
 function updDesignReq(id,k,v){const r=getDesignRequests();const x=r.find(y=>y.id===id);if(x){x[k]=v;saveDesignRequests(r)}}
 
 // ========== 이커머스 ==========
-function getEcData(t){return ST.get('ec_'+t,{
-  sales:[{id:1,product:'스킨케어 세트',category:'뷰티',qty:342,revenue:12540000,growth:12.3},{id:2,product:'프리미엄 보습 크림',category:'뷰티',qty:287,revenue:8610000,growth:-3.2},{id:3,product:'선크림 SPF50+',category:'뷰티',qty:521,revenue:7815000,growth:28.7},{id:4,product:'클렌징 폼',category:'뷰티',qty:198,revenue:3960000,growth:5.1}],
-  inventory:[{id:1,sku:'SK-001',product:'스킨케어 세트',stock:234,min:50},{id:2,sku:'SK-002',product:'프리미엄 보습 크림',stock:18,min:30},{id:3,sku:'SK-003',product:'선크림 SPF50+',stock:0,min:50},{id:4,sku:'SK-004',product:'클렌징 폼',stock:156,min:40}],
-  cost:[{id:1,product:'스킨케어 세트',cost:18000,price:45000,orderQty:200},{id:2,product:'선크림 SPF50+',cost:8000,price:15000,orderQty:500},{id:3,product:'클렌징 폼',cost:5000,price:20000,orderQty:300}]
-}[t]||[])}
-function saveEcData(t,d){ST.set('ec_'+t,d)}
+// 판매 데이터: 일자 단위 거래 기록 {id,date,brand,product,qty,revenue}
+function _genMockSales(){
+  const brands=['A브랜드','B브랜드','C브랜드'];
+  const products=[
+    {brand:'A브랜드',product:'스킨케어 세트',price:45000},
+    {brand:'A브랜드',product:'프리미엄 보습 크림',price:30000},
+    {brand:'B브랜드',product:'선크림 SPF50+',price:15000},
+    {brand:'B브랜드',product:'클렌징 폼',price:20000},
+    {brand:'C브랜드',product:'토너 세트',price:25000},
+  ];
+  const rows=[];let id=1;
+  const today=new Date();
+  for(let d=60;d>=0;d--){
+    const dt=new Date(today);dt.setDate(today.getDate()-d);
+    const date=dt.toISOString().split('T')[0];
+    products.forEach(p=>{
+      if(Math.random()<0.7){
+        const qty=Math.floor(Math.random()*15)+1;
+        rows.push({id:id++,date,brand:p.brand,product:p.product,qty,revenue:qty*p.price});
+      }
+    });
+  }
+  return rows;
+}
+function getEcData(t){
+  if(t==='sales'){const v=ST.get('ec_sales_v2',null);if(v)return v;const fresh=_genMockSales();ST.set('ec_sales_v2',fresh);return fresh;}
+  return ST.get('ec_'+t,{
+    inventory:[{id:1,sku:'SK-001',product:'스킨케어 세트',stock:234,min:50},{id:2,sku:'SK-002',product:'프리미엄 보습 크림',stock:18,min:30},{id:3,sku:'SK-003',product:'선크림 SPF50+',stock:0,min:50},{id:4,sku:'SK-004',product:'클렌징 폼',stock:156,min:40}],
+    cost:[{id:1,product:'스킨케어 세트',cost:18000,price:45000,orderQty:200},{id:2,product:'선크림 SPF50+',cost:8000,price:15000,orderQty:500},{id:3,product:'클렌징 폼',cost:5000,price:20000,orderQty:300}]
+  }[t]||[]);
+}
+function saveEcData(t,d){ST.set(t==='sales'?'ec_sales_v2':'ec_'+t,d)}
+function getEcSalesFiltered(){
+  const all=getEcData('sales');
+  const from=document.getElementById('ecSalesFrom')?.value||'';
+  const to=document.getElementById('ecSalesTo')?.value||'';
+  const brand=document.getElementById('ecSalesBrandFilter')?.value||'all';
+  const product=document.getElementById('ecSalesProductFilter')?.value||'all';
+  return all.filter(s=>{
+    if(from&&s.date<from)return false;
+    if(to&&s.date>to)return false;
+    if(brand!=='all'&&s.brand!==brand)return false;
+    if(product!=='all'&&s.product!==product)return false;
+    return true;
+  });
+}
+function _populateEcSalesFilterOpts(){
+  const all=getEcData('sales');
+  const brandSel=document.getElementById('ecSalesBrandFilter');
+  if(brandSel){
+    const prev=brandSel.value;
+    const brands=[...new Set(all.map(s=>s.brand))].sort();
+    brandSel.innerHTML='<option value="all">전체 브랜드</option>'+brands.map(b=>`<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
+    if([...brandSel.options].some(o=>o.value===prev))brandSel.value=prev;
+  }
+  const prodSel=document.getElementById('ecSalesProductFilter');
+  if(prodSel){
+    const prev=prodSel.value;
+    const brand=brandSel?.value||'all';
+    const filtered=brand==='all'?all:all.filter(s=>s.brand===brand);
+    const products=[...new Set(filtered.map(s=>s.product))].sort();
+    prodSel.innerHTML='<option value="all">전체 제품</option>'+products.map(p=>`<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+    if([...prodSel.options].some(o=>o.value===prev))prodSel.value=prev;
+  }
+}
+function ecSalesResetFilter(){
+  ['ecSalesFrom','ecSalesTo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
+  ['ecSalesBrandFilter','ecSalesProductFilter'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='all'});
+  renderEcommerce();
+}
 function renderEcommerce(){
-  const sales=getEcData('sales');
-  document.getElementById('ecSalesBody')&&(document.getElementById('ecSalesBody').innerHTML=sales.map(s=>`<tr><td class="sheet-row-num"><input type="checkbox" class="ecChk-sales" data-id="${s.id}" /></td><td contenteditable oninput="updEc('sales',${s.id},'product',this.textContent)">${s.product}</td><td contenteditable oninput="updEc('sales',${s.id},'category',this.textContent)">${s.category}</td><td contenteditable oninput="updEc('sales',${s.id},'qty',this.textContent)">${s.qty}</td><td>₩${s.revenue.toLocaleString()}</td><td class="${s.growth>=0?'text-green-600':'text-red-500'}">${s.growth>=0?'▲':'▼'} ${Math.abs(s.growth)}%</td></tr>`).join(''));
-  const totalRev=sales.reduce((s,x)=>s+x.revenue,0),totalQty=sales.reduce((s,x)=>s+x.qty,0);
+  _populateEcSalesFilterOpts();
+  const sales=getEcSalesFiltered();
+  document.getElementById('ecSalesBody')&&(document.getElementById('ecSalesBody').innerHTML=sales.length===0?'<tr><td colspan="6" class="text-center text-gray-400 py-4">조건에 맞는 판매 기록이 없습니다.</td></tr>':sales.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(s=>`<tr><td class="sheet-row-num"><input type="checkbox" class="ecChk-sales" data-id="${s.id}" /></td><td contenteditable oninput="updEc('sales',${s.id},'date',this.textContent)">${s.date}</td><td contenteditable oninput="updEc('sales',${s.id},'brand',this.textContent)">${escapeHtml(s.brand||'')}</td><td contenteditable oninput="updEc('sales',${s.id},'product',this.textContent)">${escapeHtml(s.product||'')}</td><td contenteditable oninput="updEc('sales',${s.id},'qty',this.textContent)">${s.qty}</td><td contenteditable oninput="updEc('sales',${s.id},'revenue',this.textContent)">₩${(s.revenue||0).toLocaleString()}</td></tr>`).join(''));
+  const totalRev=sales.reduce((s,x)=>s+(x.revenue||0),0),totalQty=sales.reduce((s,x)=>s+(x.qty||0),0);
+  const uniqueSku=new Set(sales.map(s=>s.product)).size;
   document.getElementById('ecSalesRevenue')&&(document.getElementById('ecSalesRevenue').textContent='₩'+totalRev.toLocaleString());
   document.getElementById('ecSalesQty')&&(document.getElementById('ecSalesQty').textContent=totalQty.toLocaleString());
-  document.getElementById('ecSalesSku')&&(document.getElementById('ecSalesSku').textContent=sales.length);
+  document.getElementById('ecSalesSku')&&(document.getElementById('ecSalesSku').textContent=uniqueSku);
   document.getElementById('ecSalesAvg')&&(document.getElementById('ecSalesAvg').textContent=totalQty>0?'₩'+Math.round(totalRev/totalQty).toLocaleString():'₩0');
   const inv=getEcData('inventory');
   document.getElementById('ecInventoryBody')&&(document.getElementById('ecInventoryBody').innerHTML=inv.map(i=>{const st=i.stock===0?{l:'품절',c:'bg-red-50 text-red-600'}:i.stock<i.min?{l:'부족',c:'bg-amber-50 text-amber-700'}:{l:'정상',c:'bg-green-50 text-green-700'};return `<tr><td class="sheet-row-num"><input type="checkbox" class="ecChk-inventory" data-id="${i.id}" /></td><td contenteditable oninput="updEc('inventory',${i.id},'sku',this.textContent)">${i.sku}</td><td contenteditable oninput="updEc('inventory',${i.id},'product',this.textContent)">${i.product}</td><td contenteditable oninput="updEc('inventory',${i.id},'stock',this.textContent)">${i.stock}</td><td contenteditable oninput="updEc('inventory',${i.id},'min',this.textContent)">${i.min}</td><td><span class="text-xs px-2 py-0.5 rounded ${st.c}">${st.l}</span></td></tr>`}).join(''));
   const cost=getEcData('cost');
   document.getElementById('ecCostBody')&&(document.getElementById('ecCostBody').innerHTML=cost.map(c=>{const m=((c.price-c.cost)/c.price*100).toFixed(1);return `<tr><td class="sheet-row-num"><input type="checkbox" class="ecChk-cost" data-id="${c.id}" /></td><td contenteditable oninput="updEc('cost',${c.id},'product',this.textContent)">${c.product}</td><td contenteditable oninput="updEc('cost',${c.id},'cost',this.textContent)">₩${c.cost.toLocaleString()}</td><td contenteditable oninput="updEc('cost',${c.id},'price',this.textContent)">₩${c.price.toLocaleString()}</td><td class="${m>=50?'text-green-600':'text-amber-600'} font-semibold">${m}%</td><td contenteditable oninput="updEc('cost',${c.id},'orderQty',this.textContent)">${c.orderQty}</td></tr>`}).join(''));
-  // ranking
-  const ranked=[...sales].sort((a,b)=>b.qty-a.qty).slice(0,10);
-  document.getElementById('ecRankingBody')&&(document.getElementById('ecRankingBody').innerHTML=ranked.map((s,i)=>{const color=i===0?'text-amber-500':i===1?'text-gray-400':i===2?'text-orange-400':'';return `<tr><td class="sheet-row-num">${i+1}</td><td class="${color} font-black">${i+1}</td><td>${s.product}</td><td>${s.qty}</td><td>₩${s.revenue.toLocaleString()}</td><td class="${s.growth>=0?'text-green-600':'text-red-500'}">${s.growth>=0?'▲':'▼'} ${Math.abs(s.growth)}%</td></tr>`}).join(''));
+  // 순위: 필터된 데이터에서 제품별 집계
+  const byProd={};
+  sales.forEach(s=>{const k=s.product;if(!byProd[k])byProd[k]={product:k,brand:s.brand,qty:0,revenue:0};byProd[k].qty+=s.qty||0;byProd[k].revenue+=s.revenue||0;});
+  const ranked=Object.values(byProd).sort((a,b)=>b.qty-a.qty).slice(0,10);
+  document.getElementById('ecRankingBody')&&(document.getElementById('ecRankingBody').innerHTML=ranked.length===0?'<tr><td colspan="6" class="text-center text-gray-400 py-4">데이터 없음</td></tr>':ranked.map((s,i)=>{const color=i===0?'text-amber-500':i===1?'text-gray-400':i===2?'text-orange-400':'';return `<tr><td class="sheet-row-num">${i+1}</td><td class="${color} font-black">${i+1}</td><td>${escapeHtml(s.product)}<div class="text-[10px] text-gray-400">${escapeHtml(s.brand||'')}</div></td><td>${s.qty}</td><td>₩${s.revenue.toLocaleString()}</td><td class="text-gray-400 text-xs">-</td></tr>`}).join(''));
 }
-function ecAddRow(t){const d=getEcData(t);const newRow={id:Date.now()};if(t==='sales')Object.assign(newRow,{product:'새 상품',category:'',qty:0,revenue:0,growth:0});if(t==='inventory')Object.assign(newRow,{sku:'',product:'새 상품',stock:0,min:0});if(t==='cost')Object.assign(newRow,{product:'새 상품',cost:0,price:0,orderQty:0});d.push(newRow);saveEcData(t,d);renderEcommerce();showToast('+','추가됨','')}
+function ecAddRow(t){
+  const d=getEcData(t);const newRow={id:Date.now()};
+  if(t==='sales')Object.assign(newRow,{date:new Date().toISOString().split('T')[0],brand:'',product:'새 상품',qty:0,revenue:0});
+  if(t==='inventory')Object.assign(newRow,{sku:'',product:'새 상품',stock:0,min:0});
+  if(t==='cost')Object.assign(newRow,{product:'새 상품',cost:0,price:0,orderQty:0});
+  d.push(newRow);saveEcData(t,d);renderEcommerce();showToast('+','추가됨','');
+}
 function ecDelRow(t){const ids=Array.from(document.querySelectorAll('.ecChk-'+t+':checked')).map(c=>parseInt(c.dataset.id));if(ids.length===0){alert('선택하세요');return}if(!confirm('삭제?'))return;saveEcData(t,getEcData(t).filter(x=>!ids.includes(x.id)));renderEcommerce();showToast('🗑️','삭제됨','')}
 function ecToggleAll(t,c){document.querySelectorAll('.ecChk-'+t).forEach(x=>x.checked=c)}
-function updEc(t,id,k,v){const d=getEcData(t);const x=d.find(y=>y.id===id);if(x){if(['qty','revenue','growth','stock','min','cost','price','orderQty'].includes(k))x[k]=parseFloat(v.replace(/[^\d.-]/g,''))||0;else x[k]=v;saveEcData(t,d)}}
+function updEc(t,id,k,v){const d=getEcData(t);const x=d.find(y=>y.id===id);if(x){if(['qty','revenue','stock','min','cost','price','orderQty'].includes(k))x[k]=parseFloat(v.replace(/[^\d.-]/g,''))||0;else x[k]=v;saveEcData(t,d)}}
+
+// ========== 이커머스 판매 분석 ==========
+function openEcSalesAnalysis(){
+  // 기본값: 기간A = 최근 7일, 기간B = 그 이전 7일
+  const today=new Date();
+  const d=(n)=>{const x=new Date(today);x.setDate(today.getDate()-n);return x.toISOString().split('T')[0]};
+  document.getElementById('ecAnATo').value=d(0);
+  document.getElementById('ecAnAFrom').value=d(6);
+  document.getElementById('ecAnBTo').value=d(7);
+  document.getElementById('ecAnBFrom').value=d(13);
+  document.getElementById('ecAnResult').innerHTML='<p class="text-xs text-gray-400 text-center py-8">[▶ 분석 실행]을 눌러 결과를 확인하세요.</p>';
+  openModal('ecSalesAnalysisModal');
+}
+function setEcAnPreset(p){
+  const today=new Date();const d=(n)=>{const x=new Date(today);x.setDate(today.getDate()-n);return x.toISOString().split('T')[0]};
+  if(p==='thisWeek'){
+    const dow=today.getDay()||7;
+    document.getElementById('ecAnAFrom').value=d(dow-1);
+    document.getElementById('ecAnATo').value=d(0);
+    document.getElementById('ecAnBFrom').value=d(dow-1+7);
+    document.getElementById('ecAnBTo').value=d(dow);
+  }else if(p==='thisMonth'){
+    const y=today.getFullYear(),m=today.getMonth();
+    const fmt=(dt)=>dt.toISOString().split('T')[0];
+    document.getElementById('ecAnAFrom').value=fmt(new Date(y,m,1));
+    document.getElementById('ecAnATo').value=d(0);
+    document.getElementById('ecAnBFrom').value=fmt(new Date(y,m-1,1));
+    document.getElementById('ecAnBTo').value=fmt(new Date(y,m,0));
+  }
+}
+function _aggregate(rows,groupBy){
+  if(groupBy==='total')return {'전체':{qty:rows.reduce((s,r)=>s+(r.qty||0),0),revenue:rows.reduce((s,r)=>s+(r.revenue||0),0)}};
+  const m={};
+  rows.forEach(r=>{const k=r[groupBy]||'(미지정)';if(!m[k])m[k]={qty:0,revenue:0};m[k].qty+=r.qty||0;m[k].revenue+=r.revenue||0;});
+  return m;
+}
+function runEcSalesAnalysis(){
+  const aFrom=document.getElementById('ecAnAFrom').value,aTo=document.getElementById('ecAnATo').value;
+  const bFrom=document.getElementById('ecAnBFrom').value,bTo=document.getElementById('ecAnBTo').value;
+  const groupBy=document.getElementById('ecAnGroupBy').value;
+  if(!aFrom||!aTo){alert('기간 A를 입력하세요');return}
+  const all=getEcData('sales');
+  const inRange=(s,from,to)=>(!from||s.date>=from)&&(!to||s.date<=to);
+  const a=all.filter(s=>inRange(s,aFrom,aTo));
+  const useB=bFrom&&bTo;
+  const b=useB?all.filter(s=>inRange(s,bFrom,bTo)):[];
+  const aAgg=_aggregate(a,groupBy);
+  const bAgg=_aggregate(b,groupBy);
+  const aTotal={qty:a.reduce((s,r)=>s+(r.qty||0),0),revenue:a.reduce((s,r)=>s+(r.revenue||0),0)};
+  const bTotal={qty:b.reduce((s,r)=>s+(r.qty||0),0),revenue:b.reduce((s,r)=>s+(r.revenue||0),0)};
+  // 결합 키 목록
+  const keys=[...new Set([...Object.keys(aAgg),...Object.keys(bAgg)])];
+  const maxRev=Math.max(1,...keys.map(k=>Math.max(aAgg[k]?.revenue||0,bAgg[k]?.revenue||0)));
+  const result=document.getElementById('ecAnResult');
+  const fmt=(n)=>'₩'+(n||0).toLocaleString();
+  const pctChg=(av,bv)=>{if(!bv)return av?'<span class="text-green-600">신규</span>':'-';const p=((av-bv)/bv*100);return `<span class="${p>=0?'text-green-600':'text-red-500'} font-semibold">${p>=0?'▲':'▼'} ${Math.abs(p).toFixed(1)}%</span>`};
+  result.innerHTML=`
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+      <div class="border border-blue-200 bg-blue-50 rounded p-2"><p class="text-[10px] text-blue-700">A 매출</p><p class="font-bold text-sm">${fmt(aTotal.revenue)}</p></div>
+      <div class="border border-blue-200 bg-blue-50 rounded p-2"><p class="text-[10px] text-blue-700">A 판매량</p><p class="font-bold text-sm">${aTotal.qty.toLocaleString()}</p></div>
+      ${useB?`<div class="border border-amber-200 bg-amber-50 rounded p-2"><p class="text-[10px] text-amber-700">B 매출</p><p class="font-bold text-sm">${fmt(bTotal.revenue)}</p></div>
+      <div class="border border-amber-200 bg-amber-50 rounded p-2"><p class="text-[10px] text-amber-700">B 판매량</p><p class="font-bold text-sm">${bTotal.qty.toLocaleString()}</p></div>`:'<div class="col-span-2 border border-gray-200 rounded p-2 flex items-center justify-center text-xs text-gray-400">기간 B 미설정</div>'}
+    </div>
+    ${useB?`<div class="mb-4 p-3 border border-gray-200 rounded">
+      <p class="text-xs text-gray-500 mb-1">전체 변화</p>
+      <div class="flex items-center gap-4 text-sm">
+        <div>매출: ${pctChg(aTotal.revenue,bTotal.revenue)} <span class="text-xs text-gray-400">(${fmt(aTotal.revenue-bTotal.revenue)})</span></div>
+        <div>판매량: ${pctChg(aTotal.qty,bTotal.qty)} <span class="text-xs text-gray-400">(${(aTotal.qty-bTotal.qty).toLocaleString()})</span></div>
+      </div>
+    </div>`:''}
+    <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
+      <table class="sheet-table">
+        <thead><tr><th>${groupBy==='product'?'제품':groupBy==='brand'?'브랜드':'구분'}</th><th>A 매출</th><th>A 판매량</th>${useB?'<th>B 매출</th><th>B 판매량</th><th>매출 변화</th><th>판매량 변화</th>':''}<th>A 시각화</th></tr></thead>
+        <tbody>
+          ${keys.sort((x,y)=>(aAgg[y]?.revenue||0)-(aAgg[x]?.revenue||0)).map(k=>{
+            const av=aAgg[k]||{qty:0,revenue:0};
+            const bv=bAgg[k]||{qty:0,revenue:0};
+            const wA=Math.round((av.revenue/maxRev)*100);
+            return `<tr>
+              <td><strong>${escapeHtml(k)}</strong></td>
+              <td>${fmt(av.revenue)}</td>
+              <td>${av.qty.toLocaleString()}</td>
+              ${useB?`<td>${fmt(bv.revenue)}</td><td>${bv.qty.toLocaleString()}</td><td>${pctChg(av.revenue,bv.revenue)}</td><td>${pctChg(av.qty,bv.qty)}</td>`:''}
+              <td style="min-width:120px"><div class="bg-blue-500 h-3 rounded" style="width:${wA}%"></div></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
 
 // ========== 이커머스: 주문/출고 (목업) ==========
 const EC_PLATFORM_NAMES={naver:'네이버',coupang:'쿠팡',cafe24:'카페24','11st':'11번가',gmarket:'G마켓',etc:'기타'};
