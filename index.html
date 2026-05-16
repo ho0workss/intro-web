@@ -1084,6 +1084,35 @@
   </div>
 </div>
 
+<!-- 송장 일괄 출력 (택배사 선택) 모달 -->
+<div id="bulkShipPrintModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-bold">🖨 송장 일괄 출력</h2>
+      <button onclick="closeModal('bulkShipPrintModal')" class="hover-bg p-1 rounded">✕</button>
+    </div>
+    <div class="p-5 space-y-3">
+      <p class="text-sm text-gray-700">선택된 주문 <strong id="bulkShipCount" class="text-blue-600">0</strong>건에 적용할 택배사를 선택하세요.</p>
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">택배사</label>
+        <select id="bulkShipCourier" class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-white"></select>
+      </div>
+      <label class="flex items-center gap-2 text-xs text-gray-600">
+        <input type="checkbox" id="bulkShipAutoTracking" class="w-3.5 h-3.5 accent-black" checked />
+        송장번호 미입력 시 임시번호 자동 생성
+      </label>
+      <label class="flex items-center gap-2 text-xs text-gray-600">
+        <input type="checkbox" id="bulkShipMarkShipped" class="w-3.5 h-3.5 accent-black" checked />
+        출력 후 상태를 '배송중'으로 변경
+      </label>
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeModal('bulkShipPrintModal')" class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm">취소</button>
+        <button onclick="confirmBulkPrint()" class="flex-1 px-3 py-2 bg-black text-white rounded text-sm font-medium">택배사 적용 후 출력</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 택배사 관리 모달 -->
 <div id="courierMgmtModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
   <div class="bg-white rounded-2xl shadow-xl w-full max-w-md">

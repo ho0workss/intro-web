@@ -2243,11 +2243,16 @@ const EC_ORDER_ALL_COLUMNS=[
   {k:'status',l:'상태'},{k:'courier',l:'택배사'},{k:'tracking',l:'송장번호'}
 ];
 const EC_ORDER_TEMPLATES_DEFAULT=[
-  {id:'tpl_all',name:'전체',columns:EC_ORDER_ALL_COLUMNS.map(c=>c.k),builtin:true},
   {id:'tpl_ship',name:'출고용',columns:['orderNo','product','option','qty','customer','zipcode','addr','phone','courier','tracking'],builtin:true},
   {id:'tpl_waybill',name:'송장용',columns:['orderNo','customer','zipcode','addr','phone','product','option','qty'],builtin:true}
 ];
-function getEcOrderTemplates(){return ST.get('ec_order_templates',EC_ORDER_TEMPLATES_DEFAULT.slice())}
+function getEcOrderTemplates(){
+  const list=ST.get('ec_order_templates',EC_ORDER_TEMPLATES_DEFAULT.slice());
+  // 'tpl_all' 기본양식은 제거됨 - 기존 사용자 데이터에서도 자동 필터
+  const filtered=list.filter(t=>t.id!=='tpl_all');
+  if(filtered.length!==list.length)ST.set('ec_order_templates',filtered);
+  return filtered;
+}
 function saveEcOrderTemplates(t){ST.set('ec_order_templates',t)}
 function _refreshEcOrderTemplateSel(){
   const sel=document.getElementById('ecOrdersTemplateSel');if(!sel)return;
@@ -2342,8 +2347,39 @@ function downloadEcOrdersExcel(){
 function printEcWaybills(){
   const ids=Array.from(document.querySelectorAll('.ecOrderChk:checked')).map(c=>parseInt(c.dataset.id));
   if(ids.length===0){alert('주문을 선택하세요');return}
+  // 택배사 선택 모달 오픈
+  document.getElementById('bulkShipCount').textContent=ids.length;
+  const sel=document.getElementById('bulkShipCourier');
+  const couriers=getCourierList();
+  sel.innerHTML='<option value="">-- 택배사 선택 --</option>'+couriers.map(c=>`<option value="${c}">${c}</option>`).join('');
+  // 기존 송장이 모두 같은 택배사면 기본 선택
   const d=getEcOrders();const list=d.filter(o=>ids.includes(o.id));
-  // 송장 출력 미리보기 (인쇄용 새 창)
+  const courierSet=new Set(list.map(o=>o.courier).filter(Boolean));
+  if(courierSet.size===1)sel.value=[...courierSet][0];
+  openModal('bulkShipPrintModal');
+}
+function confirmBulkPrint(){
+  const courier=document.getElementById('bulkShipCourier').value;
+  if(!courier){alert('택배사를 선택하세요');return}
+  const autoTracking=document.getElementById('bulkShipAutoTracking').checked;
+  const markShipped=document.getElementById('bulkShipMarkShipped').checked;
+  const ids=Array.from(document.querySelectorAll('.ecOrderChk:checked')).map(c=>parseInt(c.dataset.id));
+  if(ids.length===0){closeModal('bulkShipPrintModal');return}
+  const d=getEcOrders();
+  ids.forEach(id=>{
+    const o=d.find(x=>x.id===id);if(!o)return;
+    o.courier=courier;
+    if(autoTracking&&!o.tracking){o.tracking=`${Date.now().toString().slice(-10)}${String(id).padStart(3,'0')}`.slice(0,13);}
+    if(markShipped&&(o.status==='paid'||o.status==='preparing'))o.status='shipped';
+  });
+  saveEcOrders(d);
+  const list=d.filter(o=>ids.includes(o.id));
+  closeModal('bulkShipPrintModal');
+  renderEcOrders();
+  _doPrintWaybills(list);
+  showToast('🖨','송장 출력',`${courier} · ${list.length}건`);
+}
+function _doPrintWaybills(list){
   const html=`<html><head><title>송장 출력</title><style>
     @page{size:A6;margin:5mm}
     body{font-family:'맑은 고딕',sans-serif;margin:0;padding:8px;font-size:11px}
@@ -2368,7 +2404,6 @@ function printEcWaybills(){
   const w=window.open('','_blank','width=400,height=600');
   if(!w){alert('팝업 차단을 해제하세요');return}
   w.document.write(html);w.document.close();
-  showToast('🖨','송장 출력',list.length+'건');
 }
 async function syncEcOrders(){
   // 실제 API 연동 자리. 현재는 목업.
