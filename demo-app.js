@@ -271,7 +271,7 @@ function navigateTo(page,sub){
   if(page==='ads')renderAds();
   if(page==='events')renderEvents();
   if(page==='design')renderDesign();
-  if(page==='ecommerce')renderEcommerce();
+  if(page==='ecommerce'){renderEcommerce();renderEcOrders();}
   if(page==='partners'){
     // ★ 거래처 진입 시 CURRENT를 users 저장소와 동기화 (삭제 버그 방지)
     if(CURRENT){const fresh=getUsers()[CURRENT.username];if(fresh){CURRENT.partners=fresh.partners||[];ST.set('currentUser',CURRENT)}}
@@ -332,6 +332,7 @@ function switchSettingTab(tab){
   if(tab==='deptrole'){renderDeptRole();renderRoles()}
   if(tab==='partnersmgmt')renderPartnerMgmt();
   if(tab==='aiapi')renderAiModels();
+  if(tab==='extapi')renderExtApiSettings();
 }
 function openModal(id){document.getElementById(id).classList.remove('hidden')}
 function closeModal(id){document.getElementById(id).classList.add('hidden')}
@@ -1806,8 +1807,19 @@ function getAds(){return ST.get('ads',[
 ])}
 function saveAds(a){ST.set('ads',a)}
 function renderAds(){
-  const ads=getAds();
+  const all=getAds();
+  // 플랫폼 필터 적용 (값은 platform key, 표시는 한글 이름)
+  const pf=document.getElementById('adsPlatformFilter')?.value||'all';
+  const PLATFORM_KEYS={'네이버':'naver_sa','카카오':'kakao_moment','구글':'google_ads','인스타그램':'meta_ads','페이스북':'meta_ads'};
+  const ads=pf==='all'?all:all.filter(a=>(PLATFORM_KEYS[a.platform]||'etc')===pf);
   const body=document.getElementById('adsBody');if(!body)return;
+  if(ads.length===0){body.innerHTML='<tr><td colspan="10" class="text-center text-gray-400 py-4">선택한 플랫폼의 캠페인이 없습니다.</td></tr>';
+    document.getElementById('adsBudget')&&(document.getElementById('adsBudget').textContent='₩0');
+    document.getElementById('adsSpent')&&(document.getElementById('adsSpent').textContent='₩0');
+    document.getElementById('adsImpr')&&(document.getElementById('adsImpr').textContent='0');
+    document.getElementById('adsClicks')&&(document.getElementById('adsClicks').textContent='0');
+    return;
+  }
   body.innerHTML=ads.map((a,i)=>{
     const ctr=a.impr>0?((a.clicks/a.impr)*100).toFixed(2):'0';
     const statusColor=a.status==='진행중'?'bg-green-50 text-green-700':a.status==='예정'?'bg-blue-50 text-blue-700':'bg-gray-100 text-gray-500';
@@ -1908,6 +1920,193 @@ function ecAddRow(t){const d=getEcData(t);const newRow={id:Date.now()};if(t==='s
 function ecDelRow(t){const ids=Array.from(document.querySelectorAll('.ecChk-'+t+':checked')).map(c=>parseInt(c.dataset.id));if(ids.length===0){alert('선택하세요');return}if(!confirm('삭제?'))return;saveEcData(t,getEcData(t).filter(x=>!ids.includes(x.id)));renderEcommerce();showToast('🗑️','삭제됨','')}
 function ecToggleAll(t,c){document.querySelectorAll('.ecChk-'+t).forEach(x=>x.checked=c)}
 function updEc(t,id,k,v){const d=getEcData(t);const x=d.find(y=>y.id===id);if(x){if(['qty','revenue','growth','stock','min','cost','price','orderQty'].includes(k))x[k]=parseFloat(v.replace(/[^\d.-]/g,''))||0;else x[k]=v;saveEcData(t,d)}}
+
+// ========== 이커머스: 주문/출고 (목업) ==========
+const EC_PLATFORM_NAMES={naver:'네이버',coupang:'쿠팡',cafe24:'카페24','11st':'11번가',gmarket:'G마켓',etc:'기타'};
+const EC_STATUS_LABELS={paid:{l:'결제완료',c:'bg-blue-50 text-blue-700'},preparing:{l:'출고대기',c:'bg-amber-50 text-amber-700'},shipped:{l:'배송중',c:'bg-purple-50 text-purple-700'},delivered:{l:'배송완료',c:'bg-green-50 text-green-700'}};
+const COURIER_LIST=['CJ대한통운','한진택배','롯데택배','우체국택배','로젠택배','쿠팡로지스틱스','한국통운'];
+function getEcOrders(){
+  return ST.get('ec_orders',[
+    {id:1,platform:'naver',orderNo:'2026-05-16-N0001',orderDate:'2026-05-16',product:'선크림 SPF50+',qty:2,customer:'홍길동',addr:'서울시 강남구 테헤란로 123',phone:'010-1234-5678',status:'preparing',courier:'',tracking:''},
+    {id:2,platform:'coupang',orderNo:'C-26051600002',orderDate:'2026-05-16',product:'클렌징 폼',qty:1,customer:'김영희',addr:'경기도 성남시 분당구 정자동',phone:'010-2345-6789',status:'paid',courier:'',tracking:''},
+    {id:3,platform:'cafe24',orderNo:'CF26051500003',orderDate:'2026-05-15',product:'토너 세트',qty:1,customer:'이철수',addr:'부산시 해운대구 마린시티1로',phone:'010-3456-7890',status:'shipped',courier:'CJ대한통운',tracking:'1234567890'},
+    {id:4,platform:'11st',orderNo:'11ST-26051500004',orderDate:'2026-05-15',product:'프리미엄 보습 크림',qty:3,customer:'박지영',addr:'대구시 수성구 동대구로',phone:'010-4567-8901',status:'delivered',courier:'한진택배',tracking:'5566778899'},
+    {id:5,platform:'gmarket',orderNo:'GM26051600005',orderDate:'2026-05-16',product:'스킨케어 세트',qty:1,customer:'최민수',addr:'인천시 연수구 송도동',phone:'010-5678-9012',status:'paid',courier:'',tracking:''},
+    {id:6,platform:'naver',orderNo:'2026-05-16-N0006',orderDate:'2026-05-16',product:'선크림 SPF50+',qty:1,customer:'정수연',addr:'광주시 서구 상무대로',phone:'010-6789-0123',status:'preparing',courier:'',tracking:''}
+  ]);
+}
+function saveEcOrders(d){ST.set('ec_orders',d)}
+function renderEcOrders(){
+  const body=document.getElementById('ecOrdersBody');if(!body)return;
+  const orders=getEcOrders();
+  // KPI
+  const cnt={paid:0,preparing:0,shipped:0,delivered:0};
+  orders.forEach(o=>{if(cnt[o.status]!==undefined)cnt[o.status]++});
+  document.getElementById('ecOrdersPaid').textContent=cnt.paid;
+  document.getElementById('ecOrdersPreparing').textContent=cnt.preparing;
+  document.getElementById('ecOrdersShipped').textContent=cnt.shipped;
+  document.getElementById('ecOrdersDelivered').textContent=cnt.delivered;
+  // 필터
+  const pf=document.getElementById('ecOrdersPlatformFilter')?.value||'all';
+  const sf=document.getElementById('ecOrdersStatusFilter')?.value||'all';
+  let list=orders;
+  if(pf!=='all')list=list.filter(o=>o.platform===pf);
+  if(sf!=='all')list=list.filter(o=>o.status===sf);
+  if(list.length===0){body.innerHTML='<tr><td colspan="12" class="text-center text-gray-400 py-4">조건에 맞는 주문이 없습니다.</td></tr>';return}
+  const courierOpts=COURIER_LIST.map(c=>`<option value="${c}">${c}</option>`).join('');
+  body.innerHTML=list.map(o=>{
+    const st=EC_STATUS_LABELS[o.status]||{l:o.status,c:'bg-gray-100'};
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="ecOrderChk" data-id="${o.id}" /></td>
+      <td><span class="text-xs px-2 py-0.5 rounded bg-gray-100">${EC_PLATFORM_NAMES[o.platform]||o.platform}</span></td>
+      <td class="font-mono text-xs">${escapeHtml(o.orderNo)}</td>
+      <td>${o.orderDate}</td>
+      <td>${escapeHtml(o.product)}</td>
+      <td class="text-center">${o.qty}</td>
+      <td>${escapeHtml(o.customer)}</td>
+      <td class="text-xs text-gray-600 max-w-xs truncate" title="${escapeHtml(o.addr)}">${escapeHtml(o.addr)}</td>
+      <td><span class="text-xs px-2 py-0.5 rounded ${st.c}">${st.l}</span></td>
+      <td><select onchange="updEcOrder(${o.id},'courier',this.value)" class="text-xs border rounded px-1 py-0.5 bg-white"><option value="">선택</option>${courierOpts.replace('value="'+o.courier+'"','value="'+o.courier+'" selected')}</select></td>
+      <td><input value="${escapeHtml(o.tracking||'')}" oninput="updEcOrder(${o.id},'tracking',this.value)" placeholder="송장번호" class="text-xs border rounded px-2 py-0.5 w-32 bg-white font-mono" /></td>
+      <td>${o.status==='preparing'||o.status==='paid'?`<button onclick="shipEcOrder(${o.id})" class="text-xs px-2 py-0.5 bg-black text-white rounded">출고</button>`:o.status==='shipped'?`<button onclick="deliverEcOrder(${o.id})" class="text-xs px-2 py-0.5 bg-green-600 text-white rounded">완료</button>`:'-'}</td>
+    </tr>`;
+  }).join('');
+}
+function updEcOrder(id,key,val){
+  const d=getEcOrders();const o=d.find(x=>x.id===id);
+  if(o){o[key]=val;saveEcOrders(d)}
+}
+function shipEcOrder(id){
+  const d=getEcOrders();const o=d.find(x=>x.id===id);if(!o)return;
+  if(!o.courier||!o.tracking){alert('택배사와 송장번호를 먼저 입력하세요');return}
+  o.status='shipped';saveEcOrders(d);renderEcOrders();
+  showToast('📦','출고 처리',`${o.customer} · ${o.tracking}`);
+  // TODO: 실제 API 호출 위치 (settings에서 API 키 등록되면 호출)
+  // window.ExtAPI?.markShipped(o.platform, o.orderNo, o.courier, o.tracking)
+}
+function deliverEcOrder(id){
+  const d=getEcOrders();const o=d.find(x=>x.id===id);if(!o)return;
+  o.status='delivered';saveEcOrders(d);renderEcOrders();
+  showToast('✅','배송완료',o.customer);
+}
+function ecToggleAllOrders(c){document.querySelectorAll('.ecOrderChk').forEach(x=>x.checked=c)}
+function bulkShipEcOrders(){
+  const ids=Array.from(document.querySelectorAll('.ecOrderChk:checked')).map(c=>parseInt(c.dataset.id));
+  if(ids.length===0){alert('주문을 선택하세요');return}
+  const d=getEcOrders();let ok=0,fail=0;
+  ids.forEach(id=>{
+    const o=d.find(x=>x.id===id);
+    if(o&&o.courier&&o.tracking&&(o.status==='paid'||o.status==='preparing')){o.status='shipped';ok++}
+    else if(o&&(o.status==='paid'||o.status==='preparing'))fail++;
+  });
+  saveEcOrders(d);renderEcOrders();
+  showToast('📦','일괄 출고',`성공 ${ok}건${fail?' / 송장 누락 '+fail+'건':''}`);
+}
+function printEcWaybills(){
+  const ids=Array.from(document.querySelectorAll('.ecOrderChk:checked')).map(c=>parseInt(c.dataset.id));
+  if(ids.length===0){alert('주문을 선택하세요');return}
+  const d=getEcOrders();const list=d.filter(o=>ids.includes(o.id));
+  // 송장 출력 미리보기 (인쇄용 새 창)
+  const html=`<html><head><title>송장 출력</title><style>
+    @page{size:A6;margin:5mm}
+    body{font-family:'맑은 고딕',sans-serif;margin:0;padding:8px;font-size:11px}
+    .label{border:2px solid #000;padding:8px;margin-bottom:12px;page-break-after:always}
+    .label:last-child{page-break-after:auto}
+    h3{margin:0 0 6px 0;font-size:13px;border-bottom:1px solid #000;padding-bottom:4px}
+    .row{display:flex;gap:8px;margin:3px 0}
+    .row strong{min-width:60px}
+    .tracking{font-size:14px;font-weight:bold;text-align:center;margin-top:8px;padding:6px;background:#000;color:#fff}
+  </style></head><body>
+  ${list.map(o=>`<div class="label">
+    <h3>${EC_PLATFORM_NAMES[o.platform]||o.platform} · ${o.orderNo}</h3>
+    <div class="row"><strong>받는분:</strong>${escapeHtml(o.customer)} (${escapeHtml(o.phone||'-')})</div>
+    <div class="row"><strong>주소:</strong>${escapeHtml(o.addr)}</div>
+    <div class="row"><strong>상품:</strong>${escapeHtml(o.product)} × ${o.qty}</div>
+    <div class="row"><strong>택배사:</strong>${escapeHtml(o.courier||'(미지정)')}</div>
+    <div class="tracking">${escapeHtml(o.tracking||'송장번호 미입력')}</div>
+  </div>`).join('')}
+  <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}</script>
+  </body></html>`;
+  const w=window.open('','_blank','width=400,height=600');
+  if(!w){alert('팝업 차단을 해제하세요');return}
+  w.document.write(html);w.document.close();
+  showToast('🖨','송장 출력',list.length+'건');
+}
+async function syncEcOrders(){
+  // 실제 API 연동 자리. 현재는 목업.
+  showToast('🔄','동기화 시뮬레이션','API 키 등록 시 실연동 가능');
+  // 새 목업 주문 1건 랜덤 추가
+  const d=getEcOrders();
+  const platforms=Object.keys(EC_PLATFORM_NAMES);
+  const platform=platforms[Math.floor(Math.random()*platforms.length)];
+  const today=new Date();const yy=String(today.getFullYear()).slice(-2);const mm=String(today.getMonth()+1).padStart(2,'0');const dd=String(today.getDate()).padStart(2,'0');
+  d.unshift({
+    id:Date.now(),platform,orderNo:`MOCK-${yy}${mm}${dd}-${Math.floor(Math.random()*9000+1000)}`,
+    orderDate:`20${yy}-${mm}-${dd}`,product:'신규 주문 상품',qty:Math.floor(Math.random()*3)+1,
+    customer:'신규고객'+Math.floor(Math.random()*100),addr:'주소 정보',phone:'010-0000-0000',
+    status:'paid',courier:'',tracking:''
+  });
+  saveEcOrders(d);renderEcOrders();
+}
+async function syncAdsPerformance(){
+  showToast('🔄','광고 성과 동기화','API 키 등록 시 실연동 (현재 목업)');
+}
+
+// ========== 외부 API 연동 설정 (이커머스/광고) ==========
+const EXT_API_PROVIDERS=[
+  {id:'naver_store',name:'네이버 스마트스토어',cat:'ecommerce',fields:[{k:'clientId',l:'Client ID'},{k:'clientSecret',l:'Client Secret'}]},
+  {id:'coupang',name:'쿠팡 Wing',cat:'ecommerce',fields:[{k:'accessKey',l:'Access Key'},{k:'secretKey',l:'Secret Key'},{k:'vendorId',l:'Vendor ID'}]},
+  {id:'cafe24',name:'카페24',cat:'ecommerce',fields:[{k:'mallId',l:'Mall ID'},{k:'clientId',l:'Client ID'},{k:'clientSecret',l:'Client Secret'}]},
+  {id:'11st',name:'11번가',cat:'ecommerce',fields:[{k:'apiKey',l:'API Key'}]},
+  {id:'gmarket',name:'G마켓 / 옥션 (ESM)',cat:'ecommerce',fields:[{k:'esmId',l:'ESM ID'},{k:'apiKey',l:'API Key'}]},
+  {id:'naver_sa',name:'네이버 검색광고',cat:'ads',fields:[{k:'apiKey',l:'API Key'},{k:'secretKey',l:'Secret Key'},{k:'customerId',l:'Customer ID'}]},
+  {id:'kakao_moment',name:'카카오 모먼트',cat:'ads',fields:[{k:'apiKey',l:'REST API Key'},{k:'adAccountId',l:'광고계정 ID'}]},
+  {id:'google_ads',name:'Google Ads',cat:'ads',fields:[{k:'developerToken',l:'Developer Token'},{k:'clientId',l:'Client ID'},{k:'clientSecret',l:'Client Secret'},{k:'refreshToken',l:'Refresh Token'}]},
+  {id:'meta_ads',name:'Meta Ads (Facebook/Instagram)',cat:'ads',fields:[{k:'accessToken',l:'Access Token'},{k:'adAccountId',l:'광고계정 ID'}]},
+  {id:'goodsflow',name:'굿스플로 (통합 택배 송장)',cat:'shipping',fields:[{k:'apiKey',l:'API Key'}]},
+];
+function getExtApiSettings(){return ST.get('extApiSettings',{})}
+function saveExtApiSettings(){
+  const all=getExtApiSettings();
+  EXT_API_PROVIDERS.forEach(p=>{
+    const block=all[p.id]||{};
+    p.fields.forEach(f=>{
+      const el=document.getElementById(`extapi-${p.id}-${f.k}`);
+      if(el)block[f.k]=el.value;
+    });
+    block.enabled=!!document.getElementById(`extapi-${p.id}-enabled`)?.checked;
+    all[p.id]=block;
+  });
+  ST.set('extApiSettings',all);
+  showToast('💾','API 설정 저장','로컬에 저장됨');
+}
+function renderExtApiSettings(){
+  const list=document.getElementById('extApiList');if(!list)return;
+  const settings=getExtApiSettings();
+  const catNames={ecommerce:'🛍️ 이커머스',ads:'📣 광고',shipping:'🚚 택배'};
+  const byCat={};
+  EXT_API_PROVIDERS.forEach(p=>{(byCat[p.cat]=byCat[p.cat]||[]).push(p)});
+  list.innerHTML=Object.entries(byCat).map(([cat,ps])=>`
+    <div class="border border-gray-200 rounded-lg p-4">
+      <h3 class="text-sm font-bold mb-3">${catNames[cat]||cat}</h3>
+      <div class="space-y-3">
+        ${ps.map(p=>{
+          const s=settings[p.id]||{};
+          return `<details class="border border-gray-100 rounded p-3" ${s.enabled?'open':''}>
+            <summary class="flex items-center gap-2 cursor-pointer text-sm font-medium">
+              <input type="checkbox" id="extapi-${p.id}-enabled" ${s.enabled?'checked':''} onclick="event.stopPropagation()" class="w-4 h-4 accent-black" />
+              <span>${p.name}</span>
+              <span class="ml-auto text-xs text-gray-400">${s.enabled?'활성':'비활성'}</span>
+            </summary>
+            <div class="mt-3 space-y-2">
+              ${p.fields.map(f=>`<div><label class="block text-xs text-gray-600 mb-1">${f.l}</label><input id="extapi-${p.id}-${f.k}" type="text" value="${escapeHtml(s[f.k]||'')}" placeholder="${f.l} 입력" class="w-full px-3 py-1.5 border border-gray-300 rounded text-xs font-mono bg-white" /></div>`).join('')}
+            </div>
+          </details>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('');
+}
 
 // ========== 과거 휴가 내역 ==========
 function renderPastLeaves(){
