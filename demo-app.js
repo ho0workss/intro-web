@@ -2246,12 +2246,17 @@ function _genMockAcResult(query){
   const suffixes=['추천','후기','가격','종류','쇼핑몰','순위','뜻','사용법','구매','비교'];
   return suffixes.slice(0,6).map(s=>`${query} ${s}`);
 }
-function getAcQueries(){return ST.get('ac_queries_v1',[
-  {id:1,query:'스텐',history:_genMockAcHistory('스텐',7),note:'주력 카테고리'},
-  {id:2,query:'선크림',history:_genMockAcHistory('선크림',7),note:''},
-  {id:3,query:'클렌징',history:_genMockAcHistory('클렌징',7),note:''},
-  {id:4,query:'스',history:_genMockAcHistory('스',7),note:'단글자 트렌드'}
-])}
+function getAcQueries(){
+  const d=ST.get('ac_queries_v1',[
+    {id:1,query:'스텐',history:_genMockAcHistory('스텐',7),targetKeywords:['스텐 컵','스텐 텀블러'],negativeKeywords:['사기','불량'],note:'주력 카테고리'},
+    {id:2,query:'선크림',history:_genMockAcHistory('선크림',7),targetKeywords:['선크림 추천','선크림 spf50'],negativeKeywords:['알레르기'],note:''},
+    {id:3,query:'클렌징',history:_genMockAcHistory('클렌징',7),targetKeywords:[],negativeKeywords:['최악'],note:''},
+    {id:4,query:'스',history:_genMockAcHistory('스',7),targetKeywords:[],negativeKeywords:[],note:'단글자 트렌드'}
+  ]);
+  // 기존 데이터 마이그레이션: targetKeywords/negativeKeywords 누락 시 빈 배열
+  d.forEach(q=>{if(!Array.isArray(q.targetKeywords))q.targetKeywords=[];if(!Array.isArray(q.negativeKeywords))q.negativeKeywords=[];});
+  return d;
+}
 function _genMockAcHistory(query,days){
   const hist={};
   const today=new Date();
@@ -2285,31 +2290,99 @@ function renderAcTable(){
     totalAdded+=now.filter(x=>!past.includes(x)).length;
     totalRemoved+=past.filter(x=>!now.includes(x)).length;
   });
+  // 목표/부정 집계
+  let targetFoundTotal=0,targetTotalAll=0,negDetectedTotal=0;
+  d.forEach(q=>{
+    const nowList=q.history?.[today]||[];
+    const tm=_matchAcTargets(nowList,q.targetKeywords);
+    const nm=_matchAcNegatives(nowList,q.negativeKeywords);
+    targetFoundTotal+=tm.found.length;
+    targetTotalAll+=(q.targetKeywords||[]).length;
+    negDetectedTotal+=nm.length;
+  });
   document.getElementById('acQueryTotal')&&(document.getElementById('acQueryTotal').textContent=d.length);
+  document.getElementById('acTargetFound')&&(document.getElementById('acTargetFound').textContent=`${targetFoundTotal}/${targetTotalAll}`);
+  document.getElementById('acNegDetected')&&(document.getElementById('acNegDetected').textContent=negDetectedTotal);
   document.getElementById('acAdded')&&(document.getElementById('acAdded').textContent=totalAdded);
   document.getElementById('acRemoved')&&(document.getElementById('acRemoved').textContent=totalRemoved);
   const latestCheck=d.reduce((max,q)=>{const dates=Object.keys(q.history||{});if(dates.length===0)return max;const last=dates.sort().reverse()[0];return!max||last>max?last:max},null);
   document.getElementById('acLastChecked')&&(document.getElementById('acLastChecked').textContent=latestCheck?fmtDateYY(latestCheck):'-');
-  if(d.length===0){body.innerHTML='<tr><td colspan="8" class="text-center text-gray-400 py-4">추적 쿼리가 없습니다.</td></tr>';return}
+  if(d.length===0){body.innerHTML='<tr><td colspan="10" class="text-center text-gray-400 py-4">추적 쿼리가 없습니다.</td></tr>';return}
   body.innerHTML=d.map(q=>{
     const now=q.history?.[today]||[];
     const past=q.history?.[compareDate]||[];
     const added=now.filter(x=>!past.includes(x));
     const removed=past.filter(x=>!now.includes(x));
     const lastDate=Object.keys(q.history||{}).sort().reverse()[0];
+    // 매칭 결과는 항상 현재 데이터로 재계산 (캐시는 알림 변화감지용)
+    const tm=_matchAcTargets(now,q.targetKeywords);
+    const nm=_matchAcNegatives(now,q.negativeKeywords);
+    const targetTotal=(q.targetKeywords||[]).length;
+    const targetCell=targetTotal===0?'<span class="text-gray-400">미설정</span>':`<div class="text-xs">${tm.found.length>0?'<span class="text-green-600 font-semibold">✓ '+tm.found.map(s=>escapeHtml(s)).join(', ')+'</span>':''}${tm.missing.length>0?'<div class="text-red-500">✗ '+tm.missing.map(s=>escapeHtml(s)).join(', ')+'</div>':''}<div class="text-[10px] text-gray-400 mt-1">${tm.found.length}/${targetTotal} 노출</div></div>`;
+    const negCell=nm.length===0?(q.negativeKeywords||[]).length===0?'<span class="text-gray-400">미설정</span>':'<span class="text-gray-400 text-xs">감지 없음</span>':`<div class="text-xs"><span class="text-red-600 font-semibold">⚠️ ${nm.length}건</span>${nm.slice(0,3).map(d=>`<div class="text-[10px] text-red-500">'${escapeHtml(d.negative)}' → ${escapeHtml(d.suggestion)}</div>`).join('')}${nm.length>3?`<div class="text-[10px] text-gray-400">+${nm.length-3}건</div>`:''}</div>`;
     return `<tr>
       <td class="sheet-row-num"><input type="checkbox" class="acChk" data-id="${q.id}" /></td>
       <td class="font-mono font-medium">${escapeHtml(q.query)}</td>
       <td class="text-xs">${now.length===0?'<span class="text-gray-400">데이터 없음</span>':now.map(s=>escapeHtml(s)).join(', ')}</td>
-      <td class="text-xs text-gray-600">${past.length===0?'<span class="text-gray-400">-</span>':past.map(s=>escapeHtml(s)).join(', ')}</td>
       <td class="text-xs">${added.length===0?'<span class="text-gray-400">·</span>':'<span class="text-blue-600 font-semibold">'+added.map(s=>escapeHtml(s)).join(', ')+'</span>'}</td>
       <td class="text-xs">${removed.length===0?'<span class="text-gray-400">·</span>':'<span class="text-red-500 line-through">'+removed.map(s=>escapeHtml(s)).join(', ')+'</span>'}</td>
+      <td contenteditable oninput="updAcQuery(${q.id},'targetKeywords',this.textContent)" class="text-xs">${escapeHtml((q.targetKeywords||[]).join(', '))}</td>
+      <td>${targetCell}</td>
+      <td contenteditable oninput="updAcQuery(${q.id},'negativeKeywords',this.textContent)" class="text-xs">${escapeHtml((q.negativeKeywords||[]).join(', '))}</td>
+      <td>${negCell}</td>
       <td class="text-[10px] text-gray-500">${lastDate?fmtDateYY(lastDate):'-'}</td>
-      <td contenteditable oninput="updAcQuery(${q.id},'note',this.textContent)" class="text-xs text-gray-600">${escapeHtml(q.note||'')}</td>
     </tr>`;
   }).join('');
 }
-function updAcQuery(id,k,v){const d=getAcQueries();const x=d.find(y=>y.id===id);if(x){x[k]=v;saveAcQueries(d)}}
+function updAcQuery(id,k,v){
+  const d=getAcQueries();const x=d.find(y=>y.id===id);if(!x)return;
+  if(k==='targetKeywords'||k==='negativeKeywords'){
+    x[k]=String(v||'').split(',').map(s=>s.trim()).filter(Boolean);
+  }else{x[k]=v}
+  saveAcQueries(d);
+}
+// 자동완성 매칭: 목표(정확일치) + 부정(부분포함)
+function _matchAcTargets(suggestions,targets){
+  const found=[],missing=[];
+  (targets||[]).forEach(t=>{
+    if(!t)return;
+    const tNorm=t.trim().toLowerCase();
+    const matched=suggestions.some(s=>s.toLowerCase()===tNorm);
+    if(matched)found.push(t);else missing.push(t);
+  });
+  return {found,missing};
+}
+function _matchAcNegatives(suggestions,negatives){
+  const detected=[];
+  (negatives||[]).forEach(n=>{
+    if(!n)return;
+    const nNorm=n.trim().toLowerCase();
+    suggestions.forEach(s=>{
+      if(s.toLowerCase().includes(nNorm)&&!detected.find(d=>d.negative===n&&d.suggestion===s)){
+        detected.push({negative:n,suggestion:s});
+      }
+    });
+  });
+  return detected;
+}
+// 알림 상태 변경 감지 (이전 결과와 비교하여 새로운 변화만 알림 발송)
+function _alertAcChanges(query,prevState,nowState){
+  // 목표 신규 노출 / 신규 이탈
+  const newlyFound=(nowState.targetFound||[]).filter(t=>!(prevState.targetFound||[]).includes(t));
+  const newlyMissing=(nowState.targetMissing||[]).filter(t=>!(prevState.targetMissing||[]).includes(t)&&(prevState.targetFound||[]).includes(t));
+  // 부정 신규 감지
+  const prevNegKeys=new Set((prevState.negativeDetected||[]).map(d=>d.negative+'|'+d.suggestion));
+  const newlyNeg=(nowState.negativeDetected||[]).filter(d=>!prevNegKeys.has(d.negative+'|'+d.suggestion));
+  if(newlyFound.length>0){
+    addNotif({type:'autocomplete',icon:'🎯',title:'목표 자완 노출 진입',content:`'${query}' → ${newlyFound.join(', ')}`,target:'ecommerce'});
+  }
+  if(newlyMissing.length>0){
+    addNotif({type:'autocomplete',icon:'⚠️',title:'목표 자완 이탈',content:`'${query}' → ${newlyMissing.join(', ')}`,target:'ecommerce'});
+  }
+  if(newlyNeg.length>0){
+    addNotif({type:'autocomplete',icon:'🚨',title:'부정자완 감지',content:`'${query}' → ${newlyNeg.map(d=>d.negative+' ('+d.suggestion+')').join(' · ')}`,target:'ecommerce'});
+  }
+}
 function addAcQuery(){
   const inp=document.getElementById('acNewQuery');const q=inp?.value.trim();
   if(!q){alert('쿼리를 입력하세요 (예: 스텐, ㅅ, 선크림)');return}
@@ -2356,13 +2429,26 @@ async function refreshAllAcQueries(){
   const source=getAcDataSource();
   let ok=0,fail=0;
   for(const q of d){
+    // 이전 매칭 상태 보존 (변화 감지용)
+    const prevState={
+      targetFound:q.lastTargetFound||[],
+      targetMissing:q.lastTargetMissing||[],
+      negativeDetected:q.lastNegativeDetected||[]
+    };
     try{
       const suggestions=await _fetchAcSuggestions(q.query,source);
       q.history=q.history||{};q.history[today]=suggestions;
+      // 매칭 결과 계산
+      const tm=_matchAcTargets(suggestions,q.targetKeywords);
+      const nm=_matchAcNegatives(suggestions,q.negativeKeywords);
+      q.lastTargetFound=tm.found;
+      q.lastTargetMissing=tm.missing;
+      q.lastNegativeDetected=nm;
+      // 변화 알림
+      _alertAcChanges(q.query,prevState,{targetFound:tm.found,targetMissing:tm.missing,negativeDetected:nm});
       ok++;
     }catch(err){
       console.warn('AC fetch failed for',q.query,err);
-      // 실패 시 mock으로 폴백 (사용자 경험 위해)
       q.history=q.history||{};q.history[today]=_genMockAcResult(q.query);
       fail++;
     }
