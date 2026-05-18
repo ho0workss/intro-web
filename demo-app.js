@@ -1999,13 +1999,29 @@ function getEcData(t){
     ST.set('ec_inventory_v2',fresh);return fresh;
   }
   if(t==='cost'){
-    const v=ST.get('ec_cost_v2',null);if(v)return v;
-    const fresh=[
-      {id:1,product:'스킨케어 세트',components:[],cost:18000,shippingFee:3000,price:45000,fee:4500},
-      {id:2,product:'선크림 SPF50+',components:[],cost:8000,shippingFee:3000,price:15000,fee:1500},
-      {id:3,product:'클렌징 폼',components:[],cost:5000,shippingFee:3000,price:20000,fee:2000}
-    ];
-    ST.set('ec_cost_v2',fresh);return fresh;
+    let v=ST.get('ec_cost_v2',null);
+    if(!v){
+      // cost는 사용자가 입력하는 '기본 원가' (구성품 가격은 별도로 합산)
+      // feeRate는 판매가의 % (예: 10 = 10%)
+      v=[
+        {id:1,product:'스킨케어 세트',components:[],cost:18000,shippingFee:3000,price:45000,feeRate:10},
+        {id:2,product:'선크림 SPF50+',components:[],cost:8000,shippingFee:3000,price:15000,feeRate:10},
+        {id:3,product:'클렌징 폼',components:[],cost:5000,shippingFee:3000,price:20000,feeRate:10}
+      ];
+      ST.set('ec_cost_v2',v);return v;
+    }
+    // 마이그레이션: fee(원) → feeRate(%) 환산
+    let migrated=false;
+    v.forEach(c=>{
+      if(typeof c.feeRate!=='number'){
+        if(c.fee>0&&c.price>0)c.feeRate=Math.round((c.fee/c.price)*1000)/10;
+        else c.feeRate=0;
+        delete c.fee;
+        migrated=true;
+      }
+    });
+    if(migrated)ST.set('ec_cost_v2',v);
+    return v;
   }
   return ST.get('ec_'+t,[]);
 }
@@ -2069,7 +2085,7 @@ function ecAddRow(t){
   const d=getEcData(t);const newRow={id:Date.now()};
   if(t==='sales')Object.assign(newRow,{date:new Date().toISOString().split('T')[0],brand:'',product:'새 상품',qty:0,revenue:0});
   if(t==='inventory')Object.assign(newRow,{sku:'',product:'새 상품',stock:0,min:0,source:'manual',lastSync:''});
-  if(t==='cost')Object.assign(newRow,{product:'새 상품',components:[],cost:0,shippingFee:0,price:0,fee:0});
+  if(t==='cost')Object.assign(newRow,{product:'새 상품',components:[],cost:0,shippingFee:0,price:0,feeRate:10});
   d.push(newRow);saveEcData(t,d);renderEcommerce();showToast('+','추가됨','');
 }
 function ecDelRow(t){const ids=Array.from(document.querySelectorAll('.ecChk-'+t+':checked')).map(c=>parseInt(c.dataset.id));if(ids.length===0){alert('선택하세요');return}if(!confirm('삭제?'))return;saveEcData(t,getEcData(t).filter(x=>!ids.includes(x.id)));renderEcommerce();showToast('🗑️','삭제됨','')}
@@ -2077,7 +2093,7 @@ function ecToggleAll(t,c){document.querySelectorAll('.ecChk-'+t).forEach(x=>x.ch
 function updEc(t,id,k,v){
   const d=getEcData(t);const x=d.find(y=>y.id===id);if(!x)return;
   const oldVal=x[k];
-  if(['qty','revenue','stock','min','cost','price','orderQty','shippingFee','fee'].includes(k))x[k]=parseFloat(String(v).replace(/[^\d.-]/g,''))||0;
+  if(['qty','revenue','stock','min','cost','price','orderQty','shippingFee','feeRate'].includes(k))x[k]=parseFloat(String(v).replace(/[^\d.-]/g,''))||0;
   else if(k==='date')x[k]=parseDateYY(v);
   else x[k]=v;
   saveEcData(t,d);
@@ -2161,33 +2177,35 @@ function renderEcCost(){
   const d=getEcData('cost');
   if(d.length===0){body.innerHTML='<tr><td colspan="9" class="text-center text-gray-400 py-4">제품이 없습니다.</td></tr>';return}
   body.innerHTML=d.map(c=>{
-    // 원가 자동 계산: 구성품 가격 합 (배송비 제외)
+    // 원가 = 사용자 입력 기본 원가 + 구성품 가격 합 (배송비 제외)
+    const baseCost=c.cost||0;
     const componentsCost=_calcCostFromComponents(c);
+    const totalCost=baseCost+componentsCost;
     const hasComponents=(c.components||[]).length>0;
-    // 원가 = 구성품 합 (구성품 있을 때) 또는 사용자 입력 cost (없을 때)
-    const cost=hasComponents?componentsCost:(c.cost||0);
-    if(hasComponents&&c.cost!==componentsCost){c.cost=componentsCost;}
     const price=c.price||0;
     const shippingFee=c.shippingFee||0;
-    const fee=c.fee||0;
-    const marginAmount=price-cost-shippingFee-fee;
+    const feeRate=c.feeRate||0;
+    const feeAmount=Math.round(price*feeRate/100);
+    const marginAmount=price-totalCost-shippingFee-feeAmount;
     const marginRate=price>0?(marginAmount/price*100):0;
-    // 구성품 칩 표시
     const compChips=(c.components||[]).map((r,idx)=>`<span class="ac-chip ac-chip-pos" title="₩${(r.price||0).toLocaleString()}">${escapeHtml(r.name||'')} <button onclick="delCompFromCost(${c.id},${idx})" class="text-red-500 hover:text-red-700 ml-1" title="제거">×</button></span>`).join('');
     const addBtn=`<button onclick="openAddCompToCost(${c.id})" class="ac-chip" style="cursor:pointer;background:#e0e7ff;color:#3730a3;border-color:#c7d2fe">+ 추가</button>`;
+    // 원가 셀: 기본 원가는 항상 편집 가능, 구성품 있으면 합산 내역 표시
+    const costCell=hasComponents
+      ? `<div contenteditable oninput="updEc('cost',${c.id},'cost',this.textContent)" title="기본 원가 (편집 가능)">₩${baseCost.toLocaleString()}</div><div class="text-[10px] text-gray-500 mt-0.5">+ 구성품 ₩${componentsCost.toLocaleString()}</div><div class="text-[10px] text-blue-700 font-semibold">= 총 ₩${totalCost.toLocaleString()}</div>`
+      : `<div contenteditable oninput="updEc('cost',${c.id},'cost',this.textContent)">₩${baseCost.toLocaleString()}</div>`;
     return `<tr>
       <td class="sheet-row-num"><input type="checkbox" class="ecChk-cost" data-id="${c.id}" /></td>
       <td contenteditable oninput="updEc('cost',${c.id},'product',this.textContent)" class="align-top">${escapeHtml(c.product||'')}</td>
       <td class="align-top" style="min-width:200px">${compChips}${addBtn}${hasComponents?`<div class="text-[10px] text-gray-500 mt-1">합계 ₩${componentsCost.toLocaleString()}</div>`:''}</td>
-      <td class="align-top text-right">${hasComponents?`<div class="text-gray-700">₩${cost.toLocaleString()}</div><div class="text-[10px] text-gray-400">자동계산</div>`:`<div contenteditable oninput="updEc('cost',${c.id},'cost',this.textContent)">₩${cost.toLocaleString()}</div>`}</td>
+      <td class="align-top text-right">${costCell}</td>
       <td contenteditable oninput="updEc('cost',${c.id},'shippingFee',this.textContent)" class="align-top text-right">₩${shippingFee.toLocaleString()}</td>
       <td contenteditable oninput="updEc('cost',${c.id},'price',this.textContent)" class="align-top text-right">₩${price.toLocaleString()}</td>
-      <td contenteditable oninput="updEc('cost',${c.id},'fee',this.textContent)" class="align-top text-right">₩${fee.toLocaleString()}</td>
+      <td class="align-top text-right"><div contenteditable oninput="updEc('cost',${c.id},'feeRate',this.textContent)">${feeRate}%</div>${price>0?`<div class="text-[10px] text-gray-500">≈ ₩${feeAmount.toLocaleString()}</div>`:''}</td>
       <td class="align-top text-right ${marginAmount>=0?'text-green-700':'text-red-600'} font-semibold">₩${marginAmount.toLocaleString()}</td>
       <td class="align-top text-right ${marginRate>=30?'text-green-600':marginRate>=10?'text-amber-600':'text-red-600'} font-bold">${marginRate.toFixed(1)}%</td>
     </tr>`;
   }).join('');
-  saveEcData('cost',d); // 자동 계산된 cost 저장
 }
 
 // 원가행에 구성품 추가/제거
