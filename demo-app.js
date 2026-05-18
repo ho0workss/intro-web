@@ -913,14 +913,16 @@ function initPartnerTables(){['order','sales','inventory','settle'].forEach(rend
 function renderPartnerInventoryFromEc(){
   const tb=document.querySelector('#partner-inventory-table tbody');if(!tb)return;
   const inv=getEcData('inventory');
-  // 사용자에게 매핑된 거래처만 + 거래처 필터 적용
+  const pmap=getProductPartnerMap();
+  // 각 재고에 product→partner 매핑으로 partner 유추 (원가/마진에서 설정한 거래처)
+  const withPartner=inv.map(i=>({...i,partner:pmap[i.product]||''}));
   const userPartners=CURRENT?.partners||[];
-  let list=inv.filter(i=>i.partner&&(userPartners.length===0||userPartners.includes(i.partner)));
+  let list=withPartner.filter(i=>i.partner&&(userPartners.length===0||userPartners.includes(i.partner)));
   if(currentPartnerFilter&&currentPartnerFilter!=='all'){
     list=list.filter(i=>i.partner===currentPartnerFilter);
   }
   if(list.length===0){
-    tb.innerHTML=`<tr><td colspan="8" class="text-center text-gray-400 py-6 text-sm">${currentPartnerFilter==='all'?'거래처가 지정된 재고가 없습니다. 이커머스 ▸ 재고에서 거래처를 지정하세요.':`'${currentPartnerFilter}' 거래처의 재고가 없습니다`}</td></tr>`;
+    tb.innerHTML=`<tr><td colspan="8" class="text-center text-gray-400 py-6 text-sm">${currentPartnerFilter==='all'?'거래처가 지정된 재고가 없습니다. 이커머스 ▸ 원가/마진에서 제품의 거래처를 지정하세요.':`'${currentPartnerFilter}' 거래처의 재고가 없습니다`}</td></tr>`;
     return;
   }
   tb.innerHTML=list.map((i,idx)=>{
@@ -2022,15 +2024,27 @@ function _genMockSales(){
 function getEcData(t){
   if(t==='sales'){const v=ST.get('ec_sales_v2',null);if(v)return v;const fresh=_genMockSales();ST.set('ec_sales_v2',fresh);return fresh;}
   if(t==='inventory'){
-    const v=ST.get('ec_inventory_v2',null);if(v)return v;
-    const fresh=[
-      {id:1,sku:'SK-001-50ML',product:'스킨케어 세트',partner:'(주)뷰티코리아',stock:234,source:'naver_store',lastSync:new Date().toISOString()},
-      {id:2,sku:'SK-002-80ML',product:'프리미엄 보습 크림',partner:'',stock:18,source:'coupang',lastSync:new Date().toISOString()},
-      {id:3,sku:'SK-003-50ML',product:'선크림 SPF50+',partner:'(주)뷰티코리아',stock:30,source:'ezadmin',lastSync:new Date().toISOString()},
-      {id:4,sku:'SK-004-200ML',product:'클렌징 폼',partner:'라이프스타일컴퍼니',stock:156,source:'cj_eflex',lastSync:new Date().toISOString()},
-      {id:5,sku:'SK-005-200ML',product:'토너 세트',partner:'',stock:88,source:'manual',lastSync:''}
-    ];
-    ST.set('ec_inventory_v2',fresh);return fresh;
+    let v=ST.get('ec_inventory_v2',null);
+    if(!v){
+      v=[
+        {id:1,sku:'SK-001-50ML',product:'스킨케어 세트',stock:234,source:'naver_store',lastSync:new Date().toISOString()},
+        {id:2,sku:'SK-002-80ML',product:'프리미엄 보습 크림',stock:18,source:'coupang',lastSync:new Date().toISOString()},
+        {id:3,sku:'SK-003-50ML',product:'선크림 SPF50+',stock:30,source:'ezadmin',lastSync:new Date().toISOString()},
+        {id:4,sku:'SK-004-200ML',product:'클렌징 폼',stock:156,source:'cj_eflex',lastSync:new Date().toISOString()},
+        {id:5,sku:'SK-005-200ML',product:'토너 세트',stock:88,source:'manual',lastSync:''}
+      ];
+      ST.set('ec_inventory_v2',v);
+    }
+    // 마이그레이션: inventory.partner → product_partner_map (1회)
+    const mig=ST.get('inv_partner_migrated_v1',false);
+    if(!mig){
+      const pmap=getProductPartnerMap();let mapUpdated=false;
+      v.forEach(i=>{if(i.partner&&i.product&&!pmap[i.product]){pmap[i.product]=i.partner;mapUpdated=true;}delete i.partner;});
+      if(mapUpdated)saveProductPartnerMap(pmap);
+      ST.set('ec_inventory_v2',v);
+      ST.set('inv_partner_migrated_v1',true);
+    }
+    return v;
   }
   if(t==='cost'){
     let v=ST.get('ec_cost_v2',null);
@@ -2038,14 +2052,19 @@ function getEcData(t){
       // cost는 사용자가 입력하는 '기본 원가' (구성품 가격은 별도로 합산)
       // feeRate는 판매가의 % (예: 10 = 10%)
       v=[
-        {id:1,product:'스킨케어 세트',components:[],cost:18000,shippingFee:3000,price:45000,feeRate:10},
-        {id:2,product:'선크림 SPF50+',components:[],cost:8000,shippingFee:3000,price:15000,feeRate:10},
-        {id:3,product:'클렌징 폼',components:[],cost:5000,shippingFee:3000,price:20000,feeRate:10}
+        {id:1,product:'스킨케어 세트',partner:'(주)뷰티코리아',components:[],cost:18000,shippingFee:3000,price:45000,feeRate:10},
+        {id:2,product:'선크림 SPF50+',partner:'(주)뷰티코리아',components:[],cost:8000,shippingFee:3000,price:15000,feeRate:10},
+        {id:3,product:'클렌징 폼',partner:'라이프스타일컴퍼니',components:[],cost:5000,shippingFee:3000,price:20000,feeRate:10}
       ];
+      // 최초 생성 시 partner를 product_partner_map에 등록
+      const pmap=getProductPartnerMap();
+      v.forEach(c=>{if(c.partner&&c.product)pmap[c.product]=c.partner;});
+      saveProductPartnerMap(pmap);
       ST.set('ec_cost_v2',v);return v;
     }
-    // 마이그레이션: fee(원) → feeRate(%) 환산
+    // 마이그레이션: fee(원) → feeRate(%) 환산 + 기존 product_partner_map 에서 partner 채워주기
     let migrated=false;
+    const pmap=getProductPartnerMap();
     v.forEach(c=>{
       if(typeof c.feeRate!=='number'){
         if(c.fee>0&&c.price>0)c.feeRate=Math.round((c.fee/c.price)*1000)/10;
@@ -2053,6 +2072,8 @@ function getEcData(t){
         delete c.fee;
         migrated=true;
       }
+      // 거래처 필드가 비었으면 product_partner_map에서 보충 (UI 표시용 자동 유추)
+      if(!c.partner&&c.product&&pmap[c.product]){c.partner=pmap[c.product];migrated=true;}
     });
     if(migrated)ST.set('ec_cost_v2',v);
     return v;
@@ -2118,7 +2139,7 @@ function renderEcommerce(){
 function ecAddRow(t){
   const d=getEcData(t);const newRow={id:Date.now()};
   if(t==='sales')Object.assign(newRow,{date:new Date().toISOString().split('T')[0],brand:'',product:'새 상품',qty:0,revenue:0});
-  if(t==='inventory')Object.assign(newRow,{sku:'',product:'새 상품',partner:'',stock:0,min:0,source:'manual',lastSync:''});
+  if(t==='inventory')Object.assign(newRow,{sku:'',product:'새 상품',stock:0,min:0,source:'manual',lastSync:''});
   if(t==='cost')Object.assign(newRow,{product:'새 상품',components:[],cost:0,shippingFee:0,price:0,feeRate:10});
   d.push(newRow);saveEcData(t,d);renderEcommerce();showToast('+','추가됨','');
 }
@@ -2209,9 +2230,9 @@ function _calcCostFromComponents(row){
 function renderEcCost(){
   const body=document.getElementById('ecCostBody');if(!body)return;
   const d=getEcData('cost');
-  if(d.length===0){body.innerHTML='<tr><td colspan="9" class="text-center text-gray-400 py-4">제품이 없습니다.</td></tr>';return}
+  if(d.length===0){body.innerHTML='<tr><td colspan="10" class="text-center text-gray-400 py-4">제품이 없습니다.</td></tr>';return}
+  const partnerOpts=getPartners().map(p=>`<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join('');
   body.innerHTML=d.map(c=>{
-    // 원가 = 사용자 입력 기본 원가 + 구성품 가격 합 (배송비 제외)
     const baseCost=c.cost||0;
     const componentsCost=_calcCostFromComponents(c);
     const totalCost=baseCost+componentsCost;
@@ -2224,13 +2245,14 @@ function renderEcCost(){
     const marginRate=price>0?(marginAmount/price*100):0;
     const compChips=(c.components||[]).map((r,idx)=>`<span class="ac-chip ac-chip-pos" title="₩${(r.price||0).toLocaleString()}">${escapeHtml(r.name||'')} <button onclick="delCompFromCost(${c.id},${idx})" class="text-red-500 hover:text-red-700 ml-1" title="제거">×</button></span>`).join('');
     const addBtn=`<button onclick="openAddCompToCost(${c.id})" class="ac-chip" style="cursor:pointer;background:#e0e7ff;color:#3730a3;border-color:#c7d2fe">+ 추가</button>`;
-    // 원가 셀: 기본 원가는 항상 편집 가능, 구성품 있으면 합산 내역 표시
     const costCell=hasComponents
       ? `<div contenteditable oninput="updEc('cost',${c.id},'cost',this.textContent)" title="기본 원가 (편집 가능)">₩${baseCost.toLocaleString()}</div><div class="text-[10px] text-gray-500 mt-0.5">+ 구성품 ₩${componentsCost.toLocaleString()}</div><div class="text-[10px] text-blue-700 font-semibold">= 총 ₩${totalCost.toLocaleString()}</div>`
       : `<div contenteditable oninput="updEc('cost',${c.id},'cost',this.textContent)">₩${baseCost.toLocaleString()}</div>`;
+    const partnerSelected=partnerOpts.replace(`value="${escapeHtml(c.partner||'')}"`,`value="${escapeHtml(c.partner||'')}" selected`);
     return `<tr>
       <td class="sheet-row-num"><input type="checkbox" class="ecChk-cost" data-id="${c.id}" /></td>
       <td contenteditable oninput="updEc('cost',${c.id},'product',this.textContent)" class="align-top">${escapeHtml(c.product||'')}</td>
+      <td class="align-top"><select onchange="setCostPartner(${c.id},this.value)" class="text-xs border rounded px-1 py-0.5 bg-white"><option value="">미지정</option>${partnerSelected}</select></td>
       <td class="align-top" style="min-width:200px">${compChips}${addBtn}${hasComponents?`<div class="text-[10px] text-gray-500 mt-1">합계 ₩${componentsCost.toLocaleString()}</div>`:''}</td>
       <td class="align-top text-right">${costCell}</td>
       <td contenteditable oninput="updEc('cost',${c.id},'shippingFee',this.textContent)" class="align-top text-right">₩${shippingFee.toLocaleString()}</td>
@@ -2240,6 +2262,25 @@ function renderEcCost(){
       <td class="align-top text-right ${marginRate>=30?'text-green-600':marginRate>=10?'text-amber-600':'text-red-600'} font-bold">${marginRate.toFixed(1)}%</td>
     </tr>`;
   }).join('');
+}
+
+// 원가행의 거래처 변경 → product_partner_map 동기화 + 주문 자동 갱신
+function setCostPartner(costId,partnerName){
+  const d=getEcData('cost');const c=d.find(x=>x.id===costId);if(!c)return;
+  c.partner=partnerName;saveEcData('cost',d);
+  if(c.product){
+    const m=getProductPartnerMap();
+    if(partnerName)m[c.product]=partnerName;
+    else delete m[c.product];
+    saveProductPartnerMap(m);
+    // 같은 상품 주문의 미할당 partner도 동기화
+    const orders=getEcOrders();let touched=0;
+    orders.forEach(o=>{if(o.product===c.product){if(!o.partner||o.partner!==partnerName){o.partner=partnerName;touched++;}}});
+    if(touched>0)saveEcOrders(orders);
+  }
+  renderEcCost();
+  if(document.getElementById('ecOrdersBody'))renderEcOrders();
+  showToast('🤝','거래처 지정',`${c.product} → ${partnerName||'(해제)'}`);
 }
 
 // 원가행에 구성품 추가/제거
@@ -2882,8 +2923,7 @@ function renderEcInventory(){
   const list=_invSourceFilter==='all'?inv:inv.filter(i=>(i.source||'manual')===_invSourceFilter);
   // 부족 알림 (전체 기준으로)
   _checkLowStockAlerts(inv);
-  if(list.length===0){body.innerHTML='<tr><td colspan="9" class="text-center text-gray-400 py-4">조건에 맞는 재고가 없습니다.</td></tr>';return}
-  const partnerOpts=getPartners().map(p=>`<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join('');
+  if(list.length===0){body.innerHTML='<tr><td colspan="8" class="text-center text-gray-400 py-4">조건에 맞는 재고가 없습니다.</td></tr>';return}
   body.innerHTML=list.map(i=>{
     const avg=get7DayAvgForProduct(i.product);
     const prevAvg=getPrev7DayAvgForProduct(i.product);
@@ -2893,8 +2933,7 @@ function renderEcInventory(){
     const sourceLabel=i.source==='naver_store'?'네이버':i.source==='coupang'?'쿠팡':i.source==='ezadmin'?'이지어드민':i.source==='cj_eflex'?'CJ Eflex':'수기';
     const sourceColor=i.source&&i.source!=='manual'?'bg-blue-50 text-blue-700':'bg-gray-100 text-gray-600';
     const avgCell=avg>0?`<span class="font-semibold">${avg.toFixed(1)}</span><span class="text-gray-400 text-[10px]">/일</span> <span class="${trend.c}">${trend.ico}</span><div class="text-[10px] text-gray-400">권장재고 ${Math.round(threshold)}개</div>`:`<span class="text-gray-400 text-xs">데이터 부족</span>`;
-    const partnerSelected=partnerOpts.replace(`value="${escapeHtml(i.partner||'')}"`,`value="${escapeHtml(i.partner||'')}" selected`);
-    return `<tr><td class="sheet-row-num"><input type="checkbox" class="ecChk-inventory" data-id="${i.id}" /></td><td contenteditable oninput="updEc('inventory',${i.id},'sku',this.textContent)" class="font-mono text-xs">${escapeHtml(i.sku||'')}</td><td contenteditable oninput="updEc('inventory',${i.id},'product',this.textContent)">${escapeHtml(i.product||'')}</td><td><select onchange="updEc('inventory',${i.id},'partner',this.value)" class="text-xs border rounded px-1 py-0.5 bg-white"><option value="">미지정</option>${partnerSelected}</select></td><td contenteditable oninput="updEc('inventory',${i.id},'stock',this.textContent)" class="text-center">${i.stock}</td><td class="text-xs">${avgCell}</td><td><span class="text-xs px-2 py-0.5 rounded ${st.c}">${st.l}</span></td><td><span class="text-xs px-2 py-0.5 rounded ${sourceColor}">${sourceLabel}</span></td><td class="text-[10px] text-gray-500">${i.lastSync?fmtDateYY(i.lastSync.slice(0,10))+' '+i.lastSync.slice(11,16):'-'}</td></tr>`;
+    return `<tr><td class="sheet-row-num"><input type="checkbox" class="ecChk-inventory" data-id="${i.id}" /></td><td contenteditable oninput="updEc('inventory',${i.id},'sku',this.textContent)" class="font-mono text-xs">${escapeHtml(i.sku||'')}</td><td contenteditable oninput="updEc('inventory',${i.id},'product',this.textContent)">${escapeHtml(i.product||'')}</td><td contenteditable oninput="updEc('inventory',${i.id},'stock',this.textContent)" class="text-center">${i.stock}</td><td class="text-xs">${avgCell}</td><td><span class="text-xs px-2 py-0.5 rounded ${st.c}">${st.l}</span></td><td><span class="text-xs px-2 py-0.5 rounded ${sourceColor}">${sourceLabel}</span></td><td class="text-[10px] text-gray-500">${i.lastSync?fmtDateYY(i.lastSync.slice(0,10))+' '+i.lastSync.slice(11,16):'-'}</td></tr>`;
   }).join('');
 }
 
