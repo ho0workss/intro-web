@@ -829,12 +829,12 @@
           <div id="mon-menu-ac" class="rank-menu-page">
             <div class="bg-blue-50 border border-blue-200 rounded p-3 mb-3 text-xs text-blue-900">
               💡 키워드 또는 글자 일부(예: <code>ㅅ</code>, <code>스</code>, <code>스테</code>, <code>스텐ㅍ</code>)를 등록하면 네이버 자동완성 결과를 일별로 추적합니다.
-              <div class="mt-2 flex items-center gap-2">
+              <div class="mt-2 flex flex-wrap items-center gap-2">
                 <span class="font-semibold">데이터 소스:</span>
                 <select id="acDataSourceSel" onchange="changeAcDataSource(this.value)" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white">
+                  <option value="naver_integrated">🌐 네이버 통합검색 자동완성 (실데이터)</option>
+                  <option value="naver_shopping">🛒 네이버 쇼핑 자동완성 (실데이터)</option>
                   <option value="mock">🧪 Mock (시뮬레이션)</option>
-                  <option value="naver_unofficial">🌐 네이버 자동완성 (비공식 endpoint · 정확)</option>
-                  <option value="naver_sa">📊 네이버 검색광고 키워드 도구 (공식 / 연관키워드)</option>
                 </select>
                 <span class="text-[10px] text-gray-500" id="acDataSourceHint"></span>
               </div>
