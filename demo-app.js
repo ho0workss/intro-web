@@ -323,7 +323,7 @@ function navigateSub(page,sub){
   // 순위 탭 진입 시 현재 메뉴 활성화 (기본: 쇼핑검색순위)
   if(page==='ecommerce'&&sub==='ranking'){setRankMenu(_rankMenu||'search');renderRankSearch();renderRankSlot();}
   // 쇼핑 모니터링 탭 진입
-  if(page==='ecommerce'&&sub==='monitor'){setMonitorMenu(_monitorMenu||'ac');renderAcTable();renderSeoTable();_restoreAcDataSource();_restoreSeoDataSource();}
+  if(page==='ecommerce'&&sub==='monitor'){setMonitorMenu(_monitorMenu||'ac');renderAcTable();renderSeoTable();_restoreAcDataSource();_restoreSeoDataSource();_restoreAcHideIrrelevantToggle();}
 }
 function switchSettingTab(tab){
   document.querySelectorAll('.settings-tab').forEach(t=>t.classList.remove('bg-gray-100','font-semibold'));
@@ -2309,26 +2309,45 @@ function renderAcTable(){
   document.getElementById('acLastChecked')&&(document.getElementById('acLastChecked').textContent=latestCheck?fmtDateYY(latestCheck):'-');
   if(d.length===0){body.innerHTML='<tr><td colspan="10" class="text-center text-gray-400 py-4">추적 쿼리가 없습니다.</td></tr>';return}
   const negSourceSet=(nm)=>new Set((nm||[]).map(x=>x.suggestion));
+  const hideIrrelevant=getAcHideIrrelevant();
   body.innerHTML=d.map(q=>{
-    const now=q.history?.[today]||[];
-    const past=q.history?.[compareDate]||[];
+    const nowAll=q.history?.[today]||[];
+    const pastAll=q.history?.[compareDate]||[];
+    // 무관 자완 필터 (쿼리와 관련 없는 것 제외, 옵션 ON일 때만)
+    const filterFn=s=>_isRelevantSuggestion(q.query,s);
+    const now=hideIrrelevant?nowAll.filter(filterFn):nowAll;
+    const past=hideIrrelevant?pastAll.filter(filterFn):pastAll;
+    const hiddenCount=nowAll.length-now.length;
     const added=now.filter(x=>!past.includes(x));
     const removed=past.filter(x=>!now.includes(x));
     const lastDate=Object.keys(q.history||{}).sort().reverse()[0];
-    const tm=_matchAcTargets(now,q.targetKeywords);
-    const nm=_matchAcNegatives(now,q.negativeKeywords);
+    // 목표/부정 매칭은 필터 전 전체 결과 기준 (탐지 누락 방지)
+    const tm=_matchAcTargets(nowAll,q.targetKeywords);
+    const nm=_matchAcNegatives(nowAll,q.negativeKeywords);
     const negSrcSet=negSourceSet(nm);
-    const targetSet=new Set(tm.found.map(s=>s.toLowerCase()));
-    // 오늘 자동완성: 칩 (신규=파랑, 부정매칭자=주황, 그 외=회색)
+    // 자완 칩 클래스 결정: 우선순위 사용자부정 > 부정사전 > 긍정사전 > 기본
+    const chipFor=(s,isNew)=>{
+      let base='ac-chip';
+      if(negSrcSet.has(s))base='ac-chip ac-chip-src'; // 사용자 부정어 매칭 (주황)
+      else{
+        const cls=_classifySuggestion(s);
+        if(cls==='neg')base='ac-chip ac-chip-neg';
+        else if(cls==='pos')base='ac-chip ac-chip-pos';
+      }
+      if(isNew)base+=' ac-chip-new';
+      return base;
+    };
+    // 오늘 자동완성
     const nowChips=now.length===0?'<span class="text-gray-400 text-xs">데이터 없음</span>':now.map(s=>{
       const isNew=added.includes(s);
-      const isNeg=negSrcSet.has(s);
-      const cls=isNeg?'ac-chip ac-chip-src':isNew?'ac-chip ac-chip-new':'ac-chip';
-      const title=isNeg?'부정어 포함':(isNew?'신규 진입':'');
-      return `<span class="${cls}"${title?` title="${title}"`:''}>${escapeHtml(s)}</span>`;
-    }).join('');
+      return `<span class="${chipFor(s,isNew)}"${isNew?' title="신규 진입"':''}>${isNew?'▲ ':''}${escapeHtml(s)}</span>`;
+    }).join('')+(hiddenCount>0?`<div class="text-[10px] text-gray-400 mt-1">+ 무관 ${hiddenCount}건 숨김</div>`:'');
     // 신규 ▲
-    const addedChips=added.length===0?'<span class="text-gray-400">·</span>':added.map(s=>`<span class="ac-chip ac-chip-new">▲ ${escapeHtml(s)}</span>`).join('');
+    const addedChips=added.length===0?'<span class="text-gray-400">·</span>':added.map(s=>{
+      const cls=_classifySuggestion(s);
+      const colorCls=negSrcSet.has(s)?'ac-chip ac-chip-src':cls==='neg'?'ac-chip ac-chip-neg':cls==='pos'?'ac-chip ac-chip-pos':'ac-chip ac-chip-pos';
+      return `<span class="${colorCls}">▲ ${escapeHtml(s)}</span>`;
+    }).join('');
     // 이탈 ▼
     const removedChips=removed.length===0?'<span class="text-gray-400">·</span>':removed.map(s=>`<span class="ac-chip ac-chip-removed">▼ ${escapeHtml(s)}</span>`).join('');
     // 목표 자완 셀
@@ -3303,6 +3322,75 @@ const EXT_API_PROVIDERS=[
   {id:'naver_keyword_tool',name:'네이버 검색광고 - 키워드 도구 (공식 API)',cat:'monitor',platformKey:'naver_keyword_tool',note:'자동완성 그대로는 아니지만 공식. 연관 키워드 + 월간 검색량을 제공. 검색광고 API의 RelKwdStat 사용.',fields:[{k:'apiKey',l:'API Key'},{k:'secretKey',l:'Secret Key'},{k:'customerId',l:'Customer ID'}]},
 ];
 const EXT_API_CAT_NAMES={ecommerce:'🛍️ 이커머스',ads:'📣 광고',shipping:'🚚 택배',erp:'📦 ERP / 재고',wms:'🏭 WMS / 물류센터',monitor:'🔍 쇼핑 모니터링'};
+// 긍정/부정 단어 사전 (자동완성 색상 분류용)
+const POSITIVE_WORDS_DEFAULT=['추천','베스트','BEST','best','인기','최고','꿀팁','가성비','신상','잘하는','잘 하는','효과','효능','잘 팔','잘팔','명품','순위','TOP','top','가심비'];
+const NEGATIVE_WORDS_DEFAULT=['사기','환불','최악','불량','후회','주의','실패','문제','폭망','망함','단점','피해','민원','단종','리콜','품절','품절대란'];
+function getPositiveWords(){return ST.get('ac_positive_words',POSITIVE_WORDS_DEFAULT.slice())}
+function getNegativeWords(){return ST.get('ac_negative_words',NEGATIVE_WORDS_DEFAULT.slice())}
+function getAcHideIrrelevant(){return ST.get('ac_hide_irrelevant',true)}
+function toggleAcHideIrrelevant(on){ST.set('ac_hide_irrelevant',!!on);renderAcTable();showToast(on?'🔍':'👁',`무관 자완 ${on?'숨김':'표시'}`,'')}
+function _restoreAcHideIrrelevantToggle(){const el=document.getElementById('acHideIrrelevant');if(el)el.checked=getAcHideIrrelevant()}
+function openSentimentDictModal(){
+  document.getElementById('sentPositive').value=getPositiveWords().join(', ');
+  document.getElementById('sentNegative').value=getNegativeWords().join(', ');
+  openModal('sentimentDictModal');
+}
+function saveSentimentDict(){
+  const pos=document.getElementById('sentPositive').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const neg=document.getElementById('sentNegative').value.split(',').map(s=>s.trim()).filter(Boolean);
+  ST.set('ac_positive_words',pos);
+  ST.set('ac_negative_words',neg);
+  closeModal('sentimentDictModal');
+  renderAcTable();
+  showToast('💾','사전 저장',`긍정 ${pos.length} · 부정 ${neg.length}`);
+}
+function resetSentimentDict(){
+  document.getElementById('sentPositive').value=POSITIVE_WORDS_DEFAULT.join(', ');
+  document.getElementById('sentNegative').value=NEGATIVE_WORDS_DEFAULT.join(', ');
+}
+// 자완이 쿼리와 관련이 있는지: 쿼리 전체가 자완에 포함되는지 (단글자 쿼리는 첫 글자 매칭)
+function _isRelevantSuggestion(query,suggestion){
+  const q=(query||'').trim();
+  const s=(suggestion||'').trim();
+  if(!q||!s)return true;
+  const ql=q.toLowerCase();const sl=s.toLowerCase();
+  if(q.length===1){
+    // 단글자/자모 쿼리: 시작 글자 매칭 또는 첫 음절이 포함
+    if(sl.startsWith(ql))return true;
+    if(sl.includes(ql))return true;
+    // 한글 자음/모음(ㅅ, ㅎ) 쿼리는 자완 첫 글자가 같은 초성인지 검사
+    const cho=_extractChoSeong(s.charAt(0));
+    return cho===q;
+  }
+  // 2글자 이상: 자완에 쿼리 전체 또는 쿼리의 일부(2글자 이상 연속)가 포함되어야 함
+  if(sl.includes(ql))return true;
+  // 쿼리 길이 2일 때만 추가 완화: 자완이 쿼리의 첫 글자로 시작
+  if(q.length===2&&sl.startsWith(ql.charAt(0)))return true;
+  return false;
+}
+// 첫 글자에서 한글 초성 추출 (ㄱ-ㅎ 범위)
+function _extractChoSeong(ch){
+  if(!ch)return '';
+  const code=ch.charCodeAt(0);
+  // 한글 음절 범위
+  if(code>=0xAC00&&code<=0xD7A3){
+    const CHO=['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+    const idx=Math.floor((code-0xAC00)/(21*28));
+    return CHO[idx]||'';
+  }
+  return ch;
+}
+// 자완의 감정 분류: 'neg'(부정사전 포함) | 'pos'(긍정사전 포함) | null
+function _classifySuggestion(suggestion){
+  if(!suggestion)return null;
+  const s=suggestion.toLowerCase();
+  const neg=getNegativeWords();
+  for(const w of neg){if(w&&s.includes(w.toLowerCase()))return 'neg'}
+  const pos=getPositiveWords();
+  for(const w of pos){if(w&&s.includes(w.toLowerCase()))return 'pos'}
+  return null;
+}
+
 // 자동완성 데이터 소스: naver_integrated(통합검색·실데이터) / naver_shopping(쇼핑·실데이터) / mock(시뮬레이션)
 function getAcDataSource(){
   // 구버전 'naver_unofficial' 값은 'naver_integrated'로 마이그레이션
