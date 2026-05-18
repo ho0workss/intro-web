@@ -176,6 +176,20 @@
   .rank-menu-btn.active{background:#111;color:#fff;border-color:#111}
   [data-theme="dark"] .rank-menu-btn{background:#252525;border-color:#363636;color:#e6e6e6}
   [data-theme="dark"] .rank-menu-btn.active{background:#fff;color:#111}
+  .ac-chip{display:inline-block;padding:2px 9px;margin:2px 3px 2px 0;border-radius:11px;font-size:11px;background:#f3f4f6;color:#374151;white-space:nowrap;line-height:1.5;border:1px solid transparent}
+  .ac-chip-new{background:#dbeafe;color:#1d4ed8;font-weight:600;border-color:#bfdbfe}
+  .ac-chip-removed{background:#fee2e2;color:#b91c1c;text-decoration:line-through;border-color:#fecaca}
+  .ac-chip-tgt-ok{background:#dcfce7;color:#15803d;font-weight:600;border-color:#bbf7d0}
+  .ac-chip-tgt-ng{background:#fef2f2;color:#991b1b;border:1px dashed #fca5a5}
+  .ac-chip-neg{background:#fee2e2;color:#991b1b;font-weight:600;border-color:#fecaca}
+  .ac-chip-src{background:#fff7ed;color:#c2410c;border-color:#fed7aa}
+  [data-theme="dark"] .ac-chip{background:#2a2a2a;color:#d4d4d8;border-color:#3a3a3a}
+  [data-theme="dark"] .ac-chip-new{background:#1e3a8a;color:#bfdbfe}
+  [data-theme="dark"] .ac-chip-removed{background:#7f1d1d;color:#fecaca}
+  [data-theme="dark"] .ac-chip-tgt-ok{background:#14532d;color:#bbf7d0}
+  [data-theme="dark"] .ac-chip-tgt-ng{background:#3f0a0a;color:#fca5a5;border-color:#7f1d1d}
+  [data-theme="dark"] .ac-chip-neg{background:#7f1d1d;color:#fecaca}
+  [data-theme="dark"] .ac-chip-src{background:#5b2410;color:#fed7aa}
   [data-theme="dark"] .ec-status-card{background:#252525;border-color:#363636}
   [data-theme="dark"] .ec-status-card.active{border-color:#fff;background:#1e1e1e}
   [data-theme="dark"] .sheet-row-num{background:#2a2a2a}
@@ -873,7 +887,15 @@
           <!-- SEO 섹션 -->
           <div id="mon-menu-seo" class="rank-menu-page hidden">
             <div class="bg-blue-50 border border-blue-200 rounded p-3 mb-3 text-xs text-blue-900">
-              💡 키워드를 검색했을 때 네이버 통합검색 결과에 노출되는 <strong>SEO 섹션</strong>(파워링크, 쇼핑검색, 블로그, 카페, VIEW, 지식iN, 이미지, 동영상, 뉴스)을 추적합니다.
+              💡 키워드를 검색했을 때 네이버 통합검색 결과에 노출되는 <strong>SEO 섹션</strong>(파워링크, 쇼핑검색, 블로그, 카페, VIEW, 지식iN, 이미지, 동영상, 뉴스)과 등장 순서(순위)를 추적합니다.
+              <div class="mt-2 flex flex-wrap items-center gap-2">
+                <span class="font-semibold">데이터 소스:</span>
+                <select id="seoDataSourceSel" onchange="changeSeoDataSource(this.value)" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white">
+                  <option value="naver_serp">🌐 네이버 검색결과 크롤링 (실데이터)</option>
+                  <option value="mock">🧪 Mock (시뮬레이션)</option>
+                </select>
+                <span class="text-[10px] text-gray-500" id="seoDataSourceHint"></span>
+              </div>
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
               <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">추적 키워드</p><p class="text-xl font-bold" id="seoTotal">0</p></div>
