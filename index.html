@@ -177,18 +177,19 @@
   [data-theme="dark"] .rank-menu-btn{background:#252525;border-color:#363636;color:#e6e6e6}
   [data-theme="dark"] .rank-menu-btn.active{background:#fff;color:#111}
   .ac-chip{display:inline-block;padding:2px 9px;margin:2px 3px 2px 0;border-radius:11px;font-size:11px;background:#f3f4f6;color:#374151;white-space:nowrap;line-height:1.5;border:1px solid transparent}
-  .ac-chip-new{background:#dbeafe;color:#1d4ed8;font-weight:600;border-color:#bfdbfe}
+  .ac-chip-pos{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe;font-weight:600}
+  .ac-chip-neg{background:#fee2e2;color:#b91c1c;border-color:#fecaca;font-weight:600}
+  .ac-chip-new{box-shadow:0 0 0 2px #2563eb33}
   .ac-chip-removed{background:#fee2e2;color:#b91c1c;text-decoration:line-through;border-color:#fecaca}
   .ac-chip-tgt-ok{background:#dcfce7;color:#15803d;font-weight:600;border-color:#bbf7d0}
   .ac-chip-tgt-ng{background:#fef2f2;color:#991b1b;border:1px dashed #fca5a5}
-  .ac-chip-neg{background:#fee2e2;color:#991b1b;font-weight:600;border-color:#fecaca}
   .ac-chip-src{background:#fff7ed;color:#c2410c;border-color:#fed7aa}
   [data-theme="dark"] .ac-chip{background:#2a2a2a;color:#d4d4d8;border-color:#3a3a3a}
-  [data-theme="dark"] .ac-chip-new{background:#1e3a8a;color:#bfdbfe}
+  [data-theme="dark"] .ac-chip-pos{background:#1e3a8a;color:#bfdbfe;border-color:#1e40af}
+  [data-theme="dark"] .ac-chip-neg{background:#7f1d1d;color:#fecaca;border-color:#991b1b}
   [data-theme="dark"] .ac-chip-removed{background:#7f1d1d;color:#fecaca}
   [data-theme="dark"] .ac-chip-tgt-ok{background:#14532d;color:#bbf7d0}
   [data-theme="dark"] .ac-chip-tgt-ng{background:#3f0a0a;color:#fca5a5;border-color:#7f1d1d}
-  [data-theme="dark"] .ac-chip-neg{background:#7f1d1d;color:#fecaca}
   [data-theme="dark"] .ac-chip-src{background:#5b2410;color:#fed7aa}
   [data-theme="dark"] .ec-status-card{background:#252525;border-color:#363636}
   [data-theme="dark"] .ec-status-card.active{border-color:#fff;background:#1e1e1e}
@@ -852,6 +853,17 @@
                 </select>
                 <span class="text-[10px] text-gray-500" id="acDataSourceHint"></span>
               </div>
+              <div class="mt-2 flex flex-wrap items-center gap-3 pt-2 border-t border-blue-200/50">
+                <label class="flex items-center gap-1.5 text-xs cursor-pointer">
+                  <input type="checkbox" id="acHideIrrelevant" onchange="toggleAcHideIrrelevant(this.checked)" class="w-3.5 h-3.5 accent-black" />
+                  <span>🔍 무관 자완 자동 숨김</span>
+                </label>
+                <span class="text-[10px] text-gray-600">색상 가이드:</span>
+                <span class="ac-chip ac-chip-pos">긍정 단어 포함</span>
+                <span class="ac-chip ac-chip-neg">부정 단어 포함</span>
+                <span class="ac-chip ac-chip-src">사용자 부정어 매칭</span>
+                <button onclick="openSentimentDictModal()" class="text-[10px] text-blue-600 underline">긍정/부정 사전 편집</button>
+              </div>
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
               <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">추적 쿼리</p><p class="text-xl font-bold" id="acQueryTotal">0</p></div>
@@ -1262,6 +1274,31 @@
       </div>
       <!-- 결과 -->
       <div id="ecAnResult" class="text-xs text-gray-400 text-center py-8">[▶ 분석 실행]을 눌러 결과를 확인하세요.</div>
+    </div>
+  </div>
+</div>
+
+<!-- 긍정/부정 사전 편집 모달 -->
+<div id="sentimentDictModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-bold">🎨 긍정/부정 단어 사전</h2>
+      <button onclick="closeModal('sentimentDictModal')" class="hover-bg p-1 rounded">✕</button>
+    </div>
+    <div class="p-5 space-y-3">
+      <p class="text-xs text-gray-500">자동완성 결과 칩의 색상은 이 사전을 기준으로 결정됩니다. 콤마(,)로 구분하여 단어를 입력하세요. 부분 포함 매칭 (대소문자 무시).</p>
+      <div>
+        <label class="block text-xs font-semibold text-blue-700 mb-1">파란색 (긍정 단어)</label>
+        <textarea id="sentPositive" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded text-xs font-mono"></textarea>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-red-700 mb-1">빨간색 (부정 단어)</label>
+        <textarea id="sentNegative" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded text-xs font-mono"></textarea>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="resetSentimentDict()" class="px-3 py-1.5 border border-gray-300 rounded text-xs">기본값 복원</button>
+        <button onclick="saveSentimentDict()" class="ml-auto px-4 py-1.5 bg-black text-white rounded text-xs font-medium">저장</button>
+      </div>
     </div>
   </div>
 </div>
