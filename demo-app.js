@@ -919,11 +919,24 @@ function renderPartnerTable(t){
   const cc=document.querySelectorAll(`#partner-${t}-table thead th`).length-1;
   if(data.length===0){tb.innerHTML=`<tr><td colspan="${cc+1}" class="text-center text-gray-400 py-6 text-sm">${currentPartnerFilter==='all'?'데이터 없음':`'${currentPartnerFilter}' 거래처의 데이터가 없습니다`}</td></tr>`;return}
   // 원본 인덱스를 유지하기 위해 origIdx 사용
+  const courierOpts=t==='order'?getCourierList().map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join(''):'';
   tb.innerHTML=data.map(r=>{
     const origIdx=allData.indexOf(r);
     const linked=t==='order'&&r.sourceOrderIds&&r.sourceOrderIds.length>0;
     let c=`<td class="sheet-row-num"><input type="checkbox" class="row-check" data-type="${t}" data-idx="${origIdx}" />${linked?'<div class="text-[9px] text-purple-600 mt-0.5" title="이커머스 '+r.sourceOrderIds.length+'건과 연동">🔁</div>':''}</td>`;
-    for(let j=1;j<=cc;j++)c+=`<td contenteditable="true" oninput="updPartnerCell('${t}',${origIdx},${j},this.textContent)">${r['col'+j]||''}</td>`;
+    for(let j=1;j<=cc;j++){
+      const val=r['col'+j]||'';
+      // 발주의 col7=택배사 → select (이커머스 주문/출고와 동일)
+      if(t==='order'&&j===7){
+        const courierList=getCourierList();
+        const inList=val&&courierList.includes(val);
+        const customOpt=val&&!inList?`<option value="${escapeHtml(val)}" selected>${escapeHtml(val)} (미등록)</option>`:'';
+        const opts=courierOpts.replace(`value="${escapeHtml(val)}"`,`value="${escapeHtml(val)}" selected`);
+        c+=`<td><select onchange="updPartnerCell('${t}',${origIdx},${j},this.value)" class="text-xs border rounded px-1 py-0.5 bg-white"><option value="">선택</option>${customOpt}${opts}</select></td>`;
+      }else{
+        c+=`<td contenteditable="true" oninput="updPartnerCell('${t}',${origIdx},${j},this.textContent)">${val}</td>`;
+      }
+    }
     return `<tr data-partner="${escapeHtml(r.partner||'')}" ${linked?'class="bg-purple-50"':''}>${c}</tr>`;
   }).join('');
 }
