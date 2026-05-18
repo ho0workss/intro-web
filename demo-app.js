@@ -2324,9 +2324,9 @@ function changeAcDataSource(v){
   const hint=document.getElementById('acDataSourceHint');
   if(hint){
     const hints={
+      naver_integrated:'(ac.search.naver.com · 네이버 메인 검색창과 동일한 자동완성)',
+      naver_shopping:'(ac.shopping.naver.com · 네이버 쇼핑 검색창과 동일한 자동완성)',
       mock:'(API 호출 없음 - 데모용 가짜 데이터)',
-      naver_unofficial:'(Vercel Function /api/naver-autocomplete 사용 · API 키 불필요)',
-      naver_sa:'(설정 ▸ API 연동에 검색광고 키 등록 필요)'
     };
     hint.textContent=hints[v]||'';
   }
@@ -2337,17 +2337,16 @@ function _restoreAcDataSource(){
   if(sel){const cur=getAcDataSource();sel.value=cur;changeAcDataSource(cur);}
 }
 async function _fetchAcSuggestions(query,source){
-  if(source==='naver_unofficial'){
-    const r=await fetch(`/api/naver-autocomplete?q=${encodeURIComponent(query)}`);
-    if(!r.ok)throw new Error('Backend '+r.status);
-    const data=await r.json();
+  if(source==='naver_integrated'||source==='naver_shopping'){
+    const type=source==='naver_shopping'?'shopping':'integrated';
+    const r=await fetch(`/api/naver-autocomplete?q=${encodeURIComponent(query)}&type=${type}`);
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok){
+      const detail=data?.body_peek?` · ${data.body_peek.slice(0,80)}`:'';
+      throw new Error(`백엔드 ${r.status} (${data?.error||'unknown'})${detail}`);
+    }
     if(!Array.isArray(data?.suggestions))throw new Error('Invalid response');
     return data.suggestions;
-  }
-  if(source==='naver_sa'){
-    // 네이버 검색광고 키워드 도구 (RelKwdStat)는 인증 헤더가 필요하므로 백엔드 함수가 있어야 함
-    // 현재는 Vercel Function 미구현 → 안내 후 mock으로 폴백
-    throw new Error('네이버 검색광고 키워드 도구는 별도 백엔드 함수가 필요합니다 (미구현)');
   }
   // mock
   return _genMockAcResult(query);
@@ -2369,12 +2368,14 @@ async function refreshAllAcQueries(){
     }
   }
   saveAcQueries(d);renderAcTable();
+  const sourceLabels={naver_integrated:'네이버 통합검색',naver_shopping:'네이버 쇼핑',mock:'Mock'};
+  const label=sourceLabels[source]||source;
   if(source==='mock'){
     showToast('🔄','자동완성 새로고침',d.length+'개 쿼리 갱신 (Mock)');
   }else if(fail===0){
-    showToast('✅','자동완성 새로고침',`${ok}건 실데이터 갱신 (${source})`);
+    showToast('✅','자동완성 새로고침',`${ok}건 실데이터 갱신 (${label})`);
   }else{
-    showToast('⚠️','자동완성 새로고침',`성공 ${ok} · 실패 ${fail} (실패는 Mock 사용)`);
+    showToast('⚠️','일부 실패',`성공 ${ok} · 실패 ${fail} (실패분은 Mock 사용 - 콘솔 확인)`);
   }
 }
 function toggleAllAcRows(c){document.querySelectorAll('.acChk').forEach(x=>x.checked=c)}
@@ -3149,8 +3150,13 @@ const EXT_API_PROVIDERS=[
   {id:'naver_keyword_tool',name:'네이버 검색광고 - 키워드 도구 (공식 API)',cat:'monitor',platformKey:'naver_keyword_tool',note:'자동완성 그대로는 아니지만 공식. 연관 키워드 + 월간 검색량을 제공. 검색광고 API의 RelKwdStat 사용.',fields:[{k:'apiKey',l:'API Key'},{k:'secretKey',l:'Secret Key'},{k:'customerId',l:'Customer ID'}]},
 ];
 const EXT_API_CAT_NAMES={ecommerce:'🛍️ 이커머스',ads:'📣 광고',shipping:'🚚 택배',erp:'📦 ERP / 재고',wms:'🏭 WMS / 물류센터',monitor:'🔍 쇼핑 모니터링'};
-// 자동완성 데이터 소스 모드: mock(시뮬레이션) / naver_unofficial(비공식 endpoint, 백엔드 프록시) / naver_sa(검색광고 API)
-function getAcDataSource(){return ST.get('ac_data_source','mock')}
+// 자동완성 데이터 소스: naver_integrated(통합검색·실데이터) / naver_shopping(쇼핑·실데이터) / mock(시뮬레이션)
+function getAcDataSource(){
+  // 구버전 'naver_unofficial' 값은 'naver_integrated'로 마이그레이션
+  let v=ST.get('ac_data_source','naver_integrated');
+  if(v==='naver_unofficial'||v==='naver_sa')v='naver_integrated';
+  return v;
+}
 function saveAcDataSource(v){ST.set('ac_data_source',v)}
 function getExtApiSettings(){
   const raw=ST.get('extApiSettings',{});
