@@ -327,6 +327,8 @@ function navigateSub(page,sub){
   if(page==='ecommerce'&&sub==='ranking'){setRankMenu(_rankMenu||'search');renderRankSearch();renderRankSlot();}
   // 쇼핑 모니터링 탭 진입
   if(page==='ecommerce'&&sub==='monitor'){setMonitorMenu(_monitorMenu||'ac');renderAcTable();renderSeoTable();_restoreAcDataSource();_restoreSeoDataSource();_restoreAcHideIrrelevantToggle();}
+  // 기타 ▸ ERP
+  if(page==='other'&&sub==='erp'){setErpMenu(_erpMenu||'dashboard');renderErpAll();}
   // 원가/발주 탭 진입
   if(page==='ecommerce'&&sub==='cost'){setCostMenu(_costMenu||'cost');renderEcCost();renderComponents();}
 }
@@ -5378,3 +5380,372 @@ function delAdminRows(t){
   saveAdminData(t,getAdminData(t).filter(r=>!ids.includes(r.id)));renderAdminAll();showToast('🗑','삭제됨','');
 }
 function toggleAllAdminRows(t,c){document.querySelectorAll('.adminChk-'+t).forEach(x=>x.checked=c)}
+
+// ========== 🏛 ERP ==========
+let _erpMenu='dashboard';
+function setErpMenu(m){
+  _erpMenu=m;
+  document.querySelectorAll('[data-erpmenu]').forEach(b=>b.classList.toggle('active',b.dataset.erpmenu===m));
+  ['dashboard','pnl','approval','asset'].forEach(k=>{
+    document.getElementById('erp-menu-'+k)?.classList.toggle('hidden',m!==k);
+  });
+}
+function renderErpAll(){
+  renderErpDashboard();
+  renderErpPnl();
+  renderErpReceivable();
+  renderErpApproval();
+  renderErpAsset();
+  renderErpContract();
+}
+
+// ----- 📊 경영 대시보드 -----
+function renderErpDashboard(){
+  const today=new Date();const month=today.toISOString().slice(0,7);
+  // 매출 (이커머스 판매 + 협력사 판매)
+  const ecSales=getEcData('sales');
+  const ecMonth=ecSales.filter(s=>(s.date||'').startsWith(month));
+  const ecRev=ecMonth.reduce((s,r)=>s+(r.revenue||0),0);
+  const ecQty=ecMonth.reduce((s,r)=>s+(r.qty||0),0);
+  const partnerSales=getPartnerData('sales');
+  const psMonth=partnerSales.filter(r=>(r.col1||'').startsWith(month));
+  const psRev=psMonth.reduce((s,r)=>{const q=parseInt(r.col4)||0;const u=parseFloat(String(r.col5).replace(/[^\d.]/g,''))||0;return s+(r.finalStatus==='취소'?-q*u:q*u);},0);
+  const totalRev=ecRev+psRev;
+  const totalOrders=ecMonth.length+psMonth.length;
+  const aov=totalOrders>0?Math.round(totalRev/totalOrders):0;
+  // ROAS = 매출 / 광고비
+  const ads=getAds();
+  const adSpent=ads.reduce((s,a)=>s+(a.spent||0),0);
+  const roas=adSpent>0?(totalRev/adSpent).toFixed(1):'0';
+  // 재고 부족
+  const inv=getEcData('inventory');
+  const lowStock=inv.filter(i=>{const a=get7DayAvgForProduct(i.product);return i.stock>0&&a>0&&i.stock<a*28;}).length+inv.filter(i=>i.stock===0).length;
+  // 출고 대기
+  const orders=getEcOrders();
+  const pendingShip=orders.filter(o=>o.status==='paid'||o.status==='preparing'||o.status==='onhold').length;
+  // 미답변 리뷰
+  const reviews=getCsReviews();
+  const unanswered=reviews.filter(r=>r.status==='pending').length;
+  // 처리중 문의
+  const inqs=getCsInquiries();
+  const openInq=inqs.filter(i=>i.status==='open'||i.status==='progress').length;
+  // KPI 채우기
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('erpKpiRevenue','₩'+totalRev.toLocaleString());
+  set('erpKpiRevenueSub',`이커머스 ₩${ecRev.toLocaleString()} + 협력사 ₩${psRev.toLocaleString()}`);
+  set('erpKpiOrders',totalOrders.toLocaleString());
+  set('erpKpiOrdersSub',`이커머스 ${ecMonth.length} · 협력사 ${psMonth.length}`);
+  set('erpKpiAov','₩'+aov.toLocaleString());
+  set('erpKpiRoas',roas+'×');
+  set('erpKpiRoasSub',`광고비 ₩${adSpent.toLocaleString()}`);
+  set('erpKpiLowStock',lowStock);
+  set('erpKpiPendingShip',pendingShip);
+  set('erpKpiUnansweredReview',unanswered);
+  set('erpKpiOpenInquiry',openInq);
+  // 베스트셀러 (이커머스 + 협력사 통합)
+  const byProd={};
+  ecSales.forEach(s=>{if(!byProd[s.product])byProd[s.product]={product:s.product,qty:0,revenue:0};byProd[s.product].qty+=s.qty||0;byProd[s.product].revenue+=s.revenue||0;});
+  partnerSales.forEach(r=>{const p=r.col2;if(!p)return;if(!byProd[p])byProd[p]={product:p,qty:0,revenue:0};const q=parseInt(r.col4)||0;const u=parseFloat(String(r.col5).replace(/[^\d.]/g,''))||0;if(r.finalStatus!=='취소'){byProd[p].qty+=q;byProd[p].revenue+=q*u;}});
+  const top=Object.values(byProd).sort((a,b)=>b.revenue-a.revenue).slice(0,5);
+  const bsEl=document.getElementById('erpBestSellers');
+  if(bsEl){
+    const maxRev=Math.max(1,...top.map(t=>t.revenue));
+    bsEl.innerHTML=top.length===0?'<p class="text-xs text-gray-400">데이터 없음</p>':top.map((t,i)=>{
+      const pct=Math.round(t.revenue/maxRev*100);
+      const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`;
+      return `<div><div class="flex items-center justify-between text-xs mb-0.5"><span>${medal} ${escapeHtml(t.product)}</span><span class="font-semibold">${t.qty.toLocaleString()}개 · ₩${t.revenue.toLocaleString()}</span></div><div class="bg-gray-100 h-1.5 rounded"><div class="bg-blue-500 h-1.5 rounded" style="width:${pct}%"></div></div></div>`;
+    }).join('');
+  }
+  // 플랫폼별 매출 비중 (주문 데이터에서)
+  const byPlat={};
+  orders.forEach(o=>{const k=EC_PLATFORM_NAMES[o.platform]||o.platform;if(!byPlat[k])byPlat[k]=0;byPlat[k]+=parseInt(o.qty)||0;});
+  const psEl=document.getElementById('erpPlatformShare');
+  if(psEl){
+    const totalP=Object.values(byPlat).reduce((s,v)=>s+v,0);
+    const entries=Object.entries(byPlat).sort((a,b)=>b[1]-a[1]);
+    psEl.innerHTML=entries.length===0?'<p class="text-xs text-gray-400">데이터 없음</p>':entries.map(([k,v])=>{
+      const pct=totalP>0?(v/totalP*100).toFixed(1):'0';
+      const colors={'네이버':'bg-green-500','쿠팡':'bg-orange-500','카페24':'bg-purple-500','11번가':'bg-red-500','G마켓':'bg-blue-500','기타':'bg-gray-500'};
+      const cls=colors[k]||'bg-gray-500';
+      return `<div><div class="flex items-center justify-between text-xs mb-1"><span>${escapeHtml(k)}</span><span class="font-semibold">${v}건 · ${pct}%</span></div><div class="bg-gray-100 h-2 rounded"><div class="${cls} h-2 rounded" style="width:${pct}%"></div></div></div>`;
+    }).join('');
+  }
+}
+
+// ----- 💵 손익/캐시플로우 -----
+function _genMockPnl(){
+  const months=['2026-03','2026-04','2026-05'];
+  return months.map(m=>{
+    const revenue=Math.floor(Math.random()*30000000+40000000);
+    const cogs=Math.round(revenue*0.45);
+    const opex=Math.round(revenue*0.25);
+    return {month:m,revenue,cogs,opex};
+  });
+}
+function getErpPnl(){return ST.get('erp_pnl_v1',_genMockPnl())}
+function saveErpPnl(d){ST.set('erp_pnl_v1',d)}
+function renderErpPnl(){
+  const body=document.getElementById('erpPnlBody');if(!body)return;
+  const d=getErpPnl();
+  if(d.length===0){body.innerHTML='<tr><td colspan="7" class="text-center text-gray-400 py-4">데이터 없음</td></tr>';return}
+  body.innerHTML=d.map((r,idx)=>{
+    const gross=r.revenue-r.cogs;
+    const op=gross-r.opex;
+    const margin=r.revenue>0?(op/r.revenue*100).toFixed(1):'0';
+    return `<tr>
+      <td class="font-semibold">${r.month}</td>
+      <td contenteditable oninput="updErpPnl(${idx},'revenue',this.textContent)" class="text-right">₩${r.revenue.toLocaleString()}</td>
+      <td contenteditable oninput="updErpPnl(${idx},'cogs',this.textContent)" class="text-right text-red-500">₩${r.cogs.toLocaleString()}</td>
+      <td class="text-right">₩${gross.toLocaleString()}</td>
+      <td contenteditable oninput="updErpPnl(${idx},'opex',this.textContent)" class="text-right text-red-500">₩${r.opex.toLocaleString()}</td>
+      <td class="text-right font-bold ${op>=0?'text-green-600':'text-red-600'}">₩${op.toLocaleString()}</td>
+      <td class="text-right font-semibold ${margin>=20?'text-green-600':margin>=0?'text-amber-600':'text-red-500'}">${margin}%</td>
+    </tr>`;
+  }).join('');
+  // 캐시플로우 시각화
+  const cfEl=document.getElementById('erpCashflowChart');
+  if(cfEl){
+    const max=Math.max(1,...d.map(r=>Math.abs(r.revenue-r.cogs-r.opex)));
+    cfEl.innerHTML=d.map(r=>{
+      const op=r.revenue-r.cogs-r.opex;
+      const w=Math.abs(op)/max*100;
+      const cls=op>=0?'bg-green-400':'bg-red-400';
+      return `<div><div class="flex items-center justify-between text-xs mb-0.5"><span>${r.month}</span><span class="font-semibold ${op>=0?'text-green-600':'text-red-600'}">${op>=0?'+':'-'}₩${Math.abs(op).toLocaleString()}</span></div><div class="bg-gray-100 h-3 rounded"><div class="${cls} h-3 rounded" style="width:${w}%"></div></div></div>`;
+    }).join('');
+  }
+  // 합계
+  const op=d.reduce((s,r)=>s+(r.revenue-r.cogs-r.opex),0);
+  const inv=Math.round(op*0.3); // 단순 가정
+  document.getElementById('erpCfOp')&&(document.getElementById('erpCfOp').textContent='+₩'+op.toLocaleString());
+  document.getElementById('erpCfInv')&&(document.getElementById('erpCfInv').textContent='-₩'+inv.toLocaleString());
+  document.getElementById('erpCfNet')&&(document.getElementById('erpCfNet').textContent='₩'+(op-inv).toLocaleString());
+}
+function updErpPnl(idx,k,v){
+  const d=getErpPnl();if(!d[idx])return;
+  d[idx][k]=parseInt(String(v).replace(/[^\d]/g,''))||0;saveErpPnl(d);renderErpPnl();renderErpDashboard();
+}
+function addPnlMonth(){
+  const d=getErpPnl();
+  const last=d[d.length-1]?.month||new Date().toISOString().slice(0,7);
+  const [y,m]=last.split('-').map(Number);
+  const next=new Date(y,m,1).toISOString().slice(0,7);
+  d.push({month:next,revenue:50000000,cogs:22500000,opex:12500000});
+  saveErpPnl(d);renderErpPnl();
+}
+
+function getErpReceivable(){
+  return ST.get('erp_receivable_v1',[
+    {id:1,type:'미수금',partner:'(주)뷰티코리아',amount:3600000,issueDate:'2026-05-01',dueDate:'2026-05-31',status:'pending'},
+    {id:2,type:'미수금',partner:'라이프스타일컴퍼니',amount:1800000,issueDate:'2026-05-05',dueDate:'2026-06-05',status:'pending'},
+    {id:3,type:'미지급금',partner:'쿠팡비즈',amount:450000,issueDate:'2026-05-10',dueDate:'2026-05-25',status:'pending'},
+    {id:4,type:'미지급금',partner:'네이버 광고',amount:2800000,issueDate:'2026-05-12',dueDate:'2026-05-27',status:'paid'}
+  ]);
+}
+function saveErpReceivable(d){ST.set('erp_receivable_v1',d)}
+function renderErpReceivable(){
+  const body=document.getElementById('erpReceivableBody');if(!body)return;
+  const d=getErpReceivable();
+  if(d.length===0){body.innerHTML='<tr><td colspan="7" class="text-center text-gray-400 py-4">항목 없음</td></tr>';return}
+  const today=new Date().toISOString().split('T')[0];
+  body.innerHTML=d.map((r,idx)=>{
+    const dDay=Math.floor((new Date(r.dueDate)-new Date(today))/(1000*60*60*24));
+    const dDayCls=dDay<0?'text-red-600 font-bold':dDay<=7?'text-amber-600':'text-gray-500';
+    const stCls=r.status==='paid'?'bg-green-50 text-green-700':r.status==='overdue'?'bg-red-50 text-red-600':'bg-amber-50 text-amber-700';
+    const stLabel=r.status==='paid'?'결제완료':r.status==='overdue'?'연체':'대기';
+    return `<tr>
+      <td><span class="text-xs px-2 py-0.5 rounded ${r.type==='미수금'?'bg-blue-50 text-blue-700':'bg-purple-50 text-purple-700'}">${r.type}</span></td>
+      <td contenteditable oninput="updErpRcv(${idx},'partner',this.textContent)">${escapeHtml(r.partner)}</td>
+      <td contenteditable oninput="updErpRcv(${idx},'amount',this.textContent)" class="text-right font-semibold">₩${r.amount.toLocaleString()}</td>
+      <td class="font-mono text-xs">${fmtDateYY(r.issueDate)}</td>
+      <td contenteditable oninput="updErpRcv(${idx},'dueDate',this.textContent)" class="font-mono text-xs">${fmtDateYY(r.dueDate)}</td>
+      <td class="text-center ${dDayCls}">${dDay<0?'D+'+Math.abs(dDay):'D-'+dDay}</td>
+      <td><span class="text-xs px-2 py-0.5 rounded ${stCls}">${stLabel}</span></td>
+    </tr>`;
+  }).join('');
+}
+function updErpRcv(idx,k,v){
+  const d=getErpReceivable();if(!d[idx])return;
+  if(k==='amount')d[idx][k]=parseInt(String(v).replace(/[^\d]/g,''))||0;
+  else if(k==='dueDate')d[idx][k]=parseDateYY(v);
+  else d[idx][k]=v;
+  saveErpReceivable(d);renderErpReceivable();
+}
+function addReceivable(){
+  const d=getErpReceivable();
+  d.push({id:Date.now(),type:'미수금',partner:'',amount:0,issueDate:new Date().toISOString().split('T')[0],dueDate:new Date(Date.now()+30*86400000).toISOString().split('T')[0],status:'pending'});
+  saveErpReceivable(d);renderErpReceivable();
+}
+
+// ----- 📝 전자결재 -----
+function getErpApprovals(){
+  return ST.get('erp_approvals_v1',[
+    {id:1,docNo:'2026-05-001',type:'지출',title:'팀 회식비 (5월)',drafter:'최영업',dept:'영업팀',amount:480000,line:'팀장→대표',date:'2026-05-12',status:'approved'},
+    {id:2,docNo:'2026-05-002',type:'구매',title:'신규 노트북 3대 구매',drafter:'관리자',dept:'관리팀',amount:4500000,line:'대표',date:'2026-05-14',status:'progress'},
+    {id:3,docNo:'2026-05-003',type:'휴가',title:'연차 신청 (5/20~5/22)',drafter:'박지영',dept:'디자인팀',amount:0,line:'팀장→대표',date:'2026-05-15',status:'pending'},
+    {id:4,docNo:'2026-05-004',type:'지출',title:'네이버 광고 충전',drafter:'이마케팅',dept:'마케팅팀',amount:3000000,line:'팀장→대표',date:'2026-05-15',status:'approved'},
+    {id:5,docNo:'2026-05-005',type:'구매',title:'사무용 의자 5개',drafter:'관리자',dept:'관리팀',amount:1250000,line:'대표',date:'2026-05-16',status:'rejected'},
+    {id:6,docNo:'2026-05-006',type:'기안',title:'CS 매뉴얼 개정안',drafter:'홍길동',dept:'관리팀',amount:0,line:'팀장→대표',date:'2026-05-17',status:'pending'}
+  ]);
+}
+function saveErpApprovals(d){ST.set('erp_approvals_v1',d)}
+function renderErpApproval(){
+  const body=document.getElementById('erpApprovalBody');if(!body)return;
+  const all=getErpApprovals();
+  const tf=document.getElementById('erpApprTypeFilter')?.value||'all';
+  const d=tf==='all'?all:all.filter(r=>r.type===tf);
+  // KPI (전체 기준)
+  const map={pending:0,progress:0,approved:0,rejected:0};
+  all.forEach(r=>{if(map[r.status]!==undefined)map[r.status]++});
+  document.getElementById('erpApprTotal')&&(document.getElementById('erpApprTotal').textContent=all.length);
+  document.getElementById('erpApprPending')&&(document.getElementById('erpApprPending').textContent=map.pending);
+  document.getElementById('erpApprProgress')&&(document.getElementById('erpApprProgress').textContent=map.progress);
+  document.getElementById('erpApprApproved')&&(document.getElementById('erpApprApproved').textContent=map.approved);
+  document.getElementById('erpApprRejected')&&(document.getElementById('erpApprRejected').textContent=map.rejected);
+  if(d.length===0){body.innerHTML='<tr><td colspan="10" class="text-center text-gray-400 py-4">조건에 맞는 문서 없음</td></tr>';return}
+  const statusMap={pending:{l:'대기',c:'bg-amber-50 text-amber-700'},progress:{l:'진행중',c:'bg-blue-50 text-blue-700'},approved:{l:'승인',c:'bg-green-50 text-green-700'},rejected:{l:'반려',c:'bg-red-50 text-red-600'}};
+  const statusOpts=Object.entries(statusMap).map(([k,v])=>`<option value="${k}">${v.l}</option>`).join('');
+  const typeColors={지출:'bg-blue-100 text-blue-700',구매:'bg-purple-100 text-purple-700',휴가:'bg-amber-100 text-amber-700',기안:'bg-gray-100 text-gray-700'};
+  body.innerHTML=d.map(r=>{
+    const st=statusMap[r.status]||statusMap.pending;
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="erpApprChk" data-id="${r.id}" /></td>
+      <td class="font-mono text-xs">${escapeHtml(r.docNo)}</td>
+      <td><span class="text-xs px-2 py-0.5 rounded ${typeColors[r.type]||'bg-gray-100'}">${r.type}</span></td>
+      <td contenteditable oninput="updErpAppr(${r.id},'title',this.textContent)" class="font-medium">${escapeHtml(r.title)}</td>
+      <td>${escapeHtml(r.drafter)}</td>
+      <td class="text-xs">${escapeHtml(r.dept)}</td>
+      <td class="text-right">${r.amount>0?'₩'+r.amount.toLocaleString():'-'}</td>
+      <td class="text-xs text-gray-600">${escapeHtml(r.line)}</td>
+      <td class="font-mono text-xs">${fmtDateYY(r.date)}</td>
+      <td><select onchange="updErpAppr(${r.id},'status',this.value);renderErpApproval()" class="text-xs border rounded px-1 py-0.5 ${st.c}">${statusOpts.replace(`value="${r.status}"`,`value="${r.status}" selected`)}</select></td>
+    </tr>`;
+  }).join('');
+}
+function updErpAppr(id,k,v){
+  const d=getErpApprovals();const r=d.find(x=>x.id===id);if(!r)return;
+  r[k]=v;saveErpApprovals(d);
+}
+function addApproval(){
+  const d=getErpApprovals();
+  const docNo=`2026-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(d.length+1).padStart(3,'0')}`;
+  d.push({id:Date.now(),docNo,type:'기안',title:'새 기안서',drafter:CURRENT?.name||'',dept:CURRENT?.dept||'',amount:0,line:'팀장→대표',date:new Date().toISOString().split('T')[0],status:'pending'});
+  saveErpApprovals(d);renderErpApproval();showToast('+','기안 작성','새 결재 문서');
+}
+function toggleAllApprovals(c){document.querySelectorAll('.erpApprChk').forEach(x=>x.checked=c)}
+function delSelectedApprovals(){
+  const ids=Array.from(document.querySelectorAll('.erpApprChk:checked')).map(c=>parseInt(c.dataset.id));
+  if(ids.length===0){alert('선택하세요');return}
+  if(!confirm(ids.length+'개 삭제?'))return;
+  saveErpApprovals(getErpApprovals().filter(r=>!ids.includes(r.id)));renderErpApproval();showToast('🗑','삭제됨','');
+}
+
+// ----- 💼 자산/계약 -----
+function getErpAssets(){
+  return ST.get('erp_assets_v1',[
+    {id:1,name:'MacBook Pro 14"',type:'노트북',user:'홍길동',purchaseDate:'2024-03-01',price:2800000,status:'in_use'},
+    {id:2,name:'LG 그램 17"',type:'노트북',user:'이마케팅',purchaseDate:'2024-08-15',price:2200000,status:'in_use'},
+    {id:3,name:'24" 모니터 (LG)',type:'모니터',user:'최영업',purchaseDate:'2024-06-10',price:350000,status:'in_use'},
+    {id:4,name:'아이폰 15',type:'스마트폰',user:'박지영',purchaseDate:'2026-01-15',price:1450000,status:'in_use'},
+    {id:5,name:'갤럭시 탭 S9',type:'태블릿',user:'',purchaseDate:'2025-11-20',price:1100000,status:'idle'},
+    {id:6,name:'프린터 (HP)',type:'기타',user:'(공용)',purchaseDate:'2023-04-01',price:450000,status:'in_use'}
+  ]);
+}
+function saveErpAssets(d){ST.set('erp_assets_v1',d)}
+function renderErpAsset(){
+  const body=document.getElementById('erpAssetBody');if(!body)return;
+  const d=getErpAssets();
+  const inUse=d.filter(r=>r.status==='in_use').length;
+  const idle=d.filter(r=>r.status==='idle').length;
+  document.getElementById('erpAssetTotal')&&(document.getElementById('erpAssetTotal').textContent=d.length);
+  document.getElementById('erpAssetInUse')&&(document.getElementById('erpAssetInUse').textContent=inUse);
+  document.getElementById('erpAssetIdle')&&(document.getElementById('erpAssetIdle').textContent=idle);
+  if(d.length===0){body.innerHTML='<tr><td colspan="7" class="text-center text-gray-400 py-4">자산 없음</td></tr>';return}
+  const statusMap={in_use:{l:'사용중',c:'bg-blue-50 text-blue-700'},idle:{l:'미사용',c:'bg-gray-100 text-gray-500'},disposed:{l:'폐기',c:'bg-red-50 text-red-500'}};
+  const statusOpts=Object.entries(statusMap).map(([k,v])=>`<option value="${k}">${v.l}</option>`).join('');
+  body.innerHTML=d.map(r=>{
+    const st=statusMap[r.status]||statusMap.in_use;
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="erpAssetChk" data-id="${r.id}" /></td>
+      <td contenteditable oninput="updErpAsset(${r.id},'name',this.textContent)" class="font-medium">${escapeHtml(r.name)}</td>
+      <td contenteditable oninput="updErpAsset(${r.id},'type',this.textContent)" class="text-xs">${escapeHtml(r.type)}</td>
+      <td contenteditable oninput="updErpAsset(${r.id},'user',this.textContent)">${escapeHtml(r.user||'-')}</td>
+      <td class="font-mono text-xs">${fmtDateYY(r.purchaseDate)}</td>
+      <td class="text-right">₩${(r.price||0).toLocaleString()}</td>
+      <td><select onchange="updErpAsset(${r.id},'status',this.value);renderErpAsset()" class="text-xs border rounded px-1 py-0.5 ${st.c}">${statusOpts.replace(`value="${r.status}"`,`value="${r.status}" selected`)}</select></td>
+    </tr>`;
+  }).join('');
+}
+function updErpAsset(id,k,v){
+  const d=getErpAssets();const r=d.find(x=>x.id===id);if(!r)return;
+  r[k]=v;saveErpAssets(d);
+}
+function addErpAsset(){
+  const d=getErpAssets();
+  d.push({id:Date.now(),name:'새 자산',type:'노트북',user:'',purchaseDate:new Date().toISOString().split('T')[0],price:0,status:'idle'});
+  saveErpAssets(d);renderErpAsset();
+}
+function toggleAllAssets(c){document.querySelectorAll('.erpAssetChk').forEach(x=>x.checked=c)}
+function delSelectedAssets(){
+  const ids=Array.from(document.querySelectorAll('.erpAssetChk:checked')).map(c=>parseInt(c.dataset.id));
+  if(ids.length===0){alert('선택하세요');return}
+  if(!confirm(ids.length+'개 삭제?'))return;
+  saveErpAssets(getErpAssets().filter(r=>!ids.includes(r.id)));renderErpAsset();
+}
+
+function getErpContracts(){
+  return ST.get('erp_contracts_v1',[
+    {id:1,name:'사무실 임대차',partner:'XX빌딩 관리실',endDate:'2027-02-28',monthlyCost:3500000,status:'active'},
+    {id:2,name:'네이버 스마트스토어',partner:'네이버',endDate:'2026-12-31',monthlyCost:0,status:'active'},
+    {id:3,name:'쿠팡 입점 계약',partner:'쿠팡',endDate:'2026-06-30',monthlyCost:0,status:'active'},
+    {id:4,name:'CJ대한통운 단가계약',partner:'CJ대한통운',endDate:'2026-08-31',monthlyCost:0,status:'active'},
+    {id:5,name:'Slack 유료 플랜',partner:'Slack',endDate:'2027-01-15',monthlyCost:120000,status:'active'},
+    {id:6,name:'세무 자문 계약',partner:'OO세무회계',endDate:'2026-06-15',monthlyCost:300000,status:'active'}
+  ]);
+}
+function saveErpContracts(d){ST.set('erp_contracts_v1',d)}
+function renderErpContract(){
+  const body=document.getElementById('erpContractBody');if(!body)return;
+  const d=getErpContracts();
+  const today=new Date();
+  const expiring=d.filter(r=>{const dd=Math.floor((new Date(r.endDate)-today)/(1000*60*60*24));return dd>=0&&dd<=30}).length;
+  const monthly=d.filter(r=>r.status==='active').reduce((s,r)=>s+(r.monthlyCost||0),0);
+  document.getElementById('erpContractTotal')&&(document.getElementById('erpContractTotal').textContent=d.length);
+  document.getElementById('erpContractExpiring')&&(document.getElementById('erpContractExpiring').textContent=expiring);
+  document.getElementById('erpContractMonthly')&&(document.getElementById('erpContractMonthly').textContent='₩'+monthly.toLocaleString());
+  if(d.length===0){body.innerHTML='<tr><td colspan="7" class="text-center text-gray-400 py-4">계약 없음</td></tr>';return}
+  const statusMap={active:{l:'활성',c:'bg-green-50 text-green-700'},expired:{l:'만료',c:'bg-gray-100 text-gray-500'},terminated:{l:'해지',c:'bg-red-50 text-red-600'}};
+  const statusOpts=Object.entries(statusMap).map(([k,v])=>`<option value="${k}">${v.l}</option>`).join('');
+  body.innerHTML=d.map(r=>{
+    const dDay=Math.floor((new Date(r.endDate)-today)/(1000*60*60*24));
+    const dDayCls=dDay<0?'text-gray-400':dDay<=30?'text-red-600 font-bold':dDay<=90?'text-amber-600':'text-gray-600';
+    const st=statusMap[r.status]||statusMap.active;
+    return `<tr ${dDay>=0&&dDay<=30?'class="bg-red-50/40"':''}>
+      <td class="sheet-row-num"><input type="checkbox" class="erpContractChk" data-id="${r.id}" /></td>
+      <td contenteditable oninput="updErpContract(${r.id},'name',this.textContent)" class="font-medium">${escapeHtml(r.name)}</td>
+      <td contenteditable oninput="updErpContract(${r.id},'partner',this.textContent)" class="text-xs">${escapeHtml(r.partner)}</td>
+      <td contenteditable oninput="updErpContract(${r.id},'endDate',this.textContent)" class="font-mono text-xs">${fmtDateYY(r.endDate)}</td>
+      <td class="text-center ${dDayCls}">${dDay<0?'만료':'D-'+dDay}</td>
+      <td contenteditable oninput="updErpContract(${r.id},'monthlyCost',this.textContent)" class="text-right">${r.monthlyCost>0?'₩'+r.monthlyCost.toLocaleString():'-'}</td>
+      <td><select onchange="updErpContract(${r.id},'status',this.value);renderErpContract()" class="text-xs border rounded px-1 py-0.5 ${st.c}">${statusOpts.replace(`value="${r.status}"`,`value="${r.status}" selected`)}</select></td>
+    </tr>`;
+  }).join('');
+}
+function updErpContract(id,k,v){
+  const d=getErpContracts();const r=d.find(x=>x.id===id);if(!r)return;
+  if(k==='monthlyCost')r[k]=parseInt(String(v).replace(/[^\d]/g,''))||0;
+  else if(k==='endDate')r[k]=parseDateYY(v);
+  else r[k]=v;
+  saveErpContracts(d);renderErpContract();
+}
+function addErpContract(){
+  const d=getErpContracts();
+  d.push({id:Date.now(),name:'새 계약',partner:'',endDate:new Date(Date.now()+365*86400000).toISOString().split('T')[0],monthlyCost:0,status:'active'});
+  saveErpContracts(d);renderErpContract();
+}
+function toggleAllContracts(c){document.querySelectorAll('.erpContractChk').forEach(x=>x.checked=c)}
+function delSelectedContracts(){
+  const ids=Array.from(document.querySelectorAll('.erpContractChk:checked')).map(c=>parseInt(c.dataset.id));
+  if(ids.length===0){alert('선택하세요');return}
+  if(!confirm(ids.length+'개 삭제?'))return;
+  saveErpContracts(getErpContracts().filter(r=>!ids.includes(r.id)));renderErpContract();
+}
