@@ -171,6 +171,11 @@
   .ec-status-card{transition:all .15s;background:#fff;cursor:pointer}
   .ec-status-card:hover{border-color:#9ca3af}
   .ec-status-card.active{border-color:#111;border-width:2px;background:#f9fafb;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .rank-menu-btn{transition:all .15s;background:#fff;cursor:pointer}
+  .rank-menu-btn:hover{border-color:#9ca3af}
+  .rank-menu-btn.active{background:#111;color:#fff;border-color:#111}
+  [data-theme="dark"] .rank-menu-btn{background:#252525;border-color:#363636;color:#e6e6e6}
+  [data-theme="dark"] .rank-menu-btn.active{background:#fff;color:#111}
   [data-theme="dark"] .ec-status-card{background:#252525;border-color:#363636}
   [data-theme="dark"] .ec-status-card.active{border-color:#fff;background:#1e1e1e}
   [data-theme="dark"] .sheet-row-num{background:#2a2a2a}
@@ -760,8 +765,55 @@
           <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAll('cost',this.checked)" /></th><th>제품</th><th>원가</th><th>판매가</th><th>마진율</th><th>발주 수량</th></tr></thead><tbody id="ecCostBody"></tbody></table></div>
         </div>
         <div id="sub-ecommerce-ranking" class="sub-page">
-          <h3 class="text-sm font-bold mb-3">🏆 판매 순위 TOP 10</h3>
-          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table"><thead><tr><th class="sheet-row-num">#</th><th>순위</th><th>제품</th><th>판매량</th><th>매출</th><th>변동</th></tr></thead><tbody id="ecRankingBody"></tbody></table></div>
+          <!-- 내부 메뉴 선택 -->
+          <div class="flex flex-wrap items-center gap-2 mb-4">
+            <button type="button" data-rankmenu="search" onclick="setRankMenu('search')" class="rank-menu-btn px-3 py-1.5 border border-gray-300 rounded text-xs font-medium">🔍 쇼핑검색순위</button>
+            <button type="button" data-rankmenu="slot" onclick="setRankMenu('slot')" class="rank-menu-btn px-3 py-1.5 border border-gray-300 rounded text-xs font-medium">🎯 슬롯구동</button>
+          </div>
+
+          <!-- 쇼핑검색순위 -->
+          <div id="rank-menu-search" class="rank-menu-page">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">추적 키워드</p><p class="text-xl font-bold" id="rankSrchTotal">0</p></div>
+              <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">1페이지 진입</p><p class="text-xl font-bold text-green-600" id="rankSrchPage1">0</p></div>
+              <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">상승</p><p class="text-xl font-bold text-blue-600" id="rankSrchUp">0</p></div>
+              <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">하락</p><p class="text-xl font-bold text-red-500" id="rankSrchDown">0</p></div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 mb-3">
+              <select id="rankSrchPlatform" onchange="renderRankSearch()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white">
+                <option value="naver_shopping">네이버 쇼핑</option>
+                <option value="coupang_search">쿠팡 검색</option>
+                <option value="11st">11번가</option>
+              </select>
+              <button onclick="addRankKeyword()" class="px-3 py-1 bg-black text-white text-xs rounded">+ 키워드 추가</button>
+              <button onclick="refreshAllRankings()" class="px-3 py-1 bg-blue-600 text-white text-xs rounded">🔄 순위 새로고침</button>
+              <button onclick="delSelectedRankKeywords()" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button>
+              <span class="text-xs text-gray-400 ml-auto">💡 실연동 시 외부 API 호출로 실시간 순위 조회</span>
+            </div>
+            <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
+              <thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllRankRows(this.checked)" /></th><th>키워드</th><th>내 상품</th><th>플랫폼</th><th>현재 순위</th><th>어제 대비</th><th>페이지</th><th>마지막 조회</th><th>비고</th></tr></thead>
+              <tbody id="rankSearchBody"></tbody>
+            </table></div>
+          </div>
+
+          <!-- 슬롯구동 -->
+          <div id="rank-menu-slot" class="rank-menu-page hidden">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">전체 슬롯</p><p class="text-xl font-bold" id="rankSlotTotal">0</p></div>
+              <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">진행중</p><p class="text-xl font-bold text-green-600" id="rankSlotActive">0</p></div>
+              <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">일시정지</p><p class="text-xl font-bold text-amber-600" id="rankSlotPaused">0</p></div>
+              <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">월 총 비용</p><p class="text-xl font-bold text-purple-600" id="rankSlotCost">₩0</p></div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 mb-3">
+              <button onclick="addRankSlot()" class="px-3 py-1 bg-black text-white text-xs rounded">+ 슬롯 추가</button>
+              <button onclick="delSelectedRankSlots()" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button>
+              <span class="text-xs text-gray-400 ml-auto">💡 슬롯구동은 외부 업체/툴과 연동되며, 자체 정책에 따라 운영됩니다</span>
+            </div>
+            <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
+              <thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllSlotRows(this.checked)" /></th><th>키워드</th><th>대상 상품</th><th>목표 순위</th><th>일일 유입</th><th>시작일</th><th>일 단가</th><th>월 비용</th><th>업체</th><th>상태</th></tr></thead>
+              <tbody id="rankSlotBody"></tbody>
+            </table></div>
+          </div>
         </div></div>
       </div>
     </div>

@@ -320,6 +320,8 @@ function navigateSub(page,sub){
   document.getElementById(`sub-${page}-${sub}`)?.classList.add('active');
   document.querySelectorAll('.sub-nav-item').forEach(n=>{n.classList.remove('active');n.classList.remove('border-black')});
   document.querySelectorAll(`[data-subnav="${page}-${sub}"]`).forEach(s=>{s.classList.add('active');if(s.tagName==='BUTTON')s.classList.add('border-black')});
+  // 순위 탭 진입 시 현재 메뉴 활성화 (기본: 쇼핑검색순위)
+  if(page==='ecommerce'&&sub==='ranking'){setRankMenu(_rankMenu||'search');renderRankSearch();renderRankSlot();}
 }
 function switchSettingTab(tab){
   document.querySelectorAll('.settings-tab').forEach(t=>t.classList.remove('bg-gray-100','font-semibold'));
@@ -2051,11 +2053,7 @@ function renderEcommerce(){
   renderEcInventory();
   const cost=getEcData('cost');
   document.getElementById('ecCostBody')&&(document.getElementById('ecCostBody').innerHTML=cost.map(c=>{const m=((c.price-c.cost)/c.price*100).toFixed(1);return `<tr><td class="sheet-row-num"><input type="checkbox" class="ecChk-cost" data-id="${c.id}" /></td><td contenteditable oninput="updEc('cost',${c.id},'product',this.textContent)">${c.product}</td><td contenteditable oninput="updEc('cost',${c.id},'cost',this.textContent)">₩${c.cost.toLocaleString()}</td><td contenteditable oninput="updEc('cost',${c.id},'price',this.textContent)">₩${c.price.toLocaleString()}</td><td class="${m>=50?'text-green-600':'text-amber-600'} font-semibold">${m}%</td><td contenteditable oninput="updEc('cost',${c.id},'orderQty',this.textContent)">${c.orderQty}</td></tr>`}).join(''));
-  // 순위: 필터된 데이터에서 제품별 집계
-  const byProd={};
-  sales.forEach(s=>{const k=s.product;if(!byProd[k])byProd[k]={product:k,brand:s.brand,qty:0,revenue:0};byProd[k].qty+=s.qty||0;byProd[k].revenue+=s.revenue||0;});
-  const ranked=Object.values(byProd).sort((a,b)=>b.qty-a.qty).slice(0,10);
-  document.getElementById('ecRankingBody')&&(document.getElementById('ecRankingBody').innerHTML=ranked.length===0?'<tr><td colspan="6" class="text-center text-gray-400 py-4">데이터 없음</td></tr>':ranked.map((s,i)=>{const color=i===0?'text-amber-500':i===1?'text-gray-400':i===2?'text-orange-400':'';return `<tr><td class="sheet-row-num">${i+1}</td><td class="${color} font-black">${i+1}</td><td>${escapeHtml(s.product)}<div class="text-[10px] text-gray-400">${escapeHtml(s.brand||'')}</div></td><td>${s.qty}</td><td>₩${s.revenue.toLocaleString()}</td><td class="text-gray-400 text-xs">-</td></tr>`}).join(''));
+  renderRankSearch();renderRankSlot();
 }
 function ecAddRow(t){
   const d=getEcData(t);const newRow={id:Date.now()};
@@ -2080,6 +2078,140 @@ function updEc(t,id,k,v){
     }
     renderEcInventory();
   }
+}
+
+// ========== 순위 (쇼핑검색순위 + 슬롯구동) ==========
+let _rankMenu='search';
+function setRankMenu(m){
+  _rankMenu=m;
+  document.querySelectorAll('.rank-menu-btn').forEach(b=>b.classList.toggle('active',b.dataset.rankmenu===m));
+  document.getElementById('rank-menu-search')?.classList.toggle('hidden',m!=='search');
+  document.getElementById('rank-menu-slot')?.classList.toggle('hidden',m!=='slot');
+}
+
+// ----- 쇼핑검색순위 -----
+function getRankKeywords(){return ST.get('rank_keywords_v1',[
+  {id:1,keyword:'선크림',product:'선크림 SPF50+ (A몰)',platform:'naver_shopping',rank:7,prevRank:12,page:1,lastChecked:new Date().toISOString(),note:'주력 키워드'},
+  {id:2,keyword:'순한 클렌징폼',product:'클렌징 폼 200ml',platform:'naver_shopping',rank:23,prevRank:25,page:1,lastChecked:new Date().toISOString(),note:''},
+  {id:3,keyword:'스킨케어 세트',product:'스킨케어 5종 세트',platform:'naver_shopping',rank:52,prevRank:48,page:2,lastChecked:new Date().toISOString(),note:'경쟁 심화'},
+  {id:4,keyword:'프리미엄 보습 크림',product:'프리미엄 보습 크림',platform:'coupang_search',rank:15,prevRank:18,page:1,lastChecked:new Date().toISOString(),note:''},
+  {id:5,keyword:'토너세트',product:'토너 세트',platform:'11st',rank:104,prevRank:89,page:3,lastChecked:new Date().toISOString(),note:''}
+])}
+function saveRankKeywords(d){ST.set('rank_keywords_v1',d)}
+function renderRankSearch(){
+  const body=document.getElementById('rankSearchBody');if(!body)return;
+  const all=getRankKeywords();
+  const pf=document.getElementById('rankSrchPlatform')?.value||'naver_shopping';
+  const list=all.filter(k=>k.platform===pf);
+  // KPI
+  const upCount=list.filter(k=>k.prevRank&&k.rank<k.prevRank).length;
+  const downCount=list.filter(k=>k.prevRank&&k.rank>k.prevRank).length;
+  const page1=list.filter(k=>k.page===1).length;
+  document.getElementById('rankSrchTotal')&&(document.getElementById('rankSrchTotal').textContent=list.length);
+  document.getElementById('rankSrchPage1')&&(document.getElementById('rankSrchPage1').textContent=page1);
+  document.getElementById('rankSrchUp')&&(document.getElementById('rankSrchUp').textContent=upCount);
+  document.getElementById('rankSrchDown')&&(document.getElementById('rankSrchDown').textContent=downCount);
+  if(list.length===0){body.innerHTML='<tr><td colspan="9" class="text-center text-gray-400 py-4">등록된 키워드가 없습니다.</td></tr>';return}
+  const platformLabels={naver_shopping:'네이버 쇼핑',coupang_search:'쿠팡 검색','11st':'11번가'};
+  body.innerHTML=list.map(k=>{
+    const diff=k.prevRank?k.prevRank-k.rank:0;
+    const diffCell=diff>0?`<span class="text-blue-600 font-semibold">▲ ${diff}</span>`:diff<0?`<span class="text-red-500 font-semibold">▼ ${Math.abs(diff)}</span>`:'<span class="text-gray-400">·</span>';
+    const t=k.lastChecked?new Date(k.lastChecked):null;
+    const tStr=t?`${fmtDateYY(t.toISOString().slice(0,10))} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`:'-';
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="rankChk" data-id="${k.id}" /></td>
+      <td contenteditable oninput="updRankKw(${k.id},'keyword',this.textContent)" class="font-medium">${escapeHtml(k.keyword)}</td>
+      <td contenteditable oninput="updRankKw(${k.id},'product',this.textContent)" class="text-xs text-gray-700">${escapeHtml(k.product)}</td>
+      <td class="text-xs"><span class="px-2 py-0.5 rounded bg-gray-100">${platformLabels[k.platform]||k.platform}</span></td>
+      <td class="text-center font-bold ${k.rank<=10?'text-green-600':k.rank<=40?'text-blue-600':'text-gray-700'}">${k.rank}</td>
+      <td class="text-center text-xs">${diffCell}</td>
+      <td class="text-center text-xs">${k.page}p</td>
+      <td class="text-[10px] text-gray-500">${tStr}</td>
+      <td contenteditable oninput="updRankKw(${k.id},'note',this.textContent)" class="text-xs text-gray-500">${escapeHtml(k.note||'')}</td>
+    </tr>`;
+  }).join('');
+}
+function updRankKw(id,k,v){const d=getRankKeywords();const x=d.find(y=>y.id===id);if(x){x[k]=v;saveRankKeywords(d)}}
+function addRankKeyword(){
+  const kw=prompt('추적할 키워드:');if(!kw)return;
+  const product=prompt('내 상품명 (선택):')||'';
+  const pf=document.getElementById('rankSrchPlatform')?.value||'naver_shopping';
+  const d=getRankKeywords();
+  d.push({id:Date.now(),keyword:kw,product,platform:pf,rank:Math.floor(Math.random()*200+1),prevRank:0,page:1,lastChecked:new Date().toISOString(),note:''});
+  saveRankKeywords(d);renderRankSearch();showToast('+','키워드 추가',kw);
+}
+function refreshAllRankings(){
+  // 실제: 외부 API 호출 / 현재는 시뮬레이션
+  const d=getRankKeywords();
+  d.forEach(k=>{k.prevRank=k.rank;k.rank=Math.max(1,k.rank+Math.floor(Math.random()*11)-5);k.page=Math.ceil(k.rank/40);k.lastChecked=new Date().toISOString();});
+  saveRankKeywords(d);renderRankSearch();
+  showToast('🔄','순위 새로고침',d.length+'개 키워드 갱신 (시뮬레이션)');
+}
+function toggleAllRankRows(c){document.querySelectorAll('.rankChk').forEach(x=>x.checked=c)}
+function delSelectedRankKeywords(){
+  const ids=Array.from(document.querySelectorAll('.rankChk:checked')).map(c=>parseInt(c.dataset.id));
+  if(ids.length===0){alert('선택하세요');return}
+  if(!confirm(ids.length+'개 키워드를 삭제하시겠습니까?'))return;
+  saveRankKeywords(getRankKeywords().filter(k=>!ids.includes(k.id)));renderRankSearch();showToast('🗑','삭제됨','');
+}
+
+// ----- 슬롯구동 -----
+function getRankSlots(){return ST.get('rank_slots_v1',[
+  {id:1,keyword:'선크림',product:'선크림 SPF50+',targetRank:5,dailyTraffic:80,startDate:'2026-05-01',dailyCost:15000,vendor:'A슬롯업체',status:'진행중'},
+  {id:2,keyword:'순한 클렌징폼',product:'클렌징 폼 200ml',targetRank:10,dailyTraffic:50,startDate:'2026-05-05',dailyCost:10000,vendor:'B슬롯업체',status:'진행중'},
+  {id:3,keyword:'스킨케어 세트',product:'스킨케어 5종 세트',targetRank:15,dailyTraffic:60,startDate:'2026-04-20',dailyCost:12000,vendor:'A슬롯업체',status:'일시정지'},
+  {id:4,keyword:'토너세트',product:'토너 세트',targetRank:20,dailyTraffic:40,startDate:'2026-05-10',dailyCost:8000,vendor:'C슬롯업체',status:'진행중'}
+])}
+function saveRankSlots(d){ST.set('rank_slots_v1',d)}
+function renderRankSlot(){
+  const body=document.getElementById('rankSlotBody');if(!body)return;
+  const d=getRankSlots();
+  // KPI
+  const active=d.filter(s=>s.status==='진행중').length;
+  const paused=d.filter(s=>s.status==='일시정지').length;
+  const monthCost=d.filter(s=>s.status==='진행중').reduce((sum,s)=>sum+(s.dailyCost||0)*30,0);
+  document.getElementById('rankSlotTotal')&&(document.getElementById('rankSlotTotal').textContent=d.length);
+  document.getElementById('rankSlotActive')&&(document.getElementById('rankSlotActive').textContent=active);
+  document.getElementById('rankSlotPaused')&&(document.getElementById('rankSlotPaused').textContent=paused);
+  document.getElementById('rankSlotCost')&&(document.getElementById('rankSlotCost').textContent='₩'+monthCost.toLocaleString());
+  if(d.length===0){body.innerHTML='<tr><td colspan="10" class="text-center text-gray-400 py-4">등록된 슬롯이 없습니다.</td></tr>';return}
+  const statusOpts=['진행중','일시정지','종료'].map(s=>`<option value="${s}">${s}</option>`).join('');
+  body.innerHTML=d.map(s=>{
+    const sc=s.status==='진행중'?'bg-green-50 text-green-700':s.status==='일시정지'?'bg-amber-50 text-amber-700':'bg-gray-100 text-gray-500';
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="slotChk" data-id="${s.id}" /></td>
+      <td contenteditable oninput="updRankSlot(${s.id},'keyword',this.textContent)" class="font-medium">${escapeHtml(s.keyword)}</td>
+      <td contenteditable oninput="updRankSlot(${s.id},'product',this.textContent)" class="text-xs">${escapeHtml(s.product)}</td>
+      <td contenteditable oninput="updRankSlot(${s.id},'targetRank',this.textContent)" class="text-center font-bold text-blue-600">${s.targetRank}</td>
+      <td contenteditable oninput="updRankSlot(${s.id},'dailyTraffic',this.textContent)" class="text-center">${s.dailyTraffic}</td>
+      <td contenteditable oninput="updRankSlot(${s.id},'startDate',this.textContent)" class="font-mono text-xs">${fmtDateYY(s.startDate)}</td>
+      <td contenteditable oninput="updRankSlot(${s.id},'dailyCost',this.textContent)" class="text-xs">₩${(s.dailyCost||0).toLocaleString()}</td>
+      <td class="text-xs">₩${((s.dailyCost||0)*30).toLocaleString()}</td>
+      <td contenteditable oninput="updRankSlot(${s.id},'vendor',this.textContent)" class="text-xs text-gray-700">${escapeHtml(s.vendor||'')}</td>
+      <td><select onchange="updRankSlot(${s.id},'status',this.value);renderRankSlot()" class="text-xs border rounded px-1 py-0.5 ${sc}">${statusOpts.replace(`value="${s.status}"`,`value="${s.status}" selected`)}</select></td>
+    </tr>`;
+  }).join('');
+}
+function updRankSlot(id,k,v){
+  const d=getRankSlots();const x=d.find(y=>y.id===id);if(!x)return;
+  if(['targetRank','dailyTraffic','dailyCost'].includes(k))x[k]=parseInt(String(v).replace(/[^\d]/g,''))||0;
+  else if(k==='startDate')x[k]=parseDateYY(v);
+  else x[k]=v;
+  saveRankSlots(d);
+}
+function addRankSlot(){
+  const kw=prompt('키워드:');if(!kw)return;
+  const product=prompt('대상 상품:')||'';
+  const d=getRankSlots();
+  d.push({id:Date.now(),keyword:kw,product,targetRank:10,dailyTraffic:50,startDate:new Date().toISOString().split('T')[0],dailyCost:10000,vendor:'',status:'진행중'});
+  saveRankSlots(d);renderRankSlot();showToast('+','슬롯 추가',kw);
+}
+function toggleAllSlotRows(c){document.querySelectorAll('.slotChk').forEach(x=>x.checked=c)}
+function delSelectedRankSlots(){
+  const ids=Array.from(document.querySelectorAll('.slotChk:checked')).map(c=>parseInt(c.dataset.id));
+  if(ids.length===0){alert('선택하세요');return}
+  if(!confirm(ids.length+'개 슬롯을 삭제하시겠습니까?'))return;
+  saveRankSlots(getRankSlots().filter(s=>!ids.includes(s.id)));renderRankSlot();showToast('🗑','삭제됨','');
 }
 
 // ----- 재고 7일 평균/상태/필터 -----
