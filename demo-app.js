@@ -323,7 +323,7 @@ function navigateSub(page,sub){
   // 순위 탭 진입 시 현재 메뉴 활성화 (기본: 쇼핑검색순위)
   if(page==='ecommerce'&&sub==='ranking'){setRankMenu(_rankMenu||'search');renderRankSearch();renderRankSlot();}
   // 쇼핑 모니터링 탭 진입
-  if(page==='ecommerce'&&sub==='monitor'){setMonitorMenu(_monitorMenu||'ac');renderAcTable();renderSeoTable();_restoreAcDataSource();}
+  if(page==='ecommerce'&&sub==='monitor'){setMonitorMenu(_monitorMenu||'ac');renderAcTable();renderSeoTable();_restoreAcDataSource();_restoreSeoDataSource();}
 }
 function switchSettingTab(tab){
   document.querySelectorAll('.settings-tab').forEach(t=>t.classList.remove('bg-gray-100','font-semibold'));
@@ -2308,29 +2308,58 @@ function renderAcTable(){
   const latestCheck=d.reduce((max,q)=>{const dates=Object.keys(q.history||{});if(dates.length===0)return max;const last=dates.sort().reverse()[0];return!max||last>max?last:max},null);
   document.getElementById('acLastChecked')&&(document.getElementById('acLastChecked').textContent=latestCheck?fmtDateYY(latestCheck):'-');
   if(d.length===0){body.innerHTML='<tr><td colspan="10" class="text-center text-gray-400 py-4">추적 쿼리가 없습니다.</td></tr>';return}
+  const negSourceSet=(nm)=>new Set((nm||[]).map(x=>x.suggestion));
   body.innerHTML=d.map(q=>{
     const now=q.history?.[today]||[];
     const past=q.history?.[compareDate]||[];
     const added=now.filter(x=>!past.includes(x));
     const removed=past.filter(x=>!now.includes(x));
     const lastDate=Object.keys(q.history||{}).sort().reverse()[0];
-    // 매칭 결과는 항상 현재 데이터로 재계산 (캐시는 알림 변화감지용)
     const tm=_matchAcTargets(now,q.targetKeywords);
     const nm=_matchAcNegatives(now,q.negativeKeywords);
+    const negSrcSet=negSourceSet(nm);
+    const targetSet=new Set(tm.found.map(s=>s.toLowerCase()));
+    // 오늘 자동완성: 칩 (신규=파랑, 부정매칭자=주황, 그 외=회색)
+    const nowChips=now.length===0?'<span class="text-gray-400 text-xs">데이터 없음</span>':now.map(s=>{
+      const isNew=added.includes(s);
+      const isNeg=negSrcSet.has(s);
+      const cls=isNeg?'ac-chip ac-chip-src':isNew?'ac-chip ac-chip-new':'ac-chip';
+      const title=isNeg?'부정어 포함':(isNew?'신규 진입':'');
+      return `<span class="${cls}"${title?` title="${title}"`:''}>${escapeHtml(s)}</span>`;
+    }).join('');
+    // 신규 ▲
+    const addedChips=added.length===0?'<span class="text-gray-400">·</span>':added.map(s=>`<span class="ac-chip ac-chip-new">▲ ${escapeHtml(s)}</span>`).join('');
+    // 이탈 ▼
+    const removedChips=removed.length===0?'<span class="text-gray-400">·</span>':removed.map(s=>`<span class="ac-chip ac-chip-removed">▼ ${escapeHtml(s)}</span>`).join('');
+    // 목표 자완 셀
     const targetTotal=(q.targetKeywords||[]).length;
-    const targetCell=targetTotal===0?'<span class="text-gray-400">미설정</span>':`<div class="text-xs">${tm.found.length>0?'<span class="text-green-600 font-semibold">✓ '+tm.found.map(s=>escapeHtml(s)).join(', ')+'</span>':''}${tm.missing.length>0?'<div class="text-red-500">✗ '+tm.missing.map(s=>escapeHtml(s)).join(', ')+'</div>':''}<div class="text-[10px] text-gray-400 mt-1">${tm.found.length}/${targetTotal} 노출</div></div>`;
-    const negCell=nm.length===0?(q.negativeKeywords||[]).length===0?'<span class="text-gray-400">미설정</span>':'<span class="text-gray-400 text-xs">감지 없음</span>':`<div class="text-xs"><span class="text-red-600 font-semibold">⚠️ ${nm.length}건</span>${nm.slice(0,3).map(d=>`<div class="text-[10px] text-red-500">'${escapeHtml(d.negative)}' → ${escapeHtml(d.suggestion)}</div>`).join('')}${nm.length>3?`<div class="text-[10px] text-gray-400">+${nm.length-3}건</div>`:''}</div>`;
+    let targetCell;
+    if(targetTotal===0){targetCell='<span class="text-gray-400 text-xs">미설정</span>';}
+    else{
+      const okChips=tm.found.map(s=>`<span class="ac-chip ac-chip-tgt-ok" title="자동완성에 노출됨">✓ ${escapeHtml(s)}</span>`).join('');
+      const ngChips=tm.missing.map(s=>`<span class="ac-chip ac-chip-tgt-ng" title="자동완성에 없음">✗ ${escapeHtml(s)}</span>`).join('');
+      targetCell=`<div>${okChips}${ngChips}<div class="text-[10px] text-gray-500 mt-1">${tm.found.length}/${targetTotal} 노출</div></div>`;
+    }
+    // 부정어 셀
+    let negCell;
+    if((q.negativeKeywords||[]).length===0){negCell='<span class="text-gray-400 text-xs">미설정</span>';}
+    else if(nm.length===0){negCell='<span class="text-gray-400 text-xs">감지 없음 ✓</span>';}
+    else{
+      // 부정어별 그룹핑
+      const byNeg={};nm.forEach(d=>{(byNeg[d.negative]=byNeg[d.negative]||[]).push(d.suggestion)});
+      negCell=`<div><span class="text-red-600 text-xs font-semibold">⚠️ ${nm.length}건 감지</span>${Object.entries(byNeg).map(([n,sugs])=>`<div class="mt-1"><span class="ac-chip ac-chip-neg">${escapeHtml(n)}</span>→ ${sugs.map(s=>`<span class="ac-chip ac-chip-src">${escapeHtml(s)}</span>`).join('')}</div>`).join('')}</div>`;
+    }
     return `<tr>
       <td class="sheet-row-num"><input type="checkbox" class="acChk" data-id="${q.id}" /></td>
-      <td class="font-mono font-medium">${escapeHtml(q.query)}</td>
-      <td class="text-xs">${now.length===0?'<span class="text-gray-400">데이터 없음</span>':now.map(s=>escapeHtml(s)).join(', ')}</td>
-      <td class="text-xs">${added.length===0?'<span class="text-gray-400">·</span>':'<span class="text-blue-600 font-semibold">'+added.map(s=>escapeHtml(s)).join(', ')+'</span>'}</td>
-      <td class="text-xs">${removed.length===0?'<span class="text-gray-400">·</span>':'<span class="text-red-500 line-through">'+removed.map(s=>escapeHtml(s)).join(', ')+'</span>'}</td>
-      <td contenteditable oninput="updAcQuery(${q.id},'targetKeywords',this.textContent)" class="text-xs">${escapeHtml((q.targetKeywords||[]).join(', '))}</td>
-      <td>${targetCell}</td>
-      <td contenteditable oninput="updAcQuery(${q.id},'negativeKeywords',this.textContent)" class="text-xs">${escapeHtml((q.negativeKeywords||[]).join(', '))}</td>
-      <td>${negCell}</td>
-      <td class="text-[10px] text-gray-500">${lastDate?fmtDateYY(lastDate):'-'}</td>
+      <td class="font-mono font-medium align-top">${escapeHtml(q.query)}</td>
+      <td class="align-top" style="min-width:280px;max-width:420px">${nowChips}</td>
+      <td class="align-top" style="min-width:100px">${addedChips}</td>
+      <td class="align-top" style="min-width:100px">${removedChips}</td>
+      <td contenteditable oninput="updAcQuery(${q.id},'targetKeywords',this.textContent)" class="text-xs align-top" style="min-width:120px">${escapeHtml((q.targetKeywords||[]).join(', '))}</td>
+      <td class="align-top" style="min-width:140px">${targetCell}</td>
+      <td contenteditable oninput="updAcQuery(${q.id},'negativeKeywords',this.textContent)" class="text-xs align-top" style="min-width:100px">${escapeHtml((q.negativeKeywords||[]).join(', '))}</td>
+      <td class="align-top" style="min-width:160px">${negCell}</td>
+      <td class="text-[10px] text-gray-500 align-top">${lastDate?fmtDateYY(lastDate):'-'}</td>
     </tr>`;
   }).join('');
 }
@@ -2524,19 +2553,57 @@ function addSeoKeyword(){
   saveSeoKeywords(d);inp.value='';renderSeoTable();
   showToast('+','SEO 키워드 추가',kw);
 }
-function refreshSeoSections(){
+function getSeoDataSource(){return ST.get('seo_data_source','naver_serp')}
+function saveSeoDataSource(v){ST.set('seo_data_source',v)}
+function changeSeoDataSource(v){
+  saveSeoDataSource(v);
+  const hint=document.getElementById('seoDataSourceHint');
+  if(hint){
+    hint.textContent=v==='naver_serp'?'(search.naver.com 통합검색 결과 페이지 크롤링 · API 키 불필요)':'(시뮬레이션 데이터)';
+  }
+  showToast('🔄','데이터 소스 변경',v);
+}
+function _restoreSeoDataSource(){
+  const sel=document.getElementById('seoDataSourceSel');
+  if(sel){const cur=getSeoDataSource();sel.value=cur;changeSeoDataSource(cur);}
+}
+async function refreshSeoSections(){
   const d=getSeoKeywords();
-  d.forEach(k=>{
-    SEO_SECTIONS.forEach(s=>{
-      // 기존 노출되던 섹션은 ±5 변동, 안 되던 섹션은 30% 확률로 신규 진입
-      const cur=k.sections?.[s];
-      if(cur)k.sections[s]=Math.max(1,cur+Math.floor(Math.random()*11)-5);
-      else if(Math.random()<0.3)k.sections[s]=Math.floor(Math.random()*30+1);
-    });
-    k.lastChecked=new Date().toISOString();
-  });
+  const source=getSeoDataSource();
+  let ok=0,fail=0;
+  for(const k of d){
+    if(source==='naver_serp'){
+      try{
+        const r=await fetch(`/api/naver-seo-sections?q=${encodeURIComponent(k.keyword)}`);
+        const data=await r.json().catch(()=>({}));
+        if(!r.ok){throw new Error(data?.error||'upstream')}
+        // sections는 {섹션명: 순위(null 가능)} 형태로 들어옴 — 우리 SEO_SECTIONS와 일치
+        k.sections=data.sections||{};
+        k.lastChecked=new Date().toISOString();
+        ok++;
+      }catch(err){
+        console.warn('SEO fetch failed for',k.keyword,err);
+        fail++;
+      }
+    }else{
+      // mock
+      SEO_SECTIONS.forEach(s=>{
+        const cur=k.sections?.[s];
+        if(cur)k.sections[s]=Math.max(1,cur+Math.floor(Math.random()*11)-5);
+        else if(Math.random()<0.3){k.sections=k.sections||{};k.sections[s]=Math.floor(Math.random()*30+1);}
+      });
+      k.lastChecked=new Date().toISOString();
+      ok++;
+    }
+  }
   saveSeoKeywords(d);renderSeoTable();
-  showToast('🔄','SEO 노출 새로고침',d.length+'개 키워드 갱신 (시뮬레이션)');
+  if(source==='mock'){
+    showToast('🔄','SEO 노출 새로고침',d.length+'개 키워드 갱신 (Mock)');
+  }else if(fail===0){
+    showToast('✅','SEO 노출 새로고침',`${ok}건 실데이터 갱신 (네이버 SERP)`);
+  }else{
+    showToast('⚠️','일부 실패',`성공 ${ok} · 실패 ${fail}`);
+  }
 }
 function toggleAllSeoRows(c){document.querySelectorAll('.seoChk').forEach(x=>x.checked=c)}
 function delSelectedSeoKws(){
