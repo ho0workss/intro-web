@@ -665,9 +665,9 @@
           <div class="border border-gray-200 rounded-lg overflow-hidden">
             <div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between">
               <h3 class="text-sm font-bold">📦 재고 (이커머스 연동)</h3>
-              <button onclick="navigateTo('ecommerce');setTimeout(()=>navigateSub('ecommerce','inventory'),50)" class="px-3 py-1 border border-gray-300 text-xs rounded">✏️ 이커머스에서 편집</button>
+              <button onclick="navigateTo('ecommerce');setTimeout(()=>navigateSub('ecommerce','cost'),50)" class="px-3 py-1 border border-gray-300 text-xs rounded">✏️ 원가/마진에서 거래처 변경</button>
             </div>
-            <div class="bg-blue-50 border-b border-blue-200 px-4 py-2 text-[11px] text-blue-900">💡 이커머스 ▸ 재고에서 거래처가 지정된 항목만 자동으로 표시됩니다. 수정은 이커머스 페이지에서 진행하세요.</div>
+            <div class="bg-blue-50 border-b border-blue-200 px-4 py-2 text-[11px] text-blue-900">💡 이커머스 ▸ 원가/마진에서 제품별 거래처가 지정된 항목만 자동으로 표시됩니다.</div>
             <div class="overflow-x-auto">
               <table class="sheet-table" id="partner-inventory-table"><thead><tr><th class="sheet-row-num">#</th><th>SKU(옵션ID)</th><th>제품</th><th>거래처</th><th>현재고</th><th>7일평균/일</th><th>상태</th><th>출처</th></tr></thead><tbody></tbody></table>
             </div>
@@ -786,7 +786,7 @@
               <button onclick="ecDelRow('inventory')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button>
             </div>
           </div>
-          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAll('inventory',this.checked)" /></th><th>SKU(옵션ID)</th><th>제품</th><th>거래처</th><th>현재고</th><th>7일 평균 판매량</th><th>상태</th><th>출처</th><th>최근동기화</th></tr></thead><tbody id="ecInventoryBody"></tbody></table></div>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAll('inventory',this.checked)" /></th><th>SKU(옵션ID)</th><th>제품</th><th>현재고</th><th>7일 평균 판매량</th><th>상태</th><th>출처</th><th>최근동기화</th></tr></thead><tbody id="ecInventoryBody"></tbody></table></div>
         </div>
         <div id="sub-ecommerce-cost" class="sub-page">
           <!-- 서브 메뉴 -->
@@ -807,11 +807,11 @@
             <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
               <thead><tr>
                 <th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAll('cost',this.checked)" /></th>
-                <th>제품</th><th>구성품</th><th>원가</th><th>배송비</th><th>판매가</th><th>수수료</th><th>마진액</th><th>마진율</th>
+                <th>제품</th><th>거래처</th><th>구성품</th><th>원가</th><th>배송비</th><th>판매가</th><th>수수료</th><th>마진액</th><th>마진율</th>
               </tr></thead>
               <tbody id="ecCostBody"></tbody>
             </table></div>
-            <p class="text-[10px] text-gray-500 mt-2">💡 원가 = 기본 원가 + 구성품 가격 합. 수수료는 판매가의 %로 입력합니다. 마진액 = 판매가 - 총 원가 - 배송비 - (판매가 × 수수료%)</p>
+            <p class="text-[10px] text-gray-500 mt-2">💡 원가 = 기본 원가 + 구성품 가격 합. 수수료는 판매가의 %. 마진액 = 판매가 − 총원가 − 배송비 − (판매가 × 수수료%)<br>💡 여기서 지정한 거래처는 동일 제품의 <strong>주문/출고</strong>·<strong>재고</strong> 페이지에 자동 반영됩니다.</p>
           </div>
 
           <!-- 구성품 관리 -->
