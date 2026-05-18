@@ -663,20 +663,27 @@
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             <div class="border border-gray-200 rounded-lg p-3">
               <p class="text-xs text-gray-500 mb-1">📅 기간</p>
-              <div class="flex items-center gap-1 flex-wrap">
+              <div class="flex items-center gap-1 flex-wrap mb-1.5">
                 <input type="date" id="salesFromDate" onchange="renderPartnerSalesPage()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white" />
                 <span class="text-xs text-gray-400">~</span>
                 <input type="date" id="salesToDate" onchange="renderPartnerSalesPage()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white" />
-                <button onclick="resetSalesDateFilter()" class="text-[10px] px-2 py-1 border border-gray-200 rounded">초기화</button>
+              </div>
+              <div class="flex flex-wrap gap-1">
+                <button onclick="setSalesQuickRange(7)" class="text-[10px] px-2 py-1 border border-gray-200 rounded hover:bg-gray-50">7일</button>
+                <button onclick="setSalesQuickRange(14)" class="text-[10px] px-2 py-1 border border-gray-200 rounded hover:bg-gray-50">14일</button>
+                <button onclick="setSalesQuickRange(30)" class="text-[10px] px-2 py-1 border border-gray-200 rounded hover:bg-gray-50">한 달</button>
+                <button onclick="resetSalesDateFilter()" class="text-[10px] px-2 py-1 border border-gray-200 rounded hover:bg-gray-50">초기화</button>
               </div>
             </div>
             <button type="button" onclick="openSalesQtyBreakdown()" class="border border-gray-200 rounded-lg p-3 text-left hover:shadow-md transition">
-              <p class="text-xs text-gray-500 mb-1">📦 전체 판매수량 <span class="text-[10px] text-blue-600">▸ 제품별</span></p>
+              <p class="text-xs text-gray-500 mb-1">📦 전체 판매수량 <span class="text-[10px] text-blue-600">▸ 상세</span></p>
               <p class="text-2xl font-bold" id="salesTotalQty">0</p>
+              <p class="text-[10px] text-gray-400" id="salesTotalQtyHint"></p>
             </button>
             <button type="button" onclick="openSalesAmountBreakdown()" class="border border-gray-200 rounded-lg p-3 text-left hover:shadow-md transition">
               <p class="text-xs text-gray-500 mb-1">💰 정산금 <span class="text-[10px] text-blue-600">▸ 상세</span></p>
               <p class="text-2xl font-bold text-blue-600" id="salesTotalAmount">₩0</p>
+              <p class="text-[10px] text-gray-400" id="salesTotalAmountHint"></p>
             </button>
           </div>
           <!-- 판매 테이블 -->

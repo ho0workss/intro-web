@@ -947,17 +947,27 @@ function renderPartnerSalesPage(){
   if(currentPartnerFilter&&currentPartnerFilter!=='all'){
     scoped=scoped.filter(r=>r.partner===currentPartnerFilter);
   }
-  // 기간 필터
   const from=document.getElementById('salesFromDate')?.value||'';
   const to=document.getElementById('salesToDate')?.value||'';
   let list=scoped;
   if(from)list=list.filter(r=>(r.col1||'')>=from);
   if(to)list=list.filter(r=>(r.col1||'')<=to);
-  // KPI
-  const totalQty=list.reduce((s,r)=>s+(parseInt(r.col4)||0),0);
-  const totalAmount=list.reduce((s,r)=>s+((parseInt(r.col4)||0)*(parseFloat(String(r.col5).replace(/[^\d.]/g,''))||0)),0);
-  document.getElementById('salesTotalQty')&&(document.getElementById('salesTotalQty').textContent=totalQty.toLocaleString());
-  document.getElementById('salesTotalAmount')&&(document.getElementById('salesTotalAmount').textContent='₩'+totalAmount.toLocaleString());
+  // KPI: 정상 - 취소 차감
+  let normalQty=0,cancelQty=0,normalAmt=0,cancelAmt=0;
+  list.forEach(r=>{
+    const q=parseInt(r.col4)||0;
+    const u=parseFloat(String(r.col5).replace(/[^\d.]/g,''))||0;
+    if(r.finalStatus==='취소'){cancelQty+=q;cancelAmt+=q*u}
+    else{normalQty+=q;normalAmt+=q*u}
+  });
+  const netQty=normalQty-cancelQty;
+  const netAmt=normalAmt-cancelAmt;
+  document.getElementById('salesTotalQty')&&(document.getElementById('salesTotalQty').textContent=netQty.toLocaleString());
+  document.getElementById('salesTotalAmount')&&(document.getElementById('salesTotalAmount').textContent='₩'+netAmt.toLocaleString());
+  const qtyHint=document.getElementById('salesTotalQtyHint');
+  if(qtyHint)qtyHint.textContent=cancelQty>0?`정상 ${normalQty.toLocaleString()} − 취소 ${cancelQty.toLocaleString()}`:'';
+  const amtHint=document.getElementById('salesTotalAmountHint');
+  if(amtHint)amtHint.textContent=cancelAmt>0?`정상 ₩${normalAmt.toLocaleString()} − 취소 ₩${cancelAmt.toLocaleString()}`:'';
   if(list.length===0){
     tb.innerHTML=`<tr><td colspan="7" class="text-center text-gray-400 py-6 text-sm">${from||to?'기간 내 판매 내역이 없습니다':'판매 내역이 없습니다. 발주가 배송완료/취소되면 자동으로 추가됩니다.'}</td></tr>`;
     window._partnerSalesFiltered=[];return;
@@ -972,9 +982,9 @@ function renderPartnerSalesPage(){
       <td class="font-mono text-xs">${fmtDateYY(r.col1)}</td>
       <td>${escapeHtml(r.col2||'')}</td>
       <td class="text-xs text-gray-600">${escapeHtml(r.col3||'-')}</td>
-      <td class="text-right">${qty.toLocaleString()}${isCancelled?' <span class="text-[10px] text-red-500">(취소)</span>':''}</td>
+      <td class="text-right">${qty.toLocaleString()}${isCancelled?' <span class="text-[10px] text-red-500">(차감)</span>':''}</td>
       <td class="text-right">₩${unit.toLocaleString()}</td>
-      <td class="text-right font-semibold">₩${total.toLocaleString()}</td>
+      <td class="text-right font-semibold ${isCancelled?'text-red-500':''}">${isCancelled?'−':''}₩${total.toLocaleString()}</td>
     </tr>`;
   }).join('');
   window._partnerSalesFiltered=list;
@@ -983,30 +993,102 @@ function resetSalesDateFilter(){
   const f=document.getElementById('salesFromDate'),t=document.getElementById('salesToDate');
   if(f)f.value='';if(t)t.value='';renderPartnerSalesPage();
 }
+function setSalesQuickRange(days){
+  const today=new Date();
+  const fromDate=new Date(today);fromDate.setDate(today.getDate()-days+1);
+  const fEl=document.getElementById('salesFromDate'),tEl=document.getElementById('salesToDate');
+  if(fEl)fEl.value=fromDate.toISOString().split('T')[0];
+  if(tEl)tEl.value=today.toISOString().split('T')[0];
+  renderPartnerSalesPage();
+  showToast('📅','기간 적용',`최근 ${days}일`);
+}
 function openSalesQtyBreakdown(){
   const list=window._partnerSalesFiltered||getPartnerData('sales');
-  // 제품+옵션별 집계
+  // 제품+옵션별 집계 (취소 차감 반영)
   const byProd={};
   list.forEach(r=>{
     const key=`${r.col2}|${r.col3||''}`;
-    if(!byProd[key])byProd[key]={product:r.col2||'',option:r.col3||'',qty:0,cancelledQty:0};
+    if(!byProd[key])byProd[key]={product:r.col2||'',option:r.col3||'',qty:0,cancelledQty:0,unit:parseFloat(String(r.col5).replace(/[^\d.]/g,''))||0};
     const q=parseInt(r.col4)||0;
     if(r.finalStatus==='취소')byProd[key].cancelledQty+=q;
     else byProd[key].qty+=q;
   });
-  const rows=Object.values(byProd).sort((a,b)=>b.qty-a.qty);
-  const total=rows.reduce((s,r)=>s+r.qty,0);
-  document.getElementById('salesQtyBreakdownPeriod').textContent=`총 ${total.toLocaleString()}건 · ${rows.length}종 제품`;
-  document.getElementById('salesQtyBreakdownBody').innerHTML=rows.length===0?'<p class="text-xs text-gray-400 text-center py-6">데이터 없음</p>':`<div class="border border-gray-200 rounded-lg overflow-hidden"><table class="sheet-table"><thead><tr><th>제품</th><th>옵션</th><th>판매수량</th><th>취소수량</th><th>비율</th></tr></thead><tbody>${rows.map(r=>{const pct=total>0?(r.qty/total*100).toFixed(1):'0';return `<tr><td>${escapeHtml(r.product)}</td><td class="text-xs text-gray-600">${escapeHtml(r.option||'-')}</td><td class="text-right font-semibold">${r.qty.toLocaleString()}</td><td class="text-right text-red-500">${r.cancelledQty||'-'}</td><td class="text-right text-xs text-gray-500">${pct}%</td></tr>`}).join('')}</tbody></table></div>`;
+  const rows=Object.values(byProd).map(r=>({...r,netQty:r.qty-r.cancelledQty})).sort((a,b)=>b.netQty-a.netQty);
+  const totalNet=rows.reduce((s,r)=>s+r.netQty,0);
+  const totalNormal=rows.reduce((s,r)=>s+r.qty,0);
+  const totalCancel=rows.reduce((s,r)=>s+r.cancelledQty,0);
+  document.getElementById('salesQtyBreakdownPeriod').innerHTML=`
+    <div class="bg-blue-50 border border-blue-200 rounded p-3 mb-3">
+      <div class="text-xs text-blue-700 mb-1">📦 순 판매수량 (정상 − 취소)</div>
+      <div class="text-3xl font-bold text-blue-700">${totalNet.toLocaleString()}</div>
+      <div class="text-[11px] text-gray-600 mt-1">정상 ${totalNormal.toLocaleString()} − 취소 ${totalCancel.toLocaleString()} · ${rows.length}종 제품</div>
+    </div>`;
+  document.getElementById('salesQtyBreakdownBody').innerHTML=rows.length===0?'<p class="text-xs text-gray-400 text-center py-6">데이터 없음</p>':`<div class="border border-gray-200 rounded-lg overflow-hidden"><table class="sheet-table">
+    <thead><tr><th>제품</th><th>옵션</th><th>판매수량</th><th>취소수량</th><th>순수량</th><th>단가</th><th>합계</th><th>비율</th></tr></thead>
+    <tbody>${rows.map(r=>{
+      const total=r.netQty*r.unit;
+      const pct=totalNet>0?(r.netQty/totalNet*100).toFixed(1):'0';
+      return `<tr>
+        <td>${escapeHtml(r.product)}</td>
+        <td class="text-xs text-gray-600">${escapeHtml(r.option||'-')}</td>
+        <td class="text-right">${r.qty.toLocaleString()}</td>
+        <td class="text-right text-red-500">${r.cancelledQty>0?'−'+r.cancelledQty.toLocaleString():'-'}</td>
+        <td class="text-right font-bold text-blue-700">${r.netQty.toLocaleString()}</td>
+        <td class="text-right">₩${r.unit.toLocaleString()}</td>
+        <td class="text-right font-semibold">₩${total.toLocaleString()}</td>
+        <td class="text-right text-xs text-gray-500">${pct}%</td>
+      </tr>`;
+    }).join('')}
+    <tr class="bg-blue-50">
+      <td colspan="2" class="text-right font-bold">합계</td>
+      <td class="text-right font-bold">${totalNormal.toLocaleString()}</td>
+      <td class="text-right font-bold text-red-500">${totalCancel>0?'−'+totalCancel.toLocaleString():'-'}</td>
+      <td class="text-right font-bold text-blue-700">${totalNet.toLocaleString()}</td>
+      <td colspan="3"></td>
+    </tr></tbody></table></div>`;
   openModal('salesQtyBreakdownModal');
 }
 function openSalesAmountBreakdown(){
   const list=window._partnerSalesFiltered||getPartnerData('sales');
-  // 정산금 합계 (취소 제외)
-  const valid=list.filter(r=>r.finalStatus!=='취소');
-  const total=valid.reduce((s,r)=>s+((parseInt(r.col4)||0)*(parseFloat(String(r.col5).replace(/[^\d.]/g,''))||0)),0);
-  document.getElementById('salesAmountBreakdownPeriod').textContent=`총 ${valid.length}건 · 정산금 ₩${total.toLocaleString()} (취소 제외)`;
-  document.getElementById('salesAmountBreakdownBody').innerHTML=valid.length===0?'<p class="text-xs text-gray-400 text-center py-6">데이터 없음</p>':`<div class="border border-gray-200 rounded-lg overflow-hidden"><table class="sheet-table"><thead><tr><th>날짜</th><th>제품</th><th>옵션</th><th>수량</th><th>단가</th><th>합계</th></tr></thead><tbody>${valid.map(r=>{const qty=parseInt(r.col4)||0;const unit=parseFloat(String(r.col5).replace(/[^\d.]/g,''))||0;return `<tr><td class="font-mono text-xs">${fmtDateYY(r.col1)}</td><td>${escapeHtml(r.col2)}</td><td class="text-xs text-gray-600">${escapeHtml(r.col3||'-')}</td><td class="text-right">${qty.toLocaleString()}</td><td class="text-right">₩${unit.toLocaleString()}</td><td class="text-right font-semibold">₩${(qty*unit).toLocaleString()}</td></tr>`}).join('')}<tr class="bg-blue-50"><td colspan="5" class="text-right font-bold">합계</td><td class="text-right font-bold text-blue-600">₩${total.toLocaleString()}</td></tr></tbody></table></div>`;
+  let normalRows=[],cancelRows=[];
+  list.forEach(r=>{(r.finalStatus==='취소'?cancelRows:normalRows).push(r);});
+  const sumOf=(arr)=>arr.reduce((s,r)=>s+((parseInt(r.col4)||0)*(parseFloat(String(r.col5).replace(/[^\d.]/g,''))||0)),0);
+  const normalAmt=sumOf(normalRows);
+  const cancelAmt=sumOf(cancelRows);
+  const net=normalAmt-cancelAmt;
+  document.getElementById('salesAmountBreakdownPeriod').innerHTML=`
+    <div class="bg-blue-50 border border-blue-200 rounded p-3 mb-3">
+      <div class="text-xs text-blue-700 mb-1">💰 순 정산금 (정상 − 취소 차감)</div>
+      <div class="text-3xl font-bold text-blue-700">₩${net.toLocaleString()}</div>
+      <div class="text-[11px] text-gray-600 mt-1">정상 ₩${normalAmt.toLocaleString()} − 취소 ₩${cancelAmt.toLocaleString()} · 총 ${list.length}건</div>
+    </div>`;
+  const rowHtml=(r,cancelled)=>{
+    const qty=parseInt(r.col4)||0;const unit=parseFloat(String(r.col5).replace(/[^\d.]/g,''))||0;const total=qty*unit;
+    return `<tr ${cancelled?'class="bg-red-50/50"':''}>
+      <td class="font-mono text-xs">${fmtDateYY(r.col1)}</td>
+      <td>${escapeHtml(r.col2||'')}</td>
+      <td class="text-xs text-gray-600">${escapeHtml(r.col3||'-')}</td>
+      <td class="text-right">${qty.toLocaleString()}</td>
+      <td class="text-right">₩${unit.toLocaleString()}</td>
+      <td class="text-right font-semibold ${cancelled?'text-red-500':''}">${cancelled?'−':''}₩${total.toLocaleString()}</td>
+    </tr>`;
+  };
+  document.getElementById('salesAmountBreakdownBody').innerHTML=list.length===0?'<p class="text-xs text-gray-400 text-center py-6">데이터 없음</p>':`<div class="border border-gray-200 rounded-lg overflow-hidden"><table class="sheet-table">
+    <thead><tr><th>날짜</th><th>제품</th><th>옵션</th><th>수량</th><th>단가</th><th>합계</th></tr></thead>
+    <tbody>
+      ${normalRows.map(r=>rowHtml(r,false)).join('')}
+      ${cancelRows.length>0?`<tr class="bg-amber-50"><td colspan="6" class="text-xs text-amber-700 font-semibold">⚠️ 취소 (차감 항목)</td></tr>`:''}
+      ${cancelRows.map(r=>rowHtml(r,true)).join('')}
+      <tr class="bg-blue-50">
+        <td colspan="5" class="text-right font-bold">정상 합계</td>
+        <td class="text-right font-bold">₩${normalAmt.toLocaleString()}</td>
+      </tr>
+      ${cancelAmt>0?`<tr class="bg-red-50"><td colspan="5" class="text-right font-bold text-red-700">취소 차감</td><td class="text-right font-bold text-red-700">−₩${cancelAmt.toLocaleString()}</td></tr>`:''}
+      <tr class="bg-blue-100">
+        <td colspan="5" class="text-right font-bold">순 정산금</td>
+        <td class="text-right font-bold text-blue-700 text-base">₩${net.toLocaleString()}</td>
+      </tr>
+    </tbody></table></div>`;
   openModal('salesAmountBreakdownModal');
 }
 
