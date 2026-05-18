@@ -150,7 +150,7 @@ function closeMobileSidebar(){
   if(bd)bd.classList.remove('show');
 }
 // ========== 모바일 셸 (헤더/탭바/FAB) ==========
-const MOBILE_PAGE_TITLES={home:'홈',messenger:'메신저',chatgpt:'ChatGPT',meetings:'회의','meeting-detail':'회의',leave:'휴가 관리',partners:'협력사',ecommerce:'이커머스',events:'행사',design:'디자인',ads:'마케팅',other:'기타',settings:'설정'};
+const MOBILE_PAGE_TITLES={home:'홈',messenger:'메신저',chatgpt:'ChatGPT',meetings:'회의','meeting-detail':'회의',leave:'휴가 관리',partners:'협력사',ecommerce:'이커머스',logistics:'물류',cs:'CS',admin:'경영지원',events:'행사',design:'디자인',ads:'마케팅',other:'기타',settings:'설정'};
 const MOBILE_FAB_CONFIG={
   home:{action:'__menu__'},
   leave:{action:'openLeaveModal()'},
@@ -272,6 +272,9 @@ function navigateTo(page,sub){
   if(page==='events')renderEvents();
   if(page==='design')renderDesign();
   if(page==='ecommerce'){renderEcommerce();renderEcOrders();_restoreInvAutoSyncToggle();}
+  if(page==='logistics'){renderLogistics();}
+  if(page==='cs'){renderCsReviews();renderCsInquiries();}
+  if(page==='admin'){renderAdminAll();}
   if(page==='partners'){
     // ★ 거래처 진입 시 CURRENT를 users 저장소와 동기화 (삭제 버그 방지)
     if(CURRENT){const fresh=getUsers()[CURRENT.username];if(fresh){CURRENT.partners=fresh.partners||[];ST.set('currentUser',CURRENT)}}
@@ -662,7 +665,7 @@ function renderDeptRole(){
     return `<tr><td class="sheet-row-num">${i+1}</td><td contenteditable class="editable">${d.name}</td><td>${count}명</td><td><select class="text-xs border rounded px-2 py-1 bg-white" onchange="updateDeptRole(${i},this.value)"><option value="admin" ${d.role==='admin'?'selected':''}>관리자</option><option value="manager" ${d.role==='manager'?'selected':''}>매니저</option><option value="member" ${d.role==='member'?'selected':''}>멤버</option></select></td><td><button onclick="openPermissionModal(${i})" class="text-xs px-2 py-1 border border-gray-200 rounded bg-white">🔐 권한 (${menuCount}메뉴) ▾</button></td><td><button onclick="deleteDept(${i})" class="text-xs text-red-500">삭제</button></td></tr>`;
   }).join('');
 }
-const DEFAULT_MENUS=['홈','메신저','ChatGPT','협력사','이커머스','행사','디자인','마케팅','기타','설정'];
+const DEFAULT_MENUS=['홈','메신저','ChatGPT','협력사','이커머스','물류','CS','경영지원','행사','디자인','마케팅','기타','설정'];
 const DEFAULT_FEATURES=[
   {key:'read',label:'읽기'},{key:'write',label:'쓰기/등록'},{key:'edit',label:'수정'},{key:'delete',label:'삭제'},
   {key:'invite',label:'멤버 초대'},{key:'approve',label:'가입 승인'},{key:'kick',label:'멤버 강퇴'},
@@ -4926,3 +4929,452 @@ function sheetDeleteCol(sid){
   }
   b.sheetData=newData;renderSheetCells(sid);showToast('-','열 삭제','');
 }
+
+// ========== 🚚 물류 ==========
+const LOG_STATUS_LABELS={pending:'대기',ordered:'발주완료',shipping:'배송중',received:'입고완료',cancelled:'취소'};
+const SHIP_STATUS_LABELS={requested:'요청',preparing:'준비중',shipped:'배송중',delivered:'배송완료'};
+function getLogData(t){
+  const key='log_'+t+'_v1';
+  return ST.get(key,{
+    order_dom:[
+      {id:1,col1:'2026-05-10',col2:'(주)뷰티코리아',col3:'스킨케어 세트',col4:'5종 풀세트',col5:'200',col6:'18000',col7:'',col8:'2026-05-20',col9:'ordered'},
+      {id:2,col1:'2026-05-12',col2:'(주)코스메틱하우스',col3:'클렌징 폼',col4:'대용량 200ml',col5:'300',col6:'5000',col7:'',col8:'2026-05-22',col9:'pending'}
+    ],
+    order_intl:[
+      {id:1,col1:'2026-05-05',col2:'Shanghai Cosmetic Co.',col3:'중국',col4:'펌프 캡',col5:'5000',col6:'0.5',col7:'USD',col8:'8',col9:'',col10:'shipping'},
+      {id:2,col1:'2026-05-08',col2:'Tokyo Beauty Ltd.',col3:'일본',col4:'에센스 원료',col5:'100',col6:'12000',col7:'JPY',col8:'8',col9:'',col10:'pending'}
+    ],
+    inventory:[
+      {id:1,col1:'본사창고',col2:'SK-001-50ML',col3:'스킨케어 세트',col4:'5종 풀세트',col5:'234',col6:'50',col7:'정상',col8:''},
+      {id:2,col1:'본사창고',col2:'SK-002-80ML',col3:'프리미엄 보습 크림',col4:'리뉴얼 80ml',col5:'18',col6:'30',col7:'부족',col8:'재발주 필요'},
+      {id:3,col1:'CJ대전센터',col2:'SK-003-50ML',col3:'선크림 SPF50+',col4:'50ml',col5:'30',col6:'50',col7:'부족',col8:''},
+      {id:4,col1:'CJ대전센터',col2:'SK-004-200ML',col3:'클렌징 폼',col4:'대용량 200ml',col5:'156',col6:'40',col7:'정상',col8:''}
+    ],
+    ship:[
+      {id:1,col1:'2026-05-15',col2:'이마케팅',col3:'행사장 (강남)',col4:'스킨케어 세트',col5:'30',col6:'2026-05-17',col7:'CJ대한통운',col8:'1234567890',col9:'shipped'},
+      {id:2,col1:'2026-05-16',col2:'최영업',col3:'B2B 거래처',col4:'클렌징 폼',col5:'100',col6:'2026-05-18',col7:'',col8:'',col9:'requested'}
+    ]
+  }[t]||[]);
+}
+function saveLogData(t,d){ST.set('log_'+t+'_v1',d)}
+function renderLogistics(){renderLogOrderDom();renderLogOrderIntl();renderLogInventory();renderLogShip();}
+function renderLogOrderDom(){
+  const body=document.getElementById('logOrderDomBody');if(!body)return;
+  const d=getLogData('order_dom');
+  if(d.length===0){body.innerHTML='<tr><td colspan="10" class="text-center text-gray-400 py-4">데이터 없음</td></tr>';return}
+  const statusOpts=Object.entries(LOG_STATUS_LABELS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+  body.innerHTML=d.map(r=>{
+    const qty=parseInt(r.col5)||0,unit=parseFloat(r.col6)||0;
+    const total=qty*unit;
+    const stCls=r.col9==='received'?'bg-green-50 text-green-700':r.col9==='cancelled'?'bg-red-50 text-red-600':r.col9==='shipping'?'bg-purple-50 text-purple-700':r.col9==='ordered'?'bg-blue-50 text-blue-700':'bg-amber-50 text-amber-700';
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="logChk-order_dom" data-id="${r.id}" /></td>
+      <td contenteditable oninput="updLogCell('order_dom',${r.id},'col1',this.textContent)" class="font-mono text-xs">${fmtDateYY(r.col1)}</td>
+      <td contenteditable oninput="updLogCell('order_dom',${r.id},'col2',this.textContent)">${escapeHtml(r.col2||'')}</td>
+      <td contenteditable oninput="updLogCell('order_dom',${r.id},'col3',this.textContent)">${escapeHtml(r.col3||'')}</td>
+      <td contenteditable oninput="updLogCell('order_dom',${r.id},'col4',this.textContent)" class="text-xs text-gray-600">${escapeHtml(r.col4||'-')}</td>
+      <td contenteditable oninput="updLogCell('order_dom',${r.id},'col5',this.textContent)" class="text-right">${qty}</td>
+      <td contenteditable oninput="updLogCell('order_dom',${r.id},'col6',this.textContent)" class="text-right">₩${unit.toLocaleString()}</td>
+      <td class="text-right font-semibold">₩${total.toLocaleString()}</td>
+      <td contenteditable oninput="updLogCell('order_dom',${r.id},'col8',this.textContent)" class="font-mono text-xs">${fmtDateYY(r.col8)}</td>
+      <td><select onchange="updLogCell('order_dom',${r.id},'col9',this.value)" class="text-xs border rounded px-1 py-0.5 ${stCls}">${statusOpts.replace(`value="${r.col9}"`,`value="${r.col9}" selected`)}</select></td>
+    </tr>`;
+  }).join('');
+}
+function renderLogOrderIntl(){
+  const body=document.getElementById('logOrderIntlBody');if(!body)return;
+  const d=getLogData('order_intl');
+  if(d.length===0){body.innerHTML='<tr><td colspan="11" class="text-center text-gray-400 py-4">데이터 없음</td></tr>';return}
+  const statusOpts=Object.entries(LOG_STATUS_LABELS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+  body.innerHTML=d.map(r=>{
+    const qty=parseInt(r.col5)||0,unit=parseFloat(r.col6)||0,tariff=parseFloat(r.col8)||0;
+    const krw=Math.round(qty*unit*(1+tariff/100)*(r.col7==='USD'?1380:r.col7==='JPY'?9.5:r.col7==='CNY'?190:1));
+    const stCls=r.col10==='received'?'bg-green-50 text-green-700':r.col10==='cancelled'?'bg-red-50 text-red-600':r.col10==='shipping'?'bg-purple-50 text-purple-700':r.col10==='ordered'?'bg-blue-50 text-blue-700':'bg-amber-50 text-amber-700';
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="logChk-order_intl" data-id="${r.id}" /></td>
+      <td contenteditable oninput="updLogCell('order_intl',${r.id},'col1',this.textContent)" class="font-mono text-xs">${fmtDateYY(r.col1)}</td>
+      <td contenteditable oninput="updLogCell('order_intl',${r.id},'col2',this.textContent)">${escapeHtml(r.col2||'')}</td>
+      <td contenteditable oninput="updLogCell('order_intl',${r.id},'col3',this.textContent)" class="text-xs">${escapeHtml(r.col3||'')}</td>
+      <td contenteditable oninput="updLogCell('order_intl',${r.id},'col4',this.textContent)">${escapeHtml(r.col4||'')}</td>
+      <td contenteditable oninput="updLogCell('order_intl',${r.id},'col5',this.textContent)" class="text-right">${qty}</td>
+      <td contenteditable oninput="updLogCell('order_intl',${r.id},'col6',this.textContent)" class="text-right">${unit}</td>
+      <td contenteditable oninput="updLogCell('order_intl',${r.id},'col7',this.textContent)" class="text-xs font-semibold">${escapeHtml(r.col7||'USD')}</td>
+      <td contenteditable oninput="updLogCell('order_intl',${r.id},'col8',this.textContent)" class="text-right">${tariff}%</td>
+      <td class="text-right font-semibold">₩${krw.toLocaleString()}</td>
+      <td><select onchange="updLogCell('order_intl',${r.id},'col10',this.value)" class="text-xs border rounded px-1 py-0.5 ${stCls}">${statusOpts.replace(`value="${r.col10}"`,`value="${r.col10}" selected`)}</select></td>
+    </tr>`;
+  }).join('');
+}
+function renderLogInventory(){
+  const body=document.getElementById('logInvBody');if(!body)return;
+  const d=getLogData('inventory');
+  // KPI
+  const warehouses=new Set(d.map(r=>r.col1));
+  const total=d.reduce((s,r)=>s+(parseInt(r.col5)||0),0);
+  const low=d.filter(r=>parseInt(r.col5)<parseInt(r.col6)).length;
+  document.getElementById('logInvWarehouseCount')&&(document.getElementById('logInvWarehouseCount').textContent=warehouses.size);
+  document.getElementById('logInvSkuCount')&&(document.getElementById('logInvSkuCount').textContent=d.length);
+  document.getElementById('logInvTotal')&&(document.getElementById('logInvTotal').textContent=total.toLocaleString());
+  document.getElementById('logInvLow')&&(document.getElementById('logInvLow').textContent=low);
+  if(d.length===0){body.innerHTML='<tr><td colspan="9" class="text-center text-gray-400 py-4">데이터 없음</td></tr>';return}
+  body.innerHTML=d.map(r=>{
+    const cur=parseInt(r.col5)||0,safe=parseInt(r.col6)||0;
+    const st=cur===0?{l:'품절',c:'bg-red-50 text-red-600'}:cur<safe?{l:'부족',c:'bg-amber-50 text-amber-700'}:{l:'정상',c:'bg-green-50 text-green-700'};
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="logChk-inventory" data-id="${r.id}" /></td>
+      <td contenteditable oninput="updLogCell('inventory',${r.id},'col1',this.textContent)">${escapeHtml(r.col1||'')}</td>
+      <td contenteditable oninput="updLogCell('inventory',${r.id},'col2',this.textContent)" class="font-mono text-xs">${escapeHtml(r.col2||'')}</td>
+      <td contenteditable oninput="updLogCell('inventory',${r.id},'col3',this.textContent)">${escapeHtml(r.col3||'')}</td>
+      <td contenteditable oninput="updLogCell('inventory',${r.id},'col4',this.textContent)" class="text-xs text-gray-600">${escapeHtml(r.col4||'-')}</td>
+      <td contenteditable oninput="updLogCell('inventory',${r.id},'col5',this.textContent)" class="text-right">${cur}</td>
+      <td contenteditable oninput="updLogCell('inventory',${r.id},'col6',this.textContent)" class="text-right text-gray-500">${safe}</td>
+      <td><span class="text-xs px-2 py-0.5 rounded ${st.c}">${st.l}</span></td>
+      <td contenteditable oninput="updLogCell('inventory',${r.id},'col8',this.textContent)" class="text-xs text-gray-500">${escapeHtml(r.col8||'')}</td>
+    </tr>`;
+  }).join('');
+}
+function renderLogShip(){
+  const body=document.getElementById('logShipBody');if(!body)return;
+  const d=getLogData('ship');
+  if(d.length===0){body.innerHTML='<tr><td colspan="10" class="text-center text-gray-400 py-4">데이터 없음</td></tr>';return}
+  const statusOpts=Object.entries(SHIP_STATUS_LABELS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+  const courierOpts=getCourierList().map(c=>`<option value="${c}">${c}</option>`).join('');
+  body.innerHTML=d.map(r=>{
+    const stCls=r.col9==='delivered'?'bg-green-50 text-green-700':r.col9==='shipped'?'bg-purple-50 text-purple-700':r.col9==='preparing'?'bg-blue-50 text-blue-700':'bg-amber-50 text-amber-700';
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="logChk-ship" data-id="${r.id}" /></td>
+      <td contenteditable oninput="updLogCell('ship',${r.id},'col1',this.textContent)" class="font-mono text-xs">${fmtDateYY(r.col1)}</td>
+      <td contenteditable oninput="updLogCell('ship',${r.id},'col2',this.textContent)">${escapeHtml(r.col2||'')}</td>
+      <td contenteditable oninput="updLogCell('ship',${r.id},'col3',this.textContent)">${escapeHtml(r.col3||'')}</td>
+      <td contenteditable oninput="updLogCell('ship',${r.id},'col4',this.textContent)">${escapeHtml(r.col4||'')}</td>
+      <td contenteditable oninput="updLogCell('ship',${r.id},'col5',this.textContent)" class="text-right">${escapeHtml(r.col5||'')}</td>
+      <td contenteditable oninput="updLogCell('ship',${r.id},'col6',this.textContent)" class="font-mono text-xs">${fmtDateYY(r.col6)}</td>
+      <td><select onchange="updLogCell('ship',${r.id},'col7',this.value)" class="text-xs border rounded px-1 py-0.5 bg-white"><option value="">선택</option>${courierOpts.replace(`value="${r.col7||''}"`,`value="${r.col7||''}" selected`)}</select></td>
+      <td contenteditable oninput="updLogCell('ship',${r.id},'col8',this.textContent)" class="font-mono text-xs">${escapeHtml(r.col8||'')}</td>
+      <td><select onchange="updLogCell('ship',${r.id},'col9',this.value)" class="text-xs border rounded px-1 py-0.5 ${stCls}">${statusOpts.replace(`value="${r.col9}"`,`value="${r.col9}" selected`)}</select></td>
+    </tr>`;
+  }).join('');
+}
+function updLogCell(t,id,k,v){
+  const d=getLogData(t);const r=d.find(x=>x.id===id);if(!r)return;
+  if(k==='col1'||k==='col6'||k==='col8')v=parseDateYY(v);
+  r[k]=v;saveLogData(t,d);
+  if(t==='order_dom')renderLogOrderDom();
+  else if(t==='order_intl')renderLogOrderIntl();
+  else if(t==='inventory')renderLogInventory();
+  else if(t==='ship')renderLogShip();
+}
+function addLogRow(t){
+  const d=getLogData(t);
+  const today=new Date().toISOString().split('T')[0];
+  const tpl={
+    order_dom:{col1:today,col9:'pending'},
+    order_intl:{col1:today,col7:'USD',col8:'8',col10:'pending'},
+    inventory:{col1:'본사창고',col7:'정상'},
+    ship:{col1:today,col9:'requested'}
+  };
+  d.push({id:Date.now(),...tpl[t]||{}});
+  saveLogData(t,d);renderLogistics();showToast('+','추가됨','');
+}
+function delLogRows(t){
+  const ids=Array.from(document.querySelectorAll('.logChk-'+t+':checked')).map(c=>parseInt(c.dataset.id));
+  if(ids.length===0){alert('선택하세요');return}
+  if(!confirm(ids.length+'개 삭제?'))return;
+  saveLogData(t,getLogData(t).filter(r=>!ids.includes(r.id)));renderLogistics();showToast('🗑','삭제됨','');
+}
+function toggleAllLogRows(t,c){document.querySelectorAll('.logChk-'+t).forEach(x=>x.checked=c)}
+
+// ========== 📞 CS ==========
+function getCsReviews(){
+  return ST.get('cs_reviews_v1',[
+    {id:1,platform:'naver',date:'2026-05-15',product:'선크림 SPF50+',rating:5,author:'정**',content:'백탁 없고 발림 좋아요. 재구매 의사 있음.',reply:'',status:'pending'},
+    {id:2,platform:'coupang',date:'2026-05-14',product:'클렌징 폼',rating:4,author:'김**',content:'세정력은 좋은데 향이 강해요.',reply:'안녕하세요, 향 관련 의견 감사합니다. 더 순한 라인 출시 예정입니다.',status:'answered'},
+    {id:3,platform:'naver',date:'2026-05-13',product:'스킨케어 세트',rating:2,author:'박**',content:'기대만큼은 아니었어요. 가격 대비 아쉬움.',reply:'',status:'pending'},
+    {id:4,platform:'cafe24',date:'2026-05-12',product:'토너 세트',rating:5,author:'이**',content:'완전 만족. 다음에 또 구매할게요!',reply:'감사합니다 ❤️',status:'answered'},
+    {id:5,platform:'11st',date:'2026-05-11',product:'프리미엄 보습 크림',rating:3,author:'최**',content:'무난해요.',reply:'',status:'pending'}
+  ]);
+}
+function saveCsReviews(d){ST.set('cs_reviews_v1',d)}
+function renderCsReviews(){
+  const body=document.getElementById('csReviewsBody');if(!body)return;
+  const all=getCsReviews();
+  // KPI
+  const total=all.length;
+  const avgRating=total>0?(all.reduce((s,r)=>s+r.rating,0)/total).toFixed(1):'0.0';
+  const answered=all.filter(r=>r.status==='answered').length;
+  const pending=total-answered;
+  document.getElementById('csReviewTotal')&&(document.getElementById('csReviewTotal').textContent=total);
+  document.getElementById('csReviewAvg')&&(document.getElementById('csReviewAvg').textContent=avgRating+' ⭐');
+  document.getElementById('csReviewAnswered')&&(document.getElementById('csReviewAnswered').textContent=answered);
+  document.getElementById('csReviewPending')&&(document.getElementById('csReviewPending').textContent=pending);
+  // 필터
+  const pf=document.getElementById('csReviewPlatformFilter')?.value||'all';
+  const sf=document.getElementById('csReviewStatusFilter')?.value||'all';
+  let list=all;
+  if(pf!=='all')list=list.filter(r=>r.platform===pf);
+  if(sf!=='all')list=list.filter(r=>r.status===sf);
+  if(list.length===0){body.innerHTML='<tr><td colspan="9" class="text-center text-gray-400 py-4">조건에 맞는 리뷰가 없습니다</td></tr>';return}
+  const platLabels={naver:'네이버',coupang:'쿠팡',cafe24:'카페24','11st':'11번가'};
+  body.innerHTML=list.map(r=>{
+    const stars='⭐'.repeat(r.rating)+'☆'.repeat(5-r.rating);
+    const stCls=r.status==='answered'?'bg-green-50 text-green-700':'bg-amber-50 text-amber-700';
+    const stLabel=r.status==='answered'?'답변완료':'미답변';
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="csReviewChk" data-id="${r.id}" /></td>
+      <td><span class="text-xs px-2 py-0.5 rounded bg-gray-100">${platLabels[r.platform]||r.platform}</span></td>
+      <td class="font-mono text-xs">${fmtDateYY(r.date)}</td>
+      <td>${escapeHtml(r.product||'')}</td>
+      <td class="text-amber-500" title="${r.rating}점">${stars}</td>
+      <td>${escapeHtml(r.author||'')}</td>
+      <td contenteditable oninput="updCsReview(${r.id},'content',this.textContent)" class="text-xs max-w-xs" style="min-width:200px">${escapeHtml(r.content||'')}</td>
+      <td contenteditable oninput="updCsReview(${r.id},'reply',this.textContent);_autoAnswerReply(${r.id})" class="text-xs max-w-xs" style="min-width:200px">${escapeHtml(r.reply||'')}</td>
+      <td><span class="text-xs px-2 py-0.5 rounded ${stCls}">${stLabel}</span></td>
+    </tr>`;
+  }).join('');
+}
+function updCsReview(id,k,v){
+  const d=getCsReviews();const r=d.find(x=>x.id===id);if(!r)return;
+  r[k]=v;saveCsReviews(d);
+}
+function _autoAnswerReply(id){
+  // 답변이 입력되면 상태 자동 답변완료
+  const d=getCsReviews();const r=d.find(x=>x.id===id);if(!r)return;
+  const newStatus=r.reply&&r.reply.trim()?'answered':'pending';
+  if(r.status!==newStatus){r.status=newStatus;saveCsReviews(d);renderCsReviews();}
+}
+function addCsReview(){
+  const d=getCsReviews();
+  d.push({id:Date.now(),platform:'naver',date:new Date().toISOString().split('T')[0],product:'',rating:5,author:'',content:'',reply:'',status:'pending'});
+  saveCsReviews(d);renderCsReviews();showToast('+','리뷰 추가','');
+}
+function toggleAllCsReviews(c){document.querySelectorAll('.csReviewChk').forEach(x=>x.checked=c)}
+function delSelectedCsReviews(){
+  const ids=Array.from(document.querySelectorAll('.csReviewChk:checked')).map(c=>parseInt(c.dataset.id));
+  if(ids.length===0){alert('선택하세요');return}
+  if(!confirm(ids.length+'개 삭제?'))return;
+  saveCsReviews(getCsReviews().filter(r=>!ids.includes(r.id)));renderCsReviews();showToast('🗑','삭제됨','');
+}
+
+function getCsInquiries(){
+  return ST.get('cs_inquiries_v1',[
+    {id:1,date:'2026-05-15',channel:'전화',customer:'박지영',title:'배송 문의',content:'어제 주문했는데 언제 배송되나요?',handler:'홍길동',status:'done'},
+    {id:2,date:'2026-05-15',channel:'이메일',customer:'김영희',title:'반품 요청',content:'박스가 손상되어 있어 반품하고 싶습니다.',handler:'이마케팅',status:'progress'},
+    {id:3,date:'2026-05-14',channel:'카카오톡',customer:'정수연',title:'사이즈 문의',content:'스킨케어 세트 용량이 어떻게 되나요?',handler:'',status:'open'},
+    {id:4,date:'2026-05-13',channel:'네이버 톡톡',customer:'최민수',title:'적립금 사용',content:'적립금 사용은 어떻게 하나요?',handler:'홍길동',status:'done'}
+  ]);
+}
+function saveCsInquiries(d){ST.set('cs_inquiries_v1',d)}
+function renderCsInquiries(){
+  const body=document.getElementById('csInquiriesBody');if(!body)return;
+  const d=getCsInquiries();
+  const total=d.length;
+  const open=d.filter(r=>r.status==='open').length;
+  const progress=d.filter(r=>r.status==='progress').length;
+  const done=d.filter(r=>r.status==='done').length;
+  document.getElementById('csInqTotal')&&(document.getElementById('csInqTotal').textContent=total);
+  document.getElementById('csInqOpen')&&(document.getElementById('csInqOpen').textContent=open);
+  document.getElementById('csInqProgress')&&(document.getElementById('csInqProgress').textContent=progress);
+  document.getElementById('csInqDone')&&(document.getElementById('csInqDone').textContent=done);
+  if(d.length===0){body.innerHTML='<tr><td colspan="8" class="text-center text-gray-400 py-4">접수된 문의가 없습니다</td></tr>';return}
+  const statusOpts={open:'접수',progress:'처리중',done:'완료'};
+  const statusOptsHtml=Object.entries(statusOpts).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+  body.innerHTML=d.map(r=>{
+    const stCls=r.status==='done'?'bg-green-50 text-green-700':r.status==='progress'?'bg-amber-50 text-amber-700':'bg-blue-50 text-blue-700';
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="csInqChk" data-id="${r.id}" /></td>
+      <td class="font-mono text-xs">${fmtDateYY(r.date)}</td>
+      <td><span class="text-xs px-2 py-0.5 rounded bg-gray-100">${escapeHtml(r.channel||'')}</span></td>
+      <td>${escapeHtml(r.customer||'')}</td>
+      <td contenteditable oninput="updCsInq(${r.id},'title',this.textContent)" class="font-medium">${escapeHtml(r.title||'')}</td>
+      <td contenteditable oninput="updCsInq(${r.id},'content',this.textContent)" class="text-xs text-gray-600" style="min-width:200px">${escapeHtml(r.content||'')}</td>
+      <td contenteditable oninput="updCsInq(${r.id},'handler',this.textContent)" class="text-xs">${escapeHtml(r.handler||'')}</td>
+      <td><select onchange="updCsInq(${r.id},'status',this.value);renderCsInquiries()" class="text-xs border rounded px-1 py-0.5 ${stCls}">${statusOptsHtml.replace(`value="${r.status}"`,`value="${r.status}" selected`)}</select></td>
+    </tr>`;
+  }).join('');
+}
+function updCsInq(id,k,v){
+  const d=getCsInquiries();const r=d.find(x=>x.id===id);if(!r)return;
+  r[k]=v;saveCsInquiries(d);
+}
+function addCsInquiry(){
+  const d=getCsInquiries();
+  d.push({id:Date.now(),date:new Date().toISOString().split('T')[0],channel:'기타',customer:'',title:'새 문의',content:'',handler:'',status:'open'});
+  saveCsInquiries(d);renderCsInquiries();showToast('+','문의 추가','');
+}
+function toggleAllCsInquiries(c){document.querySelectorAll('.csInqChk').forEach(x=>x.checked=c)}
+function delSelectedCsInquiries(){
+  const ids=Array.from(document.querySelectorAll('.csInqChk:checked')).map(c=>parseInt(c.dataset.id));
+  if(ids.length===0){alert('선택하세요');return}
+  if(!confirm(ids.length+'개 삭제?'))return;
+  saveCsInquiries(getCsInquiries().filter(r=>!ids.includes(r.id)));renderCsInquiries();showToast('🗑','삭제됨','');
+}
+
+// ========== 🏢 경영지원 ==========
+function getAdminData(t){
+  const key='admin_'+t+'_v1';
+  return ST.get(key,{
+    supplies:[
+      {id:1,col1:'2026-05-12',col2:'홍길동',col3:'간식',col4:'커피믹스 100개입',col5:'2',col6:'25000',col7:'팀 간식',col8:'approved'},
+      {id:2,col1:'2026-05-14',col2:'이마케팅',col3:'사무용품',col4:'A4 용지 5박스',col5:'5',col6:'45000',col7:'재고 소진',col8:'pending'},
+      {id:3,col1:'2026-05-15',col2:'최영업',col3:'간식',col4:'과자 모음 (혼합)',col5:'1',col6:'30000',col7:'미팅용',col8:'pending'}
+    ],
+    purchase:[
+      {id:1,col1:'2026-05-10',col2:'쿠팡비즈',col3:'A4 용지',col4:'10',col5:'9500',col6:'95000',col7:'법인카드',col8:'세금계산서',col9:'completed'},
+      {id:2,col1:'2026-05-13',col2:'GS25',col3:'음료수 (24개)',col4:'2',col5:'15000',col6:'30000',col7:'법인카드',col8:'영수증',col9:'completed'},
+      {id:3,col1:'2026-05-14',col2:'아마존',col3:'무선 마우스',col4:'3',col5:'45000',col6:'135000',col7:'법인카드',col8:'카드매출전표',col9:'pending'}
+    ],
+    tax:[
+      {id:1,col1:'2026-05-31',col2:'매출 세금계산서',col3:'(주)뷰티코리아',col4:'3600000',col5:'360000',col6:'세금계산서',col7:'회계팀',col8:'pending'},
+      {id:2,col1:'2026-05-31',col2:'매입 세금계산서',col3:'쿠팡비즈',col4:'95000',col5:'9500',col6:'세금계산서',col7:'회계팀',col8:'received'},
+      {id:3,col1:'2026-06-25',col2:'부가세 신고',col3:'-',col4:'-',col5:'-',col6:'분기 정기',col7:'회계팀',col8:'pending'},
+      {id:4,col1:'2026-05-10',col2:'원천세 신고',col3:'-',col4:'-',col5:'-',col6:'월 정기',col7:'회계팀',col8:'completed'}
+    ],
+    hr:[
+      {id:1,col1:'홍길동',col2:'관리팀',col3:'대표',col4:'정규직',col5:'2020-01-01',col6:'',col7:'010-1234-5678',col8:'hong@intro.kr',col9:'active'},
+      {id:2,col1:'이마케팅',col2:'마케팅팀',col3:'매니저',col4:'정규직',col5:'2022-03-15',col6:'',col7:'010-2345-6789',col8:'lee@intro.kr',col9:'active'},
+      {id:3,col1:'최영업',col2:'영업팀',col3:'팀장',col4:'정규직',col5:'2021-07-01',col6:'',col7:'010-3456-7890',col8:'choi@intro.kr',col9:'active'},
+      {id:4,col1:'박지영',col2:'디자인팀',col3:'사원',col4:'계약직',col5:'2026-04-01',col6:'',col7:'010-4567-8901',col8:'park@intro.kr',col9:'active'},
+      {id:5,col1:'정수연',col2:'개발팀',col3:'인턴',col4:'인턴',col5:'2026-05-01',col6:'',col7:'010-5678-9012',col8:'jung@intro.kr',col9:'active'}
+    ]
+  }[t]||[]);
+}
+function saveAdminData(t,d){ST.set('admin_'+t+'_v1',d)}
+function renderAdminAll(){renderAdminSupplies();renderAdminPurchase();renderAdminTax();renderAdminHr();}
+function renderAdminSupplies(){
+  const body=document.getElementById('adminSuppliesBody');if(!body)return;
+  const d=getAdminData('supplies');
+  if(d.length===0){body.innerHTML='<tr><td colspan="9" class="text-center text-gray-400 py-4">요청 없음</td></tr>';return}
+  const statusMap={pending:{l:'대기',c:'bg-amber-50 text-amber-700'},approved:{l:'승인',c:'bg-blue-50 text-blue-700'},purchased:{l:'구매완료',c:'bg-green-50 text-green-700'},rejected:{l:'반려',c:'bg-red-50 text-red-600'}};
+  const statusOpts=Object.entries(statusMap).map(([k,v])=>`<option value="${k}">${v.l}</option>`).join('');
+  body.innerHTML=d.map(r=>{
+    const st=statusMap[r.col8]||statusMap.pending;
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="adminChk-supplies" data-id="${r.id}" /></td>
+      <td contenteditable oninput="updAdminCell('supplies',${r.id},'col1',this.textContent)" class="font-mono text-xs">${fmtDateYY(r.col1)}</td>
+      <td contenteditable oninput="updAdminCell('supplies',${r.id},'col2',this.textContent)">${escapeHtml(r.col2||'')}</td>
+      <td contenteditable oninput="updAdminCell('supplies',${r.id},'col3',this.textContent)" class="text-xs">${escapeHtml(r.col3||'')}</td>
+      <td contenteditable oninput="updAdminCell('supplies',${r.id},'col4',this.textContent)">${escapeHtml(r.col4||'')}</td>
+      <td contenteditable oninput="updAdminCell('supplies',${r.id},'col5',this.textContent)" class="text-center">${escapeHtml(r.col5||'')}</td>
+      <td contenteditable oninput="updAdminCell('supplies',${r.id},'col6',this.textContent)" class="text-right">₩${(parseInt(r.col6)||0).toLocaleString()}</td>
+      <td contenteditable oninput="updAdminCell('supplies',${r.id},'col7',this.textContent)" class="text-xs text-gray-500">${escapeHtml(r.col7||'')}</td>
+      <td><select onchange="updAdminCell('supplies',${r.id},'col8',this.value);renderAdminSupplies()" class="text-xs border rounded px-1 py-0.5 ${st.c}">${statusOpts.replace(`value="${r.col8}"`,`value="${r.col8}" selected`)}</select></td>
+    </tr>`;
+  }).join('');
+}
+function renderAdminPurchase(){
+  const body=document.getElementById('adminPurchaseBody');if(!body)return;
+  const d=getAdminData('purchase');
+  if(d.length===0){body.innerHTML='<tr><td colspan="10" class="text-center text-gray-400 py-4">구매 내역 없음</td></tr>';return}
+  const statusMap={pending:{l:'대기',c:'bg-amber-50 text-amber-700'},completed:{l:'완료',c:'bg-green-50 text-green-700'}};
+  const statusOpts=Object.entries(statusMap).map(([k,v])=>`<option value="${k}">${v.l}</option>`).join('');
+  body.innerHTML=d.map(r=>{
+    const qty=parseInt(r.col4)||0,unit=parseInt(r.col5)||0;
+    const total=qty*unit;
+    const st=statusMap[r.col9]||statusMap.pending;
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="adminChk-purchase" data-id="${r.id}" /></td>
+      <td contenteditable oninput="updAdminCell('purchase',${r.id},'col1',this.textContent)" class="font-mono text-xs">${fmtDateYY(r.col1)}</td>
+      <td contenteditable oninput="updAdminCell('purchase',${r.id},'col2',this.textContent)">${escapeHtml(r.col2||'')}</td>
+      <td contenteditable oninput="updAdminCell('purchase',${r.id},'col3',this.textContent)">${escapeHtml(r.col3||'')}</td>
+      <td contenteditable oninput="updAdminCell('purchase',${r.id},'col4',this.textContent)" class="text-right">${qty}</td>
+      <td contenteditable oninput="updAdminCell('purchase',${r.id},'col5',this.textContent)" class="text-right">₩${unit.toLocaleString()}</td>
+      <td class="text-right font-semibold">₩${total.toLocaleString()}</td>
+      <td contenteditable oninput="updAdminCell('purchase',${r.id},'col7',this.textContent)" class="text-xs">${escapeHtml(r.col7||'')}</td>
+      <td contenteditable oninput="updAdminCell('purchase',${r.id},'col8',this.textContent)" class="text-xs">${escapeHtml(r.col8||'')}</td>
+      <td><select onchange="updAdminCell('purchase',${r.id},'col9',this.value);renderAdminPurchase()" class="text-xs border rounded px-1 py-0.5 ${st.c}">${statusOpts.replace(`value="${r.col9}"`,`value="${r.col9}" selected`)}</select></td>
+    </tr>`;
+  }).join('');
+}
+function renderAdminTax(){
+  const body=document.getElementById('adminTaxBody');if(!body)return;
+  const d=getAdminData('tax');
+  // KPI
+  const thisMonth=new Date().toISOString().slice(0,7);
+  let taxIn=0,taxOut=0;
+  d.forEach(r=>{
+    const amt=parseInt(r.col4)||0;
+    if(r.col2?.includes('매입'))taxIn+=amt;
+    else if(r.col2?.includes('매출'))taxOut+=amt;
+  });
+  const vat=Math.max(0,Math.round((taxOut-taxIn)*0.1));
+  const pending=d.filter(r=>r.col8==='pending').length;
+  document.getElementById('adminTaxIn')&&(document.getElementById('adminTaxIn').textContent='₩'+taxIn.toLocaleString());
+  document.getElementById('adminTaxOut')&&(document.getElementById('adminTaxOut').textContent='₩'+taxOut.toLocaleString());
+  document.getElementById('adminTaxVat')&&(document.getElementById('adminTaxVat').textContent='₩'+vat.toLocaleString());
+  document.getElementById('adminTaxPending')&&(document.getElementById('adminTaxPending').textContent=pending);
+  if(d.length===0){body.innerHTML='<tr><td colspan="9" class="text-center text-gray-400 py-4">데이터 없음</td></tr>';return}
+  const statusMap={pending:{l:'대기',c:'bg-amber-50 text-amber-700'},received:{l:'수령',c:'bg-blue-50 text-blue-700'},completed:{l:'신고완료',c:'bg-green-50 text-green-700'}};
+  const statusOpts=Object.entries(statusMap).map(([k,v])=>`<option value="${k}">${v.l}</option>`).join('');
+  body.innerHTML=d.map(r=>{
+    const st=statusMap[r.col8]||statusMap.pending;
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="adminChk-tax" data-id="${r.id}" /></td>
+      <td contenteditable oninput="updAdminCell('tax',${r.id},'col1',this.textContent)" class="font-mono text-xs">${fmtDateYY(r.col1)}</td>
+      <td contenteditable oninput="updAdminCell('tax',${r.id},'col2',this.textContent)">${escapeHtml(r.col2||'')}</td>
+      <td contenteditable oninput="updAdminCell('tax',${r.id},'col3',this.textContent)">${escapeHtml(r.col3||'')}</td>
+      <td contenteditable oninput="updAdminCell('tax',${r.id},'col4',this.textContent)" class="text-right">${r.col4==='-'?'-':'₩'+(parseInt(r.col4)||0).toLocaleString()}</td>
+      <td contenteditable oninput="updAdminCell('tax',${r.id},'col5',this.textContent)" class="text-right">${r.col5==='-'?'-':'₩'+(parseInt(r.col5)||0).toLocaleString()}</td>
+      <td contenteditable oninput="updAdminCell('tax',${r.id},'col6',this.textContent)" class="text-xs">${escapeHtml(r.col6||'')}</td>
+      <td contenteditable oninput="updAdminCell('tax',${r.id},'col7',this.textContent)" class="text-xs">${escapeHtml(r.col7||'')}</td>
+      <td><select onchange="updAdminCell('tax',${r.id},'col8',this.value);renderAdminTax()" class="text-xs border rounded px-1 py-0.5 ${st.c}">${statusOpts.replace(`value="${r.col8}"`,`value="${r.col8}" selected`)}</select></td>
+    </tr>`;
+  }).join('');
+}
+function renderAdminHr(){
+  const body=document.getElementById('adminHrBody');if(!body)return;
+  const d=getAdminData('hr');
+  const total=d.filter(r=>r.col9==='active').length;
+  const regular=d.filter(r=>r.col4==='정규직'&&r.col9==='active').length;
+  const contract=d.filter(r=>(r.col4==='계약직'||r.col4==='인턴')&&r.col9==='active').length;
+  const thisMonth=new Date().toISOString().slice(0,7);
+  const newThisMonth=d.filter(r=>r.col5&&r.col5.startsWith(thisMonth)).length+d.filter(r=>r.col6&&r.col6.startsWith(thisMonth)).length;
+  document.getElementById('adminHrTotal')&&(document.getElementById('adminHrTotal').textContent=total);
+  document.getElementById('adminHrRegular')&&(document.getElementById('adminHrRegular').textContent=regular);
+  document.getElementById('adminHrContract')&&(document.getElementById('adminHrContract').textContent=contract);
+  document.getElementById('adminHrNew')&&(document.getElementById('adminHrNew').textContent=newThisMonth);
+  if(d.length===0){body.innerHTML='<tr><td colspan="10" class="text-center text-gray-400 py-4">직원 없음</td></tr>';return}
+  const statusMap={active:{l:'재직',c:'bg-green-50 text-green-700'},leave:{l:'휴직',c:'bg-amber-50 text-amber-700'},retired:{l:'퇴사',c:'bg-gray-100 text-gray-500'}};
+  const statusOpts=Object.entries(statusMap).map(([k,v])=>`<option value="${k}">${v.l}</option>`).join('');
+  body.innerHTML=d.map(r=>{
+    const st=statusMap[r.col9]||statusMap.active;
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="adminChk-hr" data-id="${r.id}" /></td>
+      <td contenteditable oninput="updAdminCell('hr',${r.id},'col1',this.textContent)" class="font-semibold">${escapeHtml(r.col1||'')}</td>
+      <td contenteditable oninput="updAdminCell('hr',${r.id},'col2',this.textContent)" class="text-xs">${escapeHtml(r.col2||'')}</td>
+      <td contenteditable oninput="updAdminCell('hr',${r.id},'col3',this.textContent)" class="text-xs">${escapeHtml(r.col3||'')}</td>
+      <td contenteditable oninput="updAdminCell('hr',${r.id},'col4',this.textContent)" class="text-xs">${escapeHtml(r.col4||'')}</td>
+      <td contenteditable oninput="updAdminCell('hr',${r.id},'col5',this.textContent)" class="font-mono text-xs">${fmtDateYY(r.col5)}</td>
+      <td contenteditable oninput="updAdminCell('hr',${r.id},'col6',this.textContent)" class="font-mono text-xs">${r.col6?fmtDateYY(r.col6):'-'}</td>
+      <td contenteditable oninput="updAdminCell('hr',${r.id},'col7',this.textContent)" class="text-xs">${escapeHtml(r.col7||'')}</td>
+      <td contenteditable oninput="updAdminCell('hr',${r.id},'col8',this.textContent)" class="text-xs text-gray-600">${escapeHtml(r.col8||'')}</td>
+      <td><select onchange="updAdminCell('hr',${r.id},'col9',this.value);renderAdminHr()" class="text-xs border rounded px-1 py-0.5 ${st.c}">${statusOpts.replace(`value="${r.col9}"`,`value="${r.col9}" selected`)}</select></td>
+    </tr>`;
+  }).join('');
+}
+function updAdminCell(t,id,k,v){
+  const d=getAdminData(t);const r=d.find(x=>x.id===id);if(!r)return;
+  if(t==='supplies'&&k==='col1')v=parseDateYY(v);
+  if(t==='purchase'&&k==='col1')v=parseDateYY(v);
+  if(t==='tax'&&k==='col1')v=parseDateYY(v);
+  if(t==='hr'&&(k==='col5'||k==='col6'))v=v?parseDateYY(v):'';
+  r[k]=v;saveAdminData(t,d);
+}
+function addAdminRow(t){
+  const d=getAdminData(t);
+  const today=new Date().toISOString().split('T')[0];
+  const tpl={
+    supplies:{col1:today,col2:CURRENT?.name||'',col3:'사무용품',col4:'',col5:'1',col6:'0',col7:'',col8:'pending'},
+    purchase:{col1:today,col2:'',col3:'',col4:'1',col5:'0',col6:'',col7:'법인카드',col8:'영수증',col9:'pending'},
+    tax:{col1:today,col2:'매입 세금계산서',col3:'',col4:'0',col5:'0',col6:'세금계산서',col7:CURRENT?.name||'',col8:'pending'},
+    hr:{col1:'',col2:'',col3:'',col4:'정규직',col5:today,col6:'',col7:'',col8:'',col9:'active'}
+  };
+  d.push({id:Date.now(),...tpl[t]||{}});
+  saveAdminData(t,d);renderAdminAll();showToast('+','추가됨','');
+}
+function delAdminRows(t){
+  const ids=Array.from(document.querySelectorAll('.adminChk-'+t+':checked')).map(c=>parseInt(c.dataset.id));
+  if(ids.length===0){alert('선택하세요');return}
+  if(!confirm(ids.length+'개 삭제?'))return;
+  saveAdminData(t,getAdminData(t).filter(r=>!ids.includes(r.id)));renderAdminAll();showToast('🗑','삭제됨','');
+}
+function toggleAllAdminRows(t,c){document.querySelectorAll('.adminChk-'+t).forEach(x=>x.checked=c)}
