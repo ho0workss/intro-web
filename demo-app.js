@@ -910,7 +910,41 @@ function renderPartnerFilter(){
 }
 function changePartnerFilter(v){currentPartnerFilter=v;document.getElementById('partnerFilterInfo')&&(document.getElementById('partnerFilterInfo').textContent=v==='all'?'전체 통합 보기':`'${v}' 단독 보기`);initPartnerTables();showToast('🔍','필터 변경',v==='all'?'전체':v)}
 function initPartnerTables(){['order','sales','inventory','settle'].forEach(renderPartnerTable)}
+function renderPartnerInventoryFromEc(){
+  const tb=document.querySelector('#partner-inventory-table tbody');if(!tb)return;
+  const inv=getEcData('inventory');
+  // 사용자에게 매핑된 거래처만 + 거래처 필터 적용
+  const userPartners=CURRENT?.partners||[];
+  let list=inv.filter(i=>i.partner&&(userPartners.length===0||userPartners.includes(i.partner)));
+  if(currentPartnerFilter&&currentPartnerFilter!=='all'){
+    list=list.filter(i=>i.partner===currentPartnerFilter);
+  }
+  if(list.length===0){
+    tb.innerHTML=`<tr><td colspan="8" class="text-center text-gray-400 py-6 text-sm">${currentPartnerFilter==='all'?'거래처가 지정된 재고가 없습니다. 이커머스 ▸ 재고에서 거래처를 지정하세요.':`'${currentPartnerFilter}' 거래처의 재고가 없습니다`}</td></tr>`;
+    return;
+  }
+  tb.innerHTML=list.map((i,idx)=>{
+    const avg=get7DayAvgForProduct(i.product);
+    const threshold=avg*28;
+    const st=i.stock===0?{l:'품절',c:'bg-red-50 text-red-600'}:(threshold>0&&i.stock<threshold)?{l:'부족',c:'bg-amber-50 text-amber-700'}:{l:'정상',c:'bg-green-50 text-green-700'};
+    const sourceLabel=i.source==='naver_store'?'네이버':i.source==='coupang'?'쿠팡':i.source==='ezadmin'?'이지어드민':i.source==='cj_eflex'?'CJ Eflex':'수기';
+    const sourceColor=i.source&&i.source!=='manual'?'bg-blue-50 text-blue-700':'bg-gray-100 text-gray-600';
+    return `<tr data-partner="${escapeHtml(i.partner||'')}">
+      <td class="sheet-row-num">${idx+1}</td>
+      <td class="font-mono text-xs">${escapeHtml(i.sku||'')}</td>
+      <td>${escapeHtml(i.product||'')}</td>
+      <td class="text-xs"><span class="px-2 py-0.5 rounded bg-gray-100">${escapeHtml(i.partner||'')}</span></td>
+      <td class="text-center font-semibold">${i.stock}</td>
+      <td class="text-xs">${avg>0?avg.toFixed(1)+' /일':'<span class="text-gray-400">-</span>'}</td>
+      <td><span class="text-xs px-2 py-0.5 rounded ${st.c}">${st.l}</span></td>
+      <td><span class="text-xs px-2 py-0.5 rounded ${sourceColor}">${sourceLabel}</span></td>
+    </tr>`;
+  }).join('');
+}
+
 function renderPartnerTable(t){
+  // inventory는 이커머스 재고 데이터에서 거래처 지정된 항목을 view로 제공
+  if(t==='inventory')return renderPartnerInventoryFromEc();
   const tb=document.querySelector(`#partner-${t}-table tbody`);if(!tb)return;
   const allData=getPartnerData(t);
   // ★ 사용자 거래처 + 필터 적용 (이중 필터링)
@@ -1990,11 +2024,11 @@ function getEcData(t){
   if(t==='inventory'){
     const v=ST.get('ec_inventory_v2',null);if(v)return v;
     const fresh=[
-      {id:1,sku:'SK-001-50ML',product:'스킨케어 세트',stock:234,source:'naver_store',lastSync:new Date().toISOString()},
-      {id:2,sku:'SK-002-80ML',product:'프리미엄 보습 크림',stock:18,source:'coupang',lastSync:new Date().toISOString()},
-      {id:3,sku:'SK-003-50ML',product:'선크림 SPF50+',stock:30,source:'ezadmin',lastSync:new Date().toISOString()},
-      {id:4,sku:'SK-004-200ML',product:'클렌징 폼',stock:156,source:'cj_eflex',lastSync:new Date().toISOString()},
-      {id:5,sku:'SK-005-200ML',product:'토너 세트',stock:88,source:'manual',lastSync:''}
+      {id:1,sku:'SK-001-50ML',product:'스킨케어 세트',partner:'(주)뷰티코리아',stock:234,source:'naver_store',lastSync:new Date().toISOString()},
+      {id:2,sku:'SK-002-80ML',product:'프리미엄 보습 크림',partner:'',stock:18,source:'coupang',lastSync:new Date().toISOString()},
+      {id:3,sku:'SK-003-50ML',product:'선크림 SPF50+',partner:'(주)뷰티코리아',stock:30,source:'ezadmin',lastSync:new Date().toISOString()},
+      {id:4,sku:'SK-004-200ML',product:'클렌징 폼',partner:'라이프스타일컴퍼니',stock:156,source:'cj_eflex',lastSync:new Date().toISOString()},
+      {id:5,sku:'SK-005-200ML',product:'토너 세트',partner:'',stock:88,source:'manual',lastSync:''}
     ];
     ST.set('ec_inventory_v2',fresh);return fresh;
   }
@@ -2084,7 +2118,7 @@ function renderEcommerce(){
 function ecAddRow(t){
   const d=getEcData(t);const newRow={id:Date.now()};
   if(t==='sales')Object.assign(newRow,{date:new Date().toISOString().split('T')[0],brand:'',product:'새 상품',qty:0,revenue:0});
-  if(t==='inventory')Object.assign(newRow,{sku:'',product:'새 상품',stock:0,min:0,source:'manual',lastSync:''});
+  if(t==='inventory')Object.assign(newRow,{sku:'',product:'새 상품',partner:'',stock:0,min:0,source:'manual',lastSync:''});
   if(t==='cost')Object.assign(newRow,{product:'새 상품',components:[],cost:0,shippingFee:0,price:0,feeRate:10});
   d.push(newRow);saveEcData(t,d);renderEcommerce();showToast('+','추가됨','');
 }
@@ -2848,7 +2882,8 @@ function renderEcInventory(){
   const list=_invSourceFilter==='all'?inv:inv.filter(i=>(i.source||'manual')===_invSourceFilter);
   // 부족 알림 (전체 기준으로)
   _checkLowStockAlerts(inv);
-  if(list.length===0){body.innerHTML='<tr><td colspan="8" class="text-center text-gray-400 py-4">조건에 맞는 재고가 없습니다.</td></tr>';return}
+  if(list.length===0){body.innerHTML='<tr><td colspan="9" class="text-center text-gray-400 py-4">조건에 맞는 재고가 없습니다.</td></tr>';return}
+  const partnerOpts=getPartners().map(p=>`<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join('');
   body.innerHTML=list.map(i=>{
     const avg=get7DayAvgForProduct(i.product);
     const prevAvg=getPrev7DayAvgForProduct(i.product);
@@ -2858,7 +2893,8 @@ function renderEcInventory(){
     const sourceLabel=i.source==='naver_store'?'네이버':i.source==='coupang'?'쿠팡':i.source==='ezadmin'?'이지어드민':i.source==='cj_eflex'?'CJ Eflex':'수기';
     const sourceColor=i.source&&i.source!=='manual'?'bg-blue-50 text-blue-700':'bg-gray-100 text-gray-600';
     const avgCell=avg>0?`<span class="font-semibold">${avg.toFixed(1)}</span><span class="text-gray-400 text-[10px]">/일</span> <span class="${trend.c}">${trend.ico}</span><div class="text-[10px] text-gray-400">권장재고 ${Math.round(threshold)}개</div>`:`<span class="text-gray-400 text-xs">데이터 부족</span>`;
-    return `<tr><td class="sheet-row-num"><input type="checkbox" class="ecChk-inventory" data-id="${i.id}" /></td><td contenteditable oninput="updEc('inventory',${i.id},'sku',this.textContent)" class="font-mono text-xs">${escapeHtml(i.sku||'')}</td><td contenteditable oninput="updEc('inventory',${i.id},'product',this.textContent)">${escapeHtml(i.product||'')}</td><td contenteditable oninput="updEc('inventory',${i.id},'stock',this.textContent)" class="text-center">${i.stock}</td><td class="text-xs">${avgCell}</td><td><span class="text-xs px-2 py-0.5 rounded ${st.c}">${st.l}</span></td><td><span class="text-xs px-2 py-0.5 rounded ${sourceColor}">${sourceLabel}</span></td><td class="text-[10px] text-gray-500">${i.lastSync?fmtDateYY(i.lastSync.slice(0,10))+' '+i.lastSync.slice(11,16):'-'}</td></tr>`;
+    const partnerSelected=partnerOpts.replace(`value="${escapeHtml(i.partner||'')}"`,`value="${escapeHtml(i.partner||'')}" selected`);
+    return `<tr><td class="sheet-row-num"><input type="checkbox" class="ecChk-inventory" data-id="${i.id}" /></td><td contenteditable oninput="updEc('inventory',${i.id},'sku',this.textContent)" class="font-mono text-xs">${escapeHtml(i.sku||'')}</td><td contenteditable oninput="updEc('inventory',${i.id},'product',this.textContent)">${escapeHtml(i.product||'')}</td><td><select onchange="updEc('inventory',${i.id},'partner',this.value)" class="text-xs border rounded px-1 py-0.5 bg-white"><option value="">미지정</option>${partnerSelected}</select></td><td contenteditable oninput="updEc('inventory',${i.id},'stock',this.textContent)" class="text-center">${i.stock}</td><td class="text-xs">${avgCell}</td><td><span class="text-xs px-2 py-0.5 rounded ${st.c}">${st.l}</span></td><td><span class="text-xs px-2 py-0.5 rounded ${sourceColor}">${sourceLabel}</span></td><td class="text-[10px] text-gray-500">${i.lastSync?fmtDateYY(i.lastSync.slice(0,10))+' '+i.lastSync.slice(11,16):'-'}</td></tr>`;
   }).join('');
 }
 
