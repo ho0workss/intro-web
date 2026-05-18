@@ -661,7 +661,18 @@
         </div>
         <div id="sub-partners-order" class="sub-page active"><div class="border border-gray-200 rounded-lg overflow-hidden"><div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between"><h3 class="text-sm font-bold">📋 발주</h3><div class="flex gap-2"><button onclick="addPartnerRow('order')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 행</button><button onclick="deletePartnerSelected('order')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div><div class="overflow-x-auto"><table class="sheet-table" id="partner-order-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllRows('order',this.checked)" /></th><th>발주일</th><th>제품</th><th>수량</th><th>단가</th><th>금액</th><th>상태</th><th>택배사</th><th>송장번호</th></tr></thead><tbody></tbody></table></div></div></div>
         <div id="sub-partners-sales" class="sub-page"><div class="border border-gray-200 rounded-lg overflow-hidden"><div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between"><h3 class="text-sm font-bold">💵 판매</h3><div class="flex gap-2"><button onclick="addPartnerRow('sales')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 행</button><button onclick="deletePartnerSelected('sales')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div><div class="overflow-x-auto"><table class="sheet-table" id="partner-sales-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllRows('sales',this.checked)" /></th><th>판매일</th><th>제품</th><th>판매처</th><th>수량</th><th>매출</th><th>순매출</th></tr></thead><tbody></tbody></table></div></div></div>
-        <div id="sub-partners-inventory" class="sub-page"><div class="border border-gray-200 rounded-lg overflow-hidden"><div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between"><h3 class="text-sm font-bold">📦 재고</h3><div class="flex gap-2"><button onclick="addPartnerRow('inventory')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 행</button><button onclick="deletePartnerSelected('inventory')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div><div class="overflow-x-auto"><table class="sheet-table" id="partner-inventory-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllRows('inventory',this.checked)" /></th><th>SKU</th><th>제품</th><th>입고</th><th>출고</th><th>현재고</th><th>상태</th></tr></thead><tbody></tbody></table></div></div></div>
+        <div id="sub-partners-inventory" class="sub-page">
+          <div class="border border-gray-200 rounded-lg overflow-hidden">
+            <div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+              <h3 class="text-sm font-bold">📦 재고 (이커머스 연동)</h3>
+              <button onclick="navigateTo('ecommerce');setTimeout(()=>navigateSub('ecommerce','inventory'),50)" class="px-3 py-1 border border-gray-300 text-xs rounded">✏️ 이커머스에서 편집</button>
+            </div>
+            <div class="bg-blue-50 border-b border-blue-200 px-4 py-2 text-[11px] text-blue-900">💡 이커머스 ▸ 재고에서 거래처가 지정된 항목만 자동으로 표시됩니다. 수정은 이커머스 페이지에서 진행하세요.</div>
+            <div class="overflow-x-auto">
+              <table class="sheet-table" id="partner-inventory-table"><thead><tr><th class="sheet-row-num">#</th><th>SKU(옵션ID)</th><th>제품</th><th>거래처</th><th>현재고</th><th>7일평균/일</th><th>상태</th><th>출처</th></tr></thead><tbody></tbody></table>
+            </div>
+          </div>
+        </div>
         <div id="sub-partners-settle" class="sub-page"><div class="border border-gray-200 rounded-lg overflow-hidden"><div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between"><h3 class="text-sm font-bold">🧾 정산</h3><div class="flex gap-2"><button onclick="addPartnerRow('settle')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 행</button><button onclick="deletePartnerSelected('settle')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div><div class="overflow-x-auto"><table class="sheet-table" id="partner-settle-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllRows('settle',this.checked)" /></th><th>정산기간</th><th>판매처</th><th>매출</th><th>원가</th><th>마진</th><th>상태</th></tr></thead><tbody></tbody></table></div></div></div>
       </div>
     </div>
@@ -775,7 +786,7 @@
               <button onclick="ecDelRow('inventory')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button>
             </div>
           </div>
-          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAll('inventory',this.checked)" /></th><th>SKU(옵션ID)</th><th>제품</th><th>현재고</th><th>7일 평균 판매량</th><th>상태</th><th>출처</th><th>최근동기화</th></tr></thead><tbody id="ecInventoryBody"></tbody></table></div>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAll('inventory',this.checked)" /></th><th>SKU(옵션ID)</th><th>제품</th><th>거래처</th><th>현재고</th><th>7일 평균 판매량</th><th>상태</th><th>출처</th><th>최근동기화</th></tr></thead><tbody id="ecInventoryBody"></tbody></table></div>
         </div>
         <div id="sub-ecommerce-cost" class="sub-page">
           <!-- 서브 메뉴 -->
