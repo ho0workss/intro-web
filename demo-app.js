@@ -868,12 +868,12 @@ function updPartner(i,k,v){const ps=getPartners();ps[i][k]=v;savePartners(ps)}
 
 // ========== 거래처 페이지 테이블 ==========
 const PARTNER_SAMPLE={
-  // 발주 컬럼 (v2): col1=발주일 / col2=제품 / col3=수량 / col4=단가 / col5=금액 / col6=상태 / col7=택배사 / col8=송장번호
+  // 발주 컬럼 (v3): col1=발주일 / col2=제품 / col3=수량 / col4=단가 / col5=상태 / col6=택배사 / col7=송장번호
   order:[
-    {partner:'(주)뷰티코리아',col1:'2026-05-01',col2:'스킨케어 세트',col3:'200',col4:'18000',col5:'3,600,000',col6:'완료',col7:'CJ대한통운',col8:'1234567890'},
-    {partner:'(주)뷰티코리아',col1:'2026-05-03',col2:'선크림 SPF50+',col3:'500',col4:'8000',col5:'4,000,000',col6:'진행중',col7:'',col8:''},
-    {partner:'라이프스타일컴퍼니',col1:'2026-05-05',col2:'보습 크림',col3:'150',col4:'12000',col5:'1,800,000',col6:'완료',col7:'한진택배',col8:'5566778899'},
-    {partner:'(주)코스메틱하우스',col1:'2026-05-08',col2:'클렌징 폼',col3:'300',col4:'5000',col5:'1,500,000',col6:'대기',col7:'',col8:''}
+    {partner:'(주)뷰티코리아',col1:'2026-05-01',col2:'스킨케어 세트',col3:'200',col4:'18000',col5:'배송완료',col6:'CJ대한통운',col7:'1234567890'},
+    {partner:'(주)뷰티코리아',col1:'2026-05-03',col2:'선크림 SPF50+',col3:'500',col4:'8000',col5:'배송중',col6:'',col7:''},
+    {partner:'라이프스타일컴퍼니',col1:'2026-05-05',col2:'보습 크림',col3:'150',col4:'12000',col5:'배송완료',col6:'한진택배',col7:'5566778899'},
+    {partner:'(주)코스메틱하우스',col1:'2026-05-08',col2:'클렌징 폼',col3:'300',col4:'5000',col5:'결제완료',col6:'',col7:''}
   ],
   sales:[
     {partner:'(주)뷰티코리아',col1:'2026-05-12',col2:'스킨케어 세트',col3:'네이버',col4:'87',col5:'3,915,000',col6:'3,523,500'},
@@ -891,9 +891,29 @@ const PARTNER_SAMPLE={
   ]
 };
 function getPartnerData(t){
-  // 발주는 컬럼 구조 변경(브랜드 제거 + 택배사/송장 추가) 으로 v2 키 사용
   const key=t==='order'?'partner_order_v2':'partner_'+t;
-  return ST.get(key,PARTNER_SAMPLE[t]||[]);
+  const data=ST.get(key,PARTNER_SAMPLE[t]||[]);
+  // partner_order 마이그레이션: 금액(col5) 제거, col6→col5, col7→col6, col8→col7 (한 번만)
+  if(t==='order'&&!ST.get('partner_order_amount_removed_v1',false)){
+    let migrated=false;
+    data.forEach(r=>{
+      // 기존 col5가 금액(쉼표 포함 숫자)인 경우만 시프트
+      const v5=r.col5||'';
+      const looksLikeMoney=typeof v5==='string'&&/^[\d,]+$/.test(v5.replace(/\s/g,''));
+      const hasOldCols=r.col6!==undefined||r.col7!==undefined||r.col8!==undefined;
+      if(looksLikeMoney||hasOldCols){
+        r.col5=r.col6||'';r.col6=r.col7||'';r.col7=r.col8||'';
+        delete r.col8;
+        migrated=true;
+      }
+      // 상태값 정규화: 대기→결제완료, 진행중→배송중, 완료→배송완료
+      const statusMap={'대기':'결제완료','진행중':'배송중','완료':'배송완료'};
+      if(statusMap[r.col5]){r.col5=statusMap[r.col5];migrated=true;}
+    });
+    if(migrated)ST.set(key,data);
+    ST.set('partner_order_amount_removed_v1',true);
+  }
+  return data;
 }
 function savePartnerData(t,d){
   const key=t==='order'?'partner_order_v2':'partner_'+t;
@@ -968,8 +988,15 @@ function renderPartnerTable(t){
     let c=`<td class="sheet-row-num"><input type="checkbox" class="row-check" data-type="${t}" data-idx="${origIdx}" />${linked?'<div class="text-[9px] text-purple-600 mt-0.5" title="이커머스 '+r.sourceOrderIds.length+'건과 연동">🔁</div>':''}</td>`;
     for(let j=1;j<=cc;j++){
       const val=r['col'+j]||'';
-      // 발주의 col7=택배사 → select (이커머스 주문/출고와 동일)
-      if(t==='order'&&j===7){
+      // 발주의 col5=상태 → select (이커머스 상태와 동일)
+      if(t==='order'&&j===5){
+        const statusOpts=Object.values(EC_STATUS_LABELS).map(vv=>`<option value="${vv.l}">${vv.l}</option>`).join('');
+        const st=Object.values(EC_STATUS_LABELS).find(vv=>vv.l===val);
+        const colorCls=st?st.c:'bg-gray-100';
+        c+=`<td><select onchange="updPartnerCell('${t}',${origIdx},${j},this.value)" class="text-xs border rounded px-1 py-0.5 ${colorCls}">${statusOpts.replace(`value="${val}"`,`value="${val}" selected`)}</select></td>`;
+      }
+      // 발주의 col6=택배사 → select
+      else if(t==='order'&&j===6){
         const courierList=getCourierList();
         const inList=val&&courierList.includes(val);
         const customOpt=val&&!inList?`<option value="${escapeHtml(val)}" selected>${escapeHtml(val)} (미등록)</option>`:'';
@@ -1005,21 +1032,24 @@ function toggleAllRows(t,c){document.querySelectorAll(`.row-check[data-type="${t
 function updPartnerCell(t,i,c,v){
   const d=getPartnerData(t);if(!d[i])return;
   d[i]['col'+c]=v;savePartnerData(t,d);
-  // 발주(order) 의 col7=택배사 / col8=송장번호 변경 시 이커머스 주문에도 양방향 반영
-  if(t==='order'&&(c===7||c===8)){
+  // 발주(order) col5=상태 / col6=택배사 / col7=송장번호 변경 시 이커머스 주문에도 양방향 반영
+  if(t==='order'&&(c===5||c===6||c===7)){
     const row=d[i];
     const orderIds=row.sourceOrderIds||[];
     if(orderIds.length>0){
       const ecOrders=getEcOrders();let touched=0;
+      // 상태 라벨 → 키 변환
+      const labelToKey={};Object.entries(EC_STATUS_LABELS).forEach(([k,vv])=>{labelToKey[vv.l]=k});
       orderIds.forEach(oid=>{
         const o=ecOrders.find(x=>x.id===oid);if(!o)return;
-        if(c===7)o.courier=v;
-        if(c===8)o.tracking=v;
-        touched++;
+        if(c===5){const newKey=labelToKey[v];if(newKey&&o.status!==newKey){o.status=newKey;touched++;}}
+        if(c===6){if(o.courier!==v){o.courier=v;touched++;}}
+        if(c===7){if(o.tracking!==v){o.tracking=v;touched++;}}
       });
       if(touched>0){
         saveEcOrders(ecOrders);
-        showToast('🔁','이커머스 동기화',`${touched}건 ${c===7?'택배사':'송장번호'} 반영`);
+        const fieldName=c===5?'상태':c===6?'택배사':'송장번호';
+        showToast('🔁','이커머스 동기화',`${touched}건 ${fieldName} 반영`);
         if(document.getElementById('ecOrdersBody'))renderEcOrders();
       }
     }
@@ -3108,7 +3138,7 @@ function renderEcOrders(){
       <td>${escapeHtml(o.customer)}</td>
       <td class="font-mono text-xs">${escapeHtml(o.zipcode||'-')}</td>
       <td class="text-xs text-gray-600 max-w-xs truncate" title="${escapeHtml(o.addr)}">${escapeHtml(o.addr)}</td>
-      <td><select onchange="changeEcOrderStatus(${o.id},this.value)" class="text-xs border rounded px-1 py-0.5 ${st.c}">${statusOpts.replace('value="'+o.status+'"','value="'+o.status+'" selected')}</select></td>
+      <td><select onchange="changeEcOrderStatus(${o.id},this.value)" class="text-xs border rounded px-1 py-0.5 ${st.c}" title="${o.status==='cancelled'?'취소 사유: '+escapeHtml(o.cancelCustomerReason||''):o.status==='onhold'?'보류 사유: '+escapeHtml(o.holdReason||'(미입력)'):''}">${statusOpts.replace('value="'+o.status+'"','value="'+o.status+'" selected')}</select>${o.status==='cancelled'&&o.cancelCustomerReason?`<div class="text-[10px] text-red-500 mt-0.5 truncate" style="max-width:140px" title="${escapeHtml(o.cancelCustomerReason)}">💬 ${escapeHtml(o.cancelCustomerReason.slice(0,30))}${o.cancelCustomerReason.length>30?'…':''}</div>`:''}${o.status==='onhold'&&o.holdReason?`<div class="text-[10px] text-amber-600 mt-0.5 truncate" style="max-width:140px" title="${escapeHtml(o.holdReason)}">⏸ ${escapeHtml(o.holdReason.slice(0,30))}${o.holdReason.length>30?'…':''}</div>`:''}</td>
       <td><select onchange="updEcOrder(${o.id},'courier',this.value)" class="text-xs border rounded px-1 py-0.5 bg-white"><option value="">선택</option>${courierOpts.replace('value="'+o.courier+'"','value="'+o.courier+'" selected')}</select></td>
       <td><input value="${escapeHtml(o.tracking||'')}" oninput="updEcOrder(${o.id},'tracking',this.value)" placeholder="송장번호" class="text-xs border rounded px-2 py-0.5 w-32 bg-white font-mono" /></td>
       <td>${o.status==='preparing'||o.status==='paid'?`<button onclick="shipEcOrder(${o.id})" class="text-xs px-2 py-0.5 bg-black text-white rounded">출고</button>`:o.status==='shipped'?`<button onclick="deliverEcOrder(${o.id})" class="text-xs px-2 py-0.5 bg-green-600 text-white rounded">완료</button>`:'-'}</td>
@@ -3118,8 +3148,73 @@ function renderEcOrders(){
 }
 function changeEcOrderStatus(id,newStatus){
   const d=getEcOrders();const o=d.find(x=>x.id===id);if(!o)return;
-  o.status=newStatus;saveEcOrders(d);renderEcOrders();
+  // 취소 / 출고보류는 사유 입력 모달
+  if(newStatus==='cancelled'){
+    window._pendingStatusChange={id,newStatus};
+    document.getElementById('cancelOrderNo').textContent=o.orderNo||`#${id}`;
+    document.getElementById('cancelCustomerReason').value=o.cancelCustomerReason||'';
+    document.getElementById('cancelInternalMemo').value=o.cancelInternalMemo||'';
+    openModal('cancelOrderModal');
+    // 상태는 모달 확인 후에만 변경 - select 값 복구
+    renderEcOrders();
+    return;
+  }
+  if(newStatus==='onhold'){
+    window._pendingStatusChange={id,newStatus};
+    document.getElementById('holdOrderNo').textContent=o.orderNo||`#${id}`;
+    document.getElementById('holdReasonInput').value=o.holdReason||'';
+    openModal('holdOrderModal');
+    renderEcOrders();
+    return;
+  }
+  _applyOrderStatusChange(o,d,newStatus);
+}
+function _applyOrderStatusChange(o,d,newStatus){
+  o.status=newStatus;
+  saveEcOrders(d);renderEcOrders();
+  // 발주 행 sync (양방향)
+  _syncOrderStatusToPartnerOrder(o.id,newStatus);
   showToast('🔄','상태 변경',`${o.customer} → ${EC_STATUS_LABELS[newStatus]?.l||newStatus}`);
+}
+function _syncOrderStatusToPartnerOrder(orderId,newStatusKey){
+  const partnerOrders=getPartnerData('order');
+  const newLabel=EC_STATUS_LABELS[newStatusKey]?.l;if(!newLabel)return;
+  let touched=0;
+  partnerOrders.forEach(po=>{
+    if((po.sourceOrderIds||[]).includes(orderId)&&po.col5!==newLabel){
+      po.col5=newLabel;touched++;
+    }
+  });
+  if(touched>0){
+    savePartnerData('order',partnerOrders);
+    // 거래처 페이지가 열려 있으면 재렌더
+    if(document.querySelector('#partner-order-table tbody'))initPartnerTables();
+  }
+}
+function confirmCancelOrder(){
+  const p=window._pendingStatusChange;if(!p)return;
+  const reason=document.getElementById('cancelCustomerReason').value.trim();
+  const memo=document.getElementById('cancelInternalMemo').value.trim();
+  if(!reason){alert('고객 전달 사유를 입력하세요');return}
+  const d=getEcOrders();const o=d.find(x=>x.id===p.id);if(!o)return;
+  o.cancelCustomerReason=reason;
+  o.cancelInternalMemo=memo;
+  o.cancelledAt=new Date().toISOString();
+  _applyOrderStatusChange(o,d,'cancelled');
+  closeModal('cancelOrderModal');
+  // 고객 전달 시뮬레이션 (실서비스에선 이메일/SMS 발송)
+  showToast('📨','고객 안내 전송',`${o.customer}: ${reason.slice(0,30)}...`);
+  window._pendingStatusChange=null;
+}
+function confirmHoldOrder(){
+  const p=window._pendingStatusChange;if(!p)return;
+  const reason=document.getElementById('holdReasonInput').value.trim();
+  const d=getEcOrders();const o=d.find(x=>x.id===p.id);if(!o)return;
+  o.holdReason=reason;
+  o.heldAt=new Date().toISOString();
+  _applyOrderStatusChange(o,d,'onhold');
+  closeModal('holdOrderModal');
+  window._pendingStatusChange=null;
 }
 
 // ----- 상품명/옵션명 매핑 -----
@@ -3230,17 +3325,16 @@ function confirmSendToPartner(){
       items[key].sourceOrderIds.push(o.id);
     });
     Object.values(items).forEach(item=>{
-      // v2 컬럼: col1=발주일 / col2=제품 / col3=수량 / col4=단가 / col5=금액 / col6=상태 / col7=택배사 / col8=송장번호
+      // v3 컬럼: col1=발주일 / col2=제품 / col3=수량 / col4=단가 / col5=상태 / col6=택배사 / col7=송장번호
       partnerOrders.push({
         partner,
         col1:today,
         col2:item.option?`${item.product} / ${item.option}`:item.product,
         col3:String(item.qty),
         col4:'',
-        col5:'',
-        col6:'대기',
+        col5:'결제완료',
+        col6:'',
         col7:'',
-        col8:'',
         sourceOrderIds:item.sourceOrderIds
       });
       totalAdded++;
