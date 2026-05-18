@@ -2105,7 +2105,9 @@ function runEcSalesAnalysis(){
 
 // ========== 이커머스: 주문/출고 (목업) ==========
 const EC_PLATFORM_NAMES={naver:'네이버',coupang:'쿠팡',cafe24:'카페24','11st':'11번가',gmarket:'G마켓',etc:'기타'};
-const EC_STATUS_LABELS={paid:{l:'결제완료',c:'bg-blue-50 text-blue-700'},preparing:{l:'출고대기',c:'bg-amber-50 text-amber-700'},shipped:{l:'배송중',c:'bg-purple-50 text-purple-700'},delivered:{l:'배송완료',c:'bg-green-50 text-green-700'},cancelled:{l:'취소',c:'bg-red-50 text-red-600'}};
+const EC_STATUS_LABELS={paid:{l:'결제완료',c:'bg-blue-50 text-blue-700'},preparing:{l:'출고대기',c:'bg-amber-50 text-amber-700'},onhold:{l:'출고보류',c:'bg-orange-50 text-orange-700'},shipped:{l:'배송중',c:'bg-purple-50 text-purple-700'},delivered:{l:'배송완료',c:'bg-green-50 text-green-700'},cancelled:{l:'취소',c:'bg-red-50 text-red-600'}};
+let _ecOrdersStatusFilter='all';
+function setEcOrdersStatusFilter(s){_ecOrdersStatusFilter=s;renderEcOrders();}
 const COURIER_DEFAULT=['CJ대한통운','한진택배','롯데택배','우체국택배','로젠택배','쿠팡로지스틱스','한국통운'];
 function getCourierList(){return ST.get('courier_list_v2',COURIER_DEFAULT.slice())}
 function saveCourierList(arr){ST.set('courier_list_v2',arr)}
@@ -2128,17 +2130,21 @@ function saveEcOrders(d){ST.set('ec_orders_v2',d)}
 function renderEcOrders(){
   const body=document.getElementById('ecOrdersBody');if(!body)return;
   const orders=getEcOrders();
-  // KPI
-  const cnt={paid:0,preparing:0,shipped:0,delivered:0};
+  // KPI 카운트
+  const cnt={paid:0,preparing:0,onhold:0,shipped:0,delivered:0};
   orders.forEach(o=>{if(cnt[o.status]!==undefined)cnt[o.status]++});
-  document.getElementById('ecOrdersPaid').textContent=cnt.paid;
-  document.getElementById('ecOrdersPreparing').textContent=cnt.preparing;
-  document.getElementById('ecOrdersShipped').textContent=cnt.shipped;
-  document.getElementById('ecOrdersDelivered').textContent=cnt.delivered;
+  const elAll=document.getElementById('ecOrdersAll');if(elAll)elAll.textContent=orders.length;
+  document.getElementById('ecOrdersPaid')&&(document.getElementById('ecOrdersPaid').textContent=cnt.paid);
+  document.getElementById('ecOrdersPreparing')&&(document.getElementById('ecOrdersPreparing').textContent=cnt.preparing);
+  document.getElementById('ecOrdersOnhold')&&(document.getElementById('ecOrdersOnhold').textContent=cnt.onhold);
+  document.getElementById('ecOrdersShipped')&&(document.getElementById('ecOrdersShipped').textContent=cnt.shipped);
+  document.getElementById('ecOrdersDelivered')&&(document.getElementById('ecOrdersDelivered').textContent=cnt.delivered);
+  // 활성 카드 강조
+  document.querySelectorAll('.ec-status-card').forEach(c=>c.classList.toggle('active',c.dataset.statuscard===_ecOrdersStatusFilter));
   // 필터
   const pf=document.getElementById('ecOrdersPlatformFilter')?.value||'all';
   const af=document.getElementById('ecOrdersAccountFilter')?.value||'all';
-  const sf=document.getElementById('ecOrdersStatusFilter')?.value||'all';
+  const sf=_ecOrdersStatusFilter;
   // 계정 필터 옵션 갱신 (주문 + 등록 계정 합집합)
   const accSel=document.getElementById('ecOrdersAccountFilter');
   if(accSel){
@@ -2323,7 +2329,7 @@ function downloadEcOrdersExcel(){
   const orders=getEcOrders();
   const pf=document.getElementById('ecOrdersPlatformFilter')?.value||'all';
   const af=document.getElementById('ecOrdersAccountFilter')?.value||'all';
-  const sf=document.getElementById('ecOrdersStatusFilter')?.value||'all';
+  const sf=_ecOrdersStatusFilter;
   let list=orders;
   if(checked.length>0)list=list.filter(o=>checked.includes(o.id));
   else{

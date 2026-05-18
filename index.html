@@ -168,6 +168,11 @@
   .sidebar-sub{margin-left:8px;padding-left:8px;border-left:1px solid #e9e8e3}
   [data-theme="dark"] .sidebar-sub{border-color:#363636}
   .sheet-row-num{background:#f7f6f3;color:#6f6e6a;width:32px;text-align:center !important;font-size:11px}
+  .ec-status-card{transition:all .15s;background:#fff;cursor:pointer}
+  .ec-status-card:hover{border-color:#9ca3af}
+  .ec-status-card.active{border-color:#111;border-width:2px;background:#f9fafb;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  [data-theme="dark"] .ec-status-card{background:#252525;border-color:#363636}
+  [data-theme="dark"] .ec-status-card.active{border-color:#fff;background:#1e1e1e}
   [data-theme="dark"] .sheet-row-num{background:#2a2a2a}
   .emoticon{display:inline-block;padding:2px 8px;border-radius:6px;background:#fff;border:1px solid #e5e7eb;cursor:pointer;font-size:14px;margin:2px}
   .emoticon:hover{background:#f7f6f3;transform:scale(1.05)}
@@ -676,14 +681,16 @@
           <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAll('sales',this.checked)" /></th><th>일자</th><th>브랜드</th><th>제품</th><th>판매량</th><th>매출</th></tr></thead><tbody id="ecSalesBody"></tbody></table></div>
         </div>
         <div id="sub-ecommerce-orders" class="sub-page">
-          <!-- KPI 카드 -->
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">결제완료</p><p class="text-xl font-bold text-blue-600" id="ecOrdersPaid">0</p></div>
-            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">출고대기</p><p class="text-xl font-bold text-amber-600" id="ecOrdersPreparing">0</p></div>
-            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">배송중</p><p class="text-xl font-bold text-purple-600" id="ecOrdersShipped">0</p></div>
-            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">배송완료</p><p class="text-xl font-bold text-green-600" id="ecOrdersDelivered">0</p></div>
+          <!-- KPI 카드 (클릭하면 상태별 필터) -->
+          <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-4">
+            <button type="button" data-statuscard="all" onclick="setEcOrdersStatusFilter('all')" class="ec-status-card border border-gray-200 rounded-lg p-3 text-left hover:shadow-sm"><p class="text-xs text-gray-500">전체</p><p class="text-xl font-bold text-gray-700" id="ecOrdersAll">0</p></button>
+            <button type="button" data-statuscard="paid" onclick="setEcOrdersStatusFilter('paid')" class="ec-status-card border border-gray-200 rounded-lg p-3 text-left hover:shadow-sm"><p class="text-xs text-gray-500">결제완료</p><p class="text-xl font-bold text-blue-600" id="ecOrdersPaid">0</p></button>
+            <button type="button" data-statuscard="preparing" onclick="setEcOrdersStatusFilter('preparing')" class="ec-status-card border border-gray-200 rounded-lg p-3 text-left hover:shadow-sm"><p class="text-xs text-gray-500">출고대기</p><p class="text-xl font-bold text-amber-600" id="ecOrdersPreparing">0</p></button>
+            <button type="button" data-statuscard="onhold" onclick="setEcOrdersStatusFilter('onhold')" class="ec-status-card border border-gray-200 rounded-lg p-3 text-left hover:shadow-sm"><p class="text-xs text-gray-500">출고보류</p><p class="text-xl font-bold text-orange-600" id="ecOrdersOnhold">0</p></button>
+            <button type="button" data-statuscard="shipped" onclick="setEcOrdersStatusFilter('shipped')" class="ec-status-card border border-gray-200 rounded-lg p-3 text-left hover:shadow-sm"><p class="text-xs text-gray-500">배송중</p><p class="text-xl font-bold text-purple-600" id="ecOrdersShipped">0</p></button>
+            <button type="button" data-statuscard="delivered" onclick="setEcOrdersStatusFilter('delivered')" class="ec-status-card border border-gray-200 rounded-lg p-3 text-left hover:shadow-sm"><p class="text-xs text-gray-500">배송완료</p><p class="text-xl font-bold text-green-600" id="ecOrdersDelivered">0</p></button>
           </div>
-          <!-- 플랫폼/계정/상태 필터 -->
+          <!-- 플랫폼/계정 필터 -->
           <div class="flex flex-wrap items-center gap-2 mb-3">
             <select id="ecOrdersPlatformFilter" onchange="renderEcOrders()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white">
               <option value="all">전체 플랫폼</option>
@@ -696,14 +703,6 @@
             </select>
             <select id="ecOrdersAccountFilter" onchange="renderEcOrders()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white">
               <option value="all">전체 계정</option>
-            </select>
-            <select id="ecOrdersStatusFilter" onchange="renderEcOrders()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white">
-              <option value="all">전체 상태</option>
-              <option value="paid">결제완료</option>
-              <option value="preparing">출고대기</option>
-              <option value="shipped">배송중</option>
-              <option value="delivered">배송완료</option>
-              <option value="cancelled">취소</option>
             </select>
             <button onclick="syncEcOrders()" class="px-3 py-1 bg-blue-600 text-white text-xs rounded">🔄 플랫폼 동기화</button>
             <button onclick="bulkShipEcOrders()" class="px-3 py-1 bg-black text-white text-xs rounded">📦 일괄 출고</button>
