@@ -271,7 +271,7 @@ function navigateTo(page,sub){
   if(page==='ads')renderAds();
   if(page==='events')renderEvents();
   if(page==='design')renderDesign();
-  if(page==='ecommerce'){renderEcommerce();renderEcOrders();}
+  if(page==='ecommerce'){renderEcommerce();renderEcOrders();_restoreInvAutoSyncToggle();}
   if(page==='partners'){
     // ★ 거래처 진입 시 CURRENT를 users 저장소와 동기화 (삭제 버그 방지)
     if(CURRENT){const fresh=getUsers()[CURRENT.username];if(fresh){CURRENT.partners=fresh.partners||[];ST.set('currentUser',CURRENT)}}
@@ -2022,7 +2022,21 @@ function ecAddRow(t){
 }
 function ecDelRow(t){const ids=Array.from(document.querySelectorAll('.ecChk-'+t+':checked')).map(c=>parseInt(c.dataset.id));if(ids.length===0){alert('선택하세요');return}if(!confirm('삭제?'))return;saveEcData(t,getEcData(t).filter(x=>!ids.includes(x.id)));renderEcommerce();showToast('🗑️','삭제됨','')}
 function ecToggleAll(t,c){document.querySelectorAll('.ecChk-'+t).forEach(x=>x.checked=c)}
-function updEc(t,id,k,v){const d=getEcData(t);const x=d.find(y=>y.id===id);if(x){if(['qty','revenue','stock','min','cost','price','orderQty'].includes(k))x[k]=parseFloat(v.replace(/[^\d.-]/g,''))||0;else if(k==='date')x[k]=parseDateYY(v);else x[k]=v;saveEcData(t,d);if(t==='inventory')renderEcInventory()}}
+function updEc(t,id,k,v){
+  const d=getEcData(t);const x=d.find(y=>y.id===id);if(!x)return;
+  const oldVal=x[k];
+  if(['qty','revenue','stock','min','cost','price','orderQty'].includes(k))x[k]=parseFloat(v.replace(/[^\d.-]/g,''))||0;
+  else if(k==='date')x[k]=parseDateYY(v);
+  else x[k]=v;
+  saveEcData(t,d);
+  if(t==='inventory'){
+    // 재고 수량 변경 시 자동 PUSH (토글 ON일 때)
+    if(k==='stock'&&oldVal!==x.stock&&getInvAutoSync()){
+      pushInventoryToPlatform(x,oldVal);
+    }
+    renderEcInventory();
+  }
+}
 
 // ----- 재고 7일 평균/상태/필터 -----
 let _invSourceFilter='all';
@@ -2728,6 +2742,115 @@ async function uploadCjEflexCsv(input){
   }
   saveEcData('inventory',inv);renderEcommerce();
   showToast('📥','CJ Eflex CSV 업로드',`신규 ${added}건 · 갱신 ${updated}건`);
+}
+
+// ========== 재고 양방향 동기화 (자동 PUSH + SKU 매핑 + 로그) ==========
+function getInvAutoSync(){return ST.get('inv_auto_sync',false)}
+function toggleInvAutoSync(on){ST.set('inv_auto_sync',!!on);showToast(on?'📤':'⏸',`자동 PUSH ${on?'ON':'OFF'}`,on?'재고 수정 시 출처 플랫폼으로 자동 전송':'')}
+function _restoreInvAutoSyncToggle(){const el=document.getElementById('invAutoSyncToggle');if(el)el.checked=getInvAutoSync()}
+
+// SKU 매핑 데이터
+function getSkuMapping(){return ST.get('sku_mapping_v1',{})}
+function saveSkuMapping(m){ST.set('sku_mapping_v1',m)}
+function updSkuMapping(sku,field,val){
+  const m=getSkuMapping();
+  if(!m[sku])m[sku]={};
+  m[sku][field]=val;
+  saveSkuMapping(m);
+}
+function openSkuMappingModal(){renderSkuMappingTable();openModal('skuMappingModal')}
+function renderSkuMappingTable(){
+  const body=document.getElementById('skuMappingBody');if(!body)return;
+  const inv=getEcData('inventory');
+  const mapping=getSkuMapping();
+  if(inv.length===0){body.innerHTML='<tr><td colspan="6" class="text-center text-gray-400 py-4">재고 항목이 없습니다.</td></tr>';return}
+  body.innerHTML=inv.map(i=>{
+    const sku=i.sku||'';
+    const m=mapping[sku]||{};
+    return `<tr>
+      <td class="font-mono text-xs">${escapeHtml(sku)}</td>
+      <td class="text-xs">${escapeHtml(i.product||'')}</td>
+      <td contenteditable oninput="updSkuMapping('${escapeHtml(sku)}','naverProductNo',this.textContent)" class="font-mono text-xs">${escapeHtml(m.naverProductNo||'')}</td>
+      <td contenteditable oninput="updSkuMapping('${escapeHtml(sku)}','naverOptionId',this.textContent)" class="font-mono text-xs">${escapeHtml(m.naverOptionId||'')}</td>
+      <td contenteditable oninput="updSkuMapping('${escapeHtml(sku)}','coupangVendorItemId',this.textContent)" class="font-mono text-xs">${escapeHtml(m.coupangVendorItemId||'')}</td>
+      <td contenteditable oninput="updSkuMapping('${escapeHtml(sku)}','ezadminCode',this.textContent)" class="font-mono text-xs">${escapeHtml(m.ezadminCode||'')}</td>
+    </tr>`;
+  }).join('');
+}
+
+// 변경 이력
+function getInvSyncLog(){return ST.get('inv_sync_log',[])}
+function _saveInvSyncLog(log){ST.set('inv_sync_log',log.slice(0,100))}
+function _logInvSync(entry){
+  const log=getInvSyncLog();
+  log.unshift({ts:new Date().toISOString(),...entry});
+  _saveInvSyncLog(log);
+}
+function openInvSyncLogModal(){renderInvSyncLogTable();openModal('invSyncLogModal')}
+function clearInvSyncLog(){
+  if(!confirm('전체 변경 이력을 삭제하시겠습니까?'))return;
+  ST.set('inv_sync_log',[]);renderInvSyncLogTable();showToast('🗑','이력 삭제','');
+}
+function renderInvSyncLogTable(){
+  const body=document.getElementById('invSyncLogBody');if(!body)return;
+  const log=getInvSyncLog();
+  if(log.length===0){body.innerHTML='<tr><td colspan="7" class="text-center text-gray-400 py-4">기록 없음</td></tr>';return}
+  const sourceLabels={naver_store:'네이버',coupang:'쿠팡',ezadmin:'이지어드민',cj_eflex:'CJ Eflex',manual:'수기'};
+  body.innerHTML=log.map(e=>{
+    const t=new Date(e.ts);
+    const tStr=`${fmtDateYY(t.toISOString().slice(0,10))} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}:${String(t.getSeconds()).padStart(2,'0')}`;
+    const statusColor=e.status==='success'?'bg-green-50 text-green-700':e.status==='failed'?'bg-red-50 text-red-700':e.status==='skipped'?'bg-gray-100 text-gray-500':'bg-amber-50 text-amber-700';
+    const dirIcon=e.direction==='push'?'📤 PUSH':e.direction==='pull'?'📥 PULL':e.direction==='local'?'✏️ 수기':'';
+    return `<tr>
+      <td class="font-mono text-[10px]">${tStr}</td>
+      <td class="font-mono text-xs">${escapeHtml(e.sku||'-')}</td>
+      <td>${escapeHtml(sourceLabels[e.source]||e.source||'-')}</td>
+      <td class="text-xs">${e.oldStock??'-'} → <strong>${e.newStock??'-'}</strong></td>
+      <td class="text-xs">${dirIcon}</td>
+      <td><span class="text-xs px-2 py-0.5 rounded ${statusColor}">${e.status}</span></td>
+      <td class="text-[10px] text-gray-500">${escapeHtml(e.note||'')}</td>
+    </tr>`;
+  }).join('');
+}
+
+// PUSH 시뮬레이션 (실제 API 호출 위치)
+async function pushInventoryToPlatform(item,oldStock){
+  const source=item.source||'manual';
+  if(source==='manual'){
+    // 수기 항목은 push 대상 없음
+    _logInvSync({sku:item.sku,source:'manual',oldStock,newStock:item.stock,direction:'local',status:'success',note:'수기 변경 (push 대상 없음)'});
+    return;
+  }
+  if(source==='cj_eflex'){
+    _logInvSync({sku:item.sku,source,oldStock,newStock:item.stock,direction:'push',status:'skipped',note:'CJ Eflex는 표준 OpenAPI 미제공 (CSV 업로드 전용)'});
+    return;
+  }
+  // 매핑 확인
+  const mapping=getSkuMapping()[item.sku]||{};
+  const mappingFields={naver_store:['naverProductNo'],coupang:['coupangVendorItemId'],ezadmin:['ezadminCode']};
+  const required=mappingFields[source]||[];
+  const missing=required.filter(f=>!mapping[f]);
+  if(missing.length>0){
+    _logInvSync({sku:item.sku,source,oldStock,newStock:item.stock,direction:'push',status:'failed',note:`매핑 누락: ${missing.join(', ')} (🔗 SKU 매핑에서 등록 필요)`});
+    showToast('⚠️','PUSH 실패',`${item.sku}: 매핑 누락`);
+    return;
+  }
+  // 활성 계정 확인
+  const accs=(getExtApiSettings()[source]?.accounts||[]).filter(a=>a.enabled);
+  if(accs.length===0){
+    _logInvSync({sku:item.sku,source,oldStock,newStock:item.stock,direction:'push',status:'pending',note:`활성 계정 없음 — 설정 ▸ API 연동에서 등록 필요 (목업)`});
+  }else{
+    // 실제 API 호출 위치 (현재는 시뮬레이션 - 80% 성공)
+    const ok=Math.random()<0.8;
+    if(ok){
+      _logInvSync({sku:item.sku,source,oldStock,newStock:item.stock,direction:'push',status:'success',note:`${accs[0].label} 계정으로 PUSH 완료 (시뮬레이션)`});
+    }else{
+      _logInvSync({sku:item.sku,source,oldStock,newStock:item.stock,direction:'push',status:'failed',note:`API 호출 실패 (시뮬레이션 - 재시도 필요)`});
+      showToast('⚠️','PUSH 실패',`${item.sku} → ${source}`);
+      return;
+    }
+  }
+  showToast('📤',`${source} PUSH`,`${item.sku}: ${oldStock} → ${item.stock}`);
 }
 
 // ========== 과거 휴가 내역 ==========

@@ -740,6 +740,12 @@
             <button onclick="syncInventoryFromPlatform('ezadmin')" class="px-3 py-1 bg-purple-600 text-white text-xs rounded">🔄 이지어드민</button>
             <button onclick="document.getElementById('cjEflexCsvInput').click()" class="px-3 py-1 bg-orange-600 text-white text-xs rounded" title="CJ Eflex는 표준 OpenAPI 미제공 — CSV 업로드로 처리">📥 CJ Eflex CSV</button>
             <input type="file" id="cjEflexCsvInput" accept=".csv" onchange="uploadCjEflexCsv(this)" class="hidden" />
+            <label class="flex items-center gap-1.5 text-xs px-2 py-1 border border-gray-300 rounded bg-white cursor-pointer" title="ON: 재고 수정 시 해당 출처로 자동 PUSH (양방향 동기화)">
+              <input type="checkbox" id="invAutoSyncToggle" onchange="toggleInvAutoSync(this.checked)" class="w-3.5 h-3.5 accent-black" />
+              <span>📤 자동 push</span>
+            </label>
+            <button onclick="openSkuMappingModal()" class="px-3 py-1 border border-gray-300 text-xs rounded">🔗 SKU 매핑</button>
+            <button onclick="openInvSyncLogModal()" class="px-3 py-1 border border-gray-300 text-xs rounded">📋 변경 이력</button>
             <div class="ml-auto flex gap-2">
               <button onclick="ecAddRow('inventory')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 수기 추가</button>
               <button onclick="ecDelRow('inventory')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button>
@@ -1101,6 +1107,60 @@
       </div>
       <!-- 결과 -->
       <div id="ecAnResult" class="text-xs text-gray-400 text-center py-8">[▶ 분석 실행]을 눌러 결과를 확인하세요.</div>
+    </div>
+  </div>
+</div>
+
+<!-- SKU 매핑 관리 모달 -->
+<div id="skuMappingModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
+      <h2 class="text-lg font-bold">🔗 SKU 매핑 관리</h2>
+      <button onclick="closeModal('skuMappingModal')" class="hover-bg p-1 rounded">✕</button>
+    </div>
+    <div class="p-5">
+      <div class="bg-blue-50 border border-blue-200 rounded p-3 mb-4 text-xs text-blue-900">
+        <strong>📘 안내</strong><br>
+        · 내부 SKU와 각 플랫폼의 상품 식별자를 매핑하면 자동 push 시 정확한 상품으로 전송됩니다.<br>
+        · <strong>네이버</strong>: <code>originProductNo</code> + <code>optionId</code> (옵션 있을 시)<br>
+        · <strong>쿠팡</strong>: <code>vendorItemId</code> (옵션별로 다름)<br>
+        · <strong>이지어드민</strong>: 이지어드민 자체 상품코드<br>
+        · 매핑이 없으면 PUSH 시 "매핑 누락" 으로 기록됩니다.
+      </div>
+      <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
+        <table class="sheet-table">
+          <thead><tr>
+            <th>내부 SKU(옵션ID)</th><th>제품명</th>
+            <th>네이버 originProductNo</th><th>네이버 optionId</th>
+            <th>쿠팡 vendorItemId</th>
+            <th>이지어드민 상품코드</th>
+          </tr></thead>
+          <tbody id="skuMappingBody"></tbody>
+        </table>
+      </div>
+      <p class="text-[10px] text-gray-500 mt-3">💡 셀을 더블클릭하여 편집하세요. 변경 사항은 자동 저장됩니다.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 재고 변경 이력 모달 -->
+<div id="invSyncLogModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
+      <h2 class="text-lg font-bold">📋 재고 변경 이력</h2>
+      <div class="flex gap-2">
+        <button onclick="clearInvSyncLog()" class="text-xs px-2 py-1 border border-red-200 text-red-600 rounded">🗑 전체 삭제</button>
+        <button onclick="closeModal('invSyncLogModal')" class="hover-bg p-1 rounded">✕</button>
+      </div>
+    </div>
+    <div class="p-5">
+      <p class="text-xs text-gray-500 mb-3">최근 100건의 재고 변경 / push 이력입니다.</p>
+      <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
+        <table class="sheet-table">
+          <thead><tr><th>시각</th><th>SKU</th><th>출처</th><th>변경</th><th>방향</th><th>결과</th><th>비고</th></tr></thead>
+          <tbody id="invSyncLogBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
