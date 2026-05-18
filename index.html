@@ -402,12 +402,11 @@
       <a href="javascript:void(0)" onclick="navigateTo('messenger')" data-nav="messenger" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">💬</span><span class="flex-1">메신저</span><span id="messengerNavBadge" class="unread-dot" style="display:none">0</span></a>
       <a href="javascript:void(0)" onclick="navigateTo('chatgpt')" data-nav="chatgpt" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">🤖</span>ChatGPT</a>
       <div class="mt-2">
-        <a href="javascript:void(0)" onclick="navigateTo('partners','order')" data-nav="partners" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">🤝</span>거래처<span class="ml-auto text-xs text-gray-400">▾</span></a>
+        <a href="javascript:void(0)" onclick="navigateTo('partners','order')" data-nav="partners" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">🤝</span>협력사<span class="ml-auto text-xs text-gray-400">▾</span></a>
         <div data-submenu="partners" class="hidden sidebar-sub mt-1">
           <a href="javascript:void(0)" onclick="navigateSub('partners','order')" data-subnav="partners-order" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">📋 발주</a>
           <a href="javascript:void(0)" onclick="navigateSub('partners','sales')" data-subnav="partners-sales" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">💵 판매</a>
           <a href="javascript:void(0)" onclick="navigateSub('partners','inventory')" data-subnav="partners-inventory" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">📦 재고</a>
-          <a href="javascript:void(0)" onclick="navigateSub('partners','settle')" data-subnav="partners-settle" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">🧾 정산</a>
         </div>
       </div>
       <div>
@@ -646,10 +645,10 @@
     <!-- 거래처 -->
     <div id="page-partners" class="page">
       <div class="max-w-7xl mx-auto px-12 py-10">
-        <div class="mb-6"><div class="text-5xl mb-3">🤝</div><h1 class="text-4xl font-extrabold">거래처</h1><p class="text-gray-500 text-sm mt-2" id="partnerHeader">소속 거래처: -</p></div>
+        <div class="mb-6"><div class="text-5xl mb-3">🤝</div><h1 class="text-4xl font-extrabold">협력사</h1><p class="text-gray-500 text-sm mt-2" id="partnerHeader">소속 협력사: -</p></div>
         <!-- ★ 거래처 필터 -->
         <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 rounded-lg p-3 mb-4 flex flex-wrap items-center gap-2">
-          <span class="text-xs text-gray-500 font-semibold">거래처 선택:</span>
+          <span class="text-xs text-gray-500 font-semibold">협력사 선택:</span>
           <select id="partnerFilter" onchange="changePartnerFilter(this.value)" class="px-3 py-1.5 border border-gray-300 rounded text-sm bg-white"></select>
           <span class="text-xs text-gray-400 ml-2" id="partnerFilterInfo"></span>
         </div>
@@ -657,10 +656,41 @@
           <button data-subnav="partners-order" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('partners','order')">📋 발주</button>
           <button data-subnav="partners-sales" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('partners','sales')">💵 판매</button>
           <button data-subnav="partners-inventory" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('partners','inventory')">📦 재고</button>
-          <button data-subnav="partners-settle" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('partners','settle')">🧾 정산</button>
         </div>
-        <div id="sub-partners-order" class="sub-page active"><div class="border border-gray-200 rounded-lg overflow-hidden"><div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between"><h3 class="text-sm font-bold">📋 발주</h3><div class="flex gap-2"><button onclick="addPartnerRow('order')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 행</button><button onclick="deletePartnerSelected('order')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div><div class="overflow-x-auto"><table class="sheet-table" id="partner-order-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllRows('order',this.checked)" /></th><th>발주일</th><th>제품</th><th>수량</th><th>단가</th><th>상태</th><th>택배사</th><th>송장번호</th></tr></thead><tbody></tbody></table></div></div></div>
-        <div id="sub-partners-sales" class="sub-page"><div class="border border-gray-200 rounded-lg overflow-hidden"><div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between"><h3 class="text-sm font-bold">💵 판매</h3><div class="flex gap-2"><button onclick="addPartnerRow('sales')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 행</button><button onclick="deletePartnerSelected('sales')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div><div class="overflow-x-auto"><table class="sheet-table" id="partner-sales-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllRows('sales',this.checked)" /></th><th>판매일</th><th>제품</th><th>판매처</th><th>수량</th><th>매출</th><th>순매출</th></tr></thead><tbody></tbody></table></div></div></div>
+        <div id="sub-partners-order" class="sub-page active"><div class="border border-gray-200 rounded-lg overflow-hidden"><div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between"><h3 class="text-sm font-bold">📋 발주</h3><div class="flex gap-2"><button onclick="addPartnerRow('order')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 행</button><button onclick="deletePartnerSelected('order')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div><div class="bg-blue-50 border-b border-blue-200 px-4 py-2 text-[11px] text-blue-900">💡 상태가 <strong>배송완료</strong> 또는 <strong>취소</strong>로 변경되면 자동으로 [💵 판매] 탭으로 이동됩니다.</div><div class="overflow-x-auto"><table class="sheet-table" id="partner-order-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllRows('order',this.checked)" /></th><th>발주일</th><th>상품명</th><th>옵션명</th><th>수량</th><th>단가</th><th>상태</th><th>택배사</th><th>송장번호</th></tr></thead><tbody></tbody></table></div></div></div>
+        <div id="sub-partners-sales" class="sub-page">
+          <!-- 기간/KPI -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <div class="border border-gray-200 rounded-lg p-3">
+              <p class="text-xs text-gray-500 mb-1">📅 기간</p>
+              <div class="flex items-center gap-1 flex-wrap">
+                <input type="date" id="salesFromDate" onchange="renderPartnerSalesPage()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white" />
+                <span class="text-xs text-gray-400">~</span>
+                <input type="date" id="salesToDate" onchange="renderPartnerSalesPage()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white" />
+                <button onclick="resetSalesDateFilter()" class="text-[10px] px-2 py-1 border border-gray-200 rounded">초기화</button>
+              </div>
+            </div>
+            <button type="button" onclick="openSalesQtyBreakdown()" class="border border-gray-200 rounded-lg p-3 text-left hover:shadow-md transition">
+              <p class="text-xs text-gray-500 mb-1">📦 전체 판매수량 <span class="text-[10px] text-blue-600">▸ 제품별</span></p>
+              <p class="text-2xl font-bold" id="salesTotalQty">0</p>
+            </button>
+            <button type="button" onclick="openSalesAmountBreakdown()" class="border border-gray-200 rounded-lg p-3 text-left hover:shadow-md transition">
+              <p class="text-xs text-gray-500 mb-1">💰 정산금 <span class="text-[10px] text-blue-600">▸ 상세</span></p>
+              <p class="text-2xl font-bold text-blue-600" id="salesTotalAmount">₩0</p>
+            </button>
+          </div>
+          <!-- 판매 테이블 -->
+          <div class="border border-gray-200 rounded-lg overflow-hidden">
+            <div class="bg-gray-50 border-b border-gray-200 px-4 py-3"><h3 class="text-sm font-bold">💵 판매 내역</h3></div>
+            <div class="bg-blue-50 border-b border-blue-200 px-4 py-2 text-[11px] text-blue-900">💡 발주에서 <strong>배송완료</strong>/<strong>취소</strong> 상태로 변경된 항목이 자동으로 여기로 이동합니다.</div>
+            <div class="overflow-x-auto">
+              <table class="sheet-table" id="partner-sales-table">
+                <thead><tr><th class="sheet-row-num">#</th><th>날짜</th><th>제품명</th><th>옵션명</th><th>수량</th><th>단가</th><th>합계</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
         <div id="sub-partners-inventory" class="sub-page">
           <div class="border border-gray-200 rounded-lg overflow-hidden">
             <div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between">
@@ -669,11 +699,10 @@
             </div>
             <div class="bg-blue-50 border-b border-blue-200 px-4 py-2 text-[11px] text-blue-900">💡 이커머스 ▸ 원가/마진에서 제품별 거래처가 지정된 항목만 자동으로 표시됩니다.</div>
             <div class="overflow-x-auto">
-              <table class="sheet-table" id="partner-inventory-table"><thead><tr><th class="sheet-row-num">#</th><th>SKU(옵션ID)</th><th>제품</th><th>거래처</th><th>현재고</th><th>7일평균/일</th><th>상태</th><th>출처</th></tr></thead><tbody></tbody></table>
+              <table class="sheet-table" id="partner-inventory-table"><thead><tr><th class="sheet-row-num">#</th><th>SKU(옵션ID)</th><th>제품</th><th>협력사</th><th>현재고</th><th>7일평균/일</th><th>상태</th><th>출처</th></tr></thead><tbody></tbody></table>
             </div>
           </div>
         </div>
-        <div id="sub-partners-settle" class="sub-page"><div class="border border-gray-200 rounded-lg overflow-hidden"><div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between"><h3 class="text-sm font-bold">🧾 정산</h3><div class="flex gap-2"><button onclick="addPartnerRow('settle')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 행</button><button onclick="deletePartnerSelected('settle')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div><div class="overflow-x-auto"><table class="sheet-table" id="partner-settle-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllRows('settle',this.checked)" /></th><th>정산기간</th><th>판매처</th><th>매출</th><th>원가</th><th>마진</th><th>상태</th></tr></thead><tbody></tbody></table></div></div></div>
       </div>
     </div>
 
@@ -750,7 +779,7 @@
           <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
             <thead><tr>
               <th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAllOrders(this.checked)" /></th>
-              <th>플랫폼</th><th>스토어명</th><th>주문번호</th><th>주문일</th><th>상품</th><th>옵션</th><th>거래처</th><th>수량</th><th>주문자</th><th>우편번호</th><th>주소</th><th>상태</th><th>택배사</th><th>송장번호</th><th>관리</th>
+              <th>플랫폼</th><th>스토어명</th><th>주문번호</th><th>주문일</th><th>상품</th><th>옵션</th><th>협력사</th><th>수량</th><th>주문자</th><th>우편번호</th><th>주소</th><th>상태</th><th>택배사</th><th>송장번호</th><th>관리</th>
             </tr></thead>
             <tbody id="ecOrdersBody"></tbody>
           </table></div>
@@ -807,7 +836,7 @@
             <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
               <thead><tr>
                 <th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAll('cost',this.checked)" /></th>
-                <th>제품</th><th>거래처</th><th>구성품</th><th>원가</th><th>배송비</th><th>판매가</th><th>수수료</th><th>마진액</th><th>마진율</th>
+                <th>제품</th><th>협력사</th><th>구성품</th><th>원가</th><th>배송비</th><th>판매가</th><th>수수료</th><th>마진액</th><th>마진율</th>
               </tr></thead>
               <tbody id="ecCostBody"></tbody>
             </table></div>
@@ -1141,7 +1170,7 @@
               <button onclick="switchSettingTab('requests')" data-tab="requests" class="settings-tab w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left hover-bg">🛡️ 가입 요청</button>
               <button onclick="switchSettingTab('members')" data-tab="members" class="settings-tab w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left hover-bg">👥 멤버 관리</button>
               <button onclick="switchSettingTab('deptrole')" data-tab="deptrole" class="settings-tab w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left hover-bg">🏢 부서·권한 관리</button>
-              <button onclick="switchSettingTab('partnersmgmt')" data-tab="partnersmgmt" class="settings-tab w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left hover-bg">🤝 거래처 관리</button>
+              <button onclick="switchSettingTab('partnersmgmt')" data-tab="partnersmgmt" class="settings-tab w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left hover-bg">🤝 협력사 관리</button>
               <button onclick="switchSettingTab('aiapi')" data-tab="aiapi" class="settings-tab w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left hover-bg">🤖 AI API 설정</button>
               <button onclick="switchSettingTab('extapi')" data-tab="extapi" class="settings-tab w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left hover-bg">🔌 API 연동 (이커머스·광고)</button>
             </nav>
@@ -1184,7 +1213,7 @@
               <button onclick="addDept()" class="px-3 py-1.5 bg-black text-white text-xs rounded-lg">+ 부서 추가</button>
             </div>
             <div id="tab-partnersmgmt" class="setting-content hidden">
-              <h2 class="text-lg font-bold mb-2">거래처 관리</h2>
+              <h2 class="text-lg font-bold mb-2">협력사 관리</h2>
               <p class="text-xs text-gray-500 mb-4">거래처를 추가/삭제하면 멤버 관리에서 멤버별로 매핑할 수 있습니다.</p>
               <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto mb-4">
                 <table class="sheet-table"><thead><tr><th class="sheet-row-num">#</th><th>거래처명</th><th>담당자</th><th>연락처</th><th>비고</th><th>관리</th></tr></thead><tbody id="partnerMgmtList"></tbody></table>
@@ -1326,6 +1355,34 @@
       </div>
       <!-- 결과 -->
       <div id="ecAnResult" class="text-xs text-gray-400 text-center py-8">[▶ 분석 실행]을 눌러 결과를 확인하세요.</div>
+    </div>
+  </div>
+</div>
+
+<!-- 판매 수량 분해 모달 -->
+<div id="salesQtyBreakdownModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-bold">📦 제품별 판매수량</h2>
+      <button onclick="closeModal('salesQtyBreakdownModal')" class="hover-bg p-1 rounded">✕</button>
+    </div>
+    <div class="p-5">
+      <p class="text-xs text-gray-500 mb-3" id="salesQtyBreakdownPeriod"></p>
+      <div id="salesQtyBreakdownBody"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 정산금 상세 모달 -->
+<div id="salesAmountBreakdownModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
+      <h2 class="text-lg font-bold">💰 정산금 상세 내역</h2>
+      <button onclick="closeModal('salesAmountBreakdownModal')" class="hover-bg p-1 rounded">✕</button>
+    </div>
+    <div class="p-5">
+      <p class="text-xs text-gray-500 mb-3" id="salesAmountBreakdownPeriod"></p>
+      <div id="salesAmountBreakdownBody"></div>
     </div>
   </div>
 </div>

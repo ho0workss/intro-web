@@ -128,7 +128,7 @@ function refreshUserUI(){
   document.getElementById('profileName')&&(document.getElementById('profileName').textContent=CURRENT.name);
   document.getElementById('profileMeta')&&(document.getElementById('profileMeta').textContent='@'+CURRENT.username+' · '+roleLabel(CURRENT.role)+' · '+CURRENT.dept);
   document.getElementById('profileAvatar')&&(document.getElementById('profileAvatar').textContent=CURRENT.name[0]);
-  document.getElementById('partnerHeader')&&(document.getElementById('partnerHeader').textContent='소속 거래처: '+(CURRENT.partners?.length?CURRENT.partners.join(', '):'(없음)'));
+  document.getElementById('partnerHeader')&&(document.getElementById('partnerHeader').textContent='소속 협력사: '+(CURRENT.partners?.length?CURRENT.partners.join(', '):'(없음)'));
 }
 function roleLabel(r){return r==='admin'?'관리자':r==='manager'?'매니저':'멤버'}
 
@@ -150,7 +150,7 @@ function closeMobileSidebar(){
   if(bd)bd.classList.remove('show');
 }
 // ========== 모바일 셸 (헤더/탭바/FAB) ==========
-const MOBILE_PAGE_TITLES={home:'홈',messenger:'메신저',chatgpt:'ChatGPT',meetings:'회의','meeting-detail':'회의',leave:'휴가 관리',partners:'거래처',ecommerce:'이커머스',events:'행사',design:'디자인',ads:'마케팅',other:'기타',settings:'설정'};
+const MOBILE_PAGE_TITLES={home:'홈',messenger:'메신저',chatgpt:'ChatGPT',meetings:'회의','meeting-detail':'회의',leave:'휴가 관리',partners:'협력사',ecommerce:'이커머스',events:'행사',design:'디자인',ads:'마케팅',other:'기타',settings:'설정'};
 const MOBILE_FAB_CONFIG={
   home:{action:'__menu__'},
   leave:{action:'openLeaveModal()'},
@@ -611,7 +611,7 @@ function openApproveModal(id){
   document.getElementById('approveRole').innerHTML=roles.map(rr=>`<option value="${rr.id}" ${rr.id==='member'?'selected':''}>${escapeHtml(rr.name)}</option>`).join('');
   // ★ 거래처 선택 옵션
   const partners=getPartners();
-  document.getElementById('approvePartnersList').innerHTML=partners.length===0?'<p class="text-xs text-gray-400 text-center py-2">등록된 거래처 없음</p>':partners.map(p=>`<label class="flex items-center gap-2 px-2 py-1 hover-bg rounded text-sm cursor-pointer"><input type="checkbox" class="approvePartnerChk w-4 h-4 accent-black" value="${escapeHtml(p.name)}" /><span>${escapeHtml(p.name)}</span></label>`).join('');
+  document.getElementById('approvePartnersList').innerHTML=partners.length===0?'<p class="text-xs text-gray-400 text-center py-2">등록된 협력사 없음</p>':partners.map(p=>`<label class="flex items-center gap-2 px-2 py-1 hover-bg rounded text-sm cursor-pointer"><input type="checkbox" class="approvePartnerChk w-4 h-4 accent-black" value="${escapeHtml(p.name)}" /><span>${escapeHtml(p.name)}</span></label>`).join('');
   openModal('approveModal');
 }
 function confirmApprove(){
@@ -633,7 +633,7 @@ function confirmApprove(){
   saveUsers(users);
   saveRequests(getRequests().filter(x=>x.id!==approveTargetId));
   closeModal('approveModal');renderRequests();renderHomePending();renderMembers();
-  showToast('✓','가입 승인 완료',`${r.name} (${dept}/${roleLabel(role)}/거래처 ${selectedPartners.length}개)`);
+  showToast('✓','가입 승인 완료',`${r.name} (${dept}/${roleLabel(role)}/협력사 ${selectedPartners.length}개)`);
 }
 function rejectRequest(id){
   if(!confirm('거절하시겠습니까?'))return;
@@ -662,11 +662,11 @@ function renderDeptRole(){
     return `<tr><td class="sheet-row-num">${i+1}</td><td contenteditable class="editable">${d.name}</td><td>${count}명</td><td><select class="text-xs border rounded px-2 py-1 bg-white" onchange="updateDeptRole(${i},this.value)"><option value="admin" ${d.role==='admin'?'selected':''}>관리자</option><option value="manager" ${d.role==='manager'?'selected':''}>매니저</option><option value="member" ${d.role==='member'?'selected':''}>멤버</option></select></td><td><button onclick="openPermissionModal(${i})" class="text-xs px-2 py-1 border border-gray-200 rounded bg-white">🔐 권한 (${menuCount}메뉴) ▾</button></td><td><button onclick="deleteDept(${i})" class="text-xs text-red-500">삭제</button></td></tr>`;
   }).join('');
 }
-const DEFAULT_MENUS=['홈','메신저','ChatGPT','거래처','이커머스','행사','디자인','마케팅','기타','설정'];
+const DEFAULT_MENUS=['홈','메신저','ChatGPT','협력사','이커머스','행사','디자인','마케팅','기타','설정'];
 const DEFAULT_FEATURES=[
   {key:'read',label:'읽기'},{key:'write',label:'쓰기/등록'},{key:'edit',label:'수정'},{key:'delete',label:'삭제'},
   {key:'invite',label:'멤버 초대'},{key:'approve',label:'가입 승인'},{key:'kick',label:'멤버 강퇴'},
-  {key:'manage_partners',label:'거래처 관리'},{key:'manage_ai',label:'AI API 관리'},{key:'pin',label:'고정/공지 설정'}
+  {key:'manage_partners',label:'협력사 관리'},{key:'manage_ai',label:'AI API 관리'},{key:'pin',label:'고정/공지 설정'}
 ];
 
 // ========== 역할(권한) 관리 ==========
@@ -792,8 +792,8 @@ function openMemberPartners(e,k){
   }
   const popup=document.getElementById('multiSelectPopup');
   let temp=[...cleanedSelected];
-  popup.innerHTML=`<div class="px-2 py-1 mb-2 border-b border-gray-200"><span class="text-xs font-bold">${escapeHtml(user.name)}의 거래처 매핑</span></div>
-    <div class="space-y-0.5 max-h-60 overflow-y-auto" id="mpListInner">${partners.map((p,i)=>`<label class="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover-bg text-sm"><input type="checkbox" data-partner-idx="${i}" ${cleanedSelected.includes(p)?'checked':''} class="mpChk w-4 h-4 accent-black" /><span>${escapeHtml(p)}</span></label>`).join('')||'<p class="text-center text-gray-400 py-3 text-xs">거래처 없음 (관리자에서 추가)</p>'}</div>
+  popup.innerHTML=`<div class="px-2 py-1 mb-2 border-b border-gray-200"><span class="text-xs font-bold">${escapeHtml(user.name)}의 협력사 매핑</span></div>
+    <div class="space-y-0.5 max-h-60 overflow-y-auto" id="mpListInner">${partners.map((p,i)=>`<label class="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover-bg text-sm"><input type="checkbox" data-partner-idx="${i}" ${cleanedSelected.includes(p)?'checked':''} class="mpChk w-4 h-4 accent-black" /><span>${escapeHtml(p)}</span></label>`).join('')||'<p class="text-center text-gray-400 py-3 text-xs">협력사 없음 (관리자에서 추가)</p>'}</div>
     <div class="mt-2 pt-2 border-t border-gray-200"><button id="mpApplyBtn" class="w-full px-3 py-1.5 bg-black text-white text-xs rounded">적용</button></div>`;
   // ★ 이벤트 위임으로 동기화 (인라인 onchange 대신)
   popup.querySelectorAll('.mpChk').forEach(cb=>{
@@ -812,7 +812,7 @@ function openMemberPartners(e,k){
     if(k===CURRENT.username){CURRENT.partners=[...temp];ST.set('currentUser',CURRENT);refreshUserUI();renderPartnerFilter()}
     popup.classList.add('hidden');
     renderMembers();
-    showToast('🤝','매핑 저장',`${user.name}: ${temp.length}개 거래처`);
+    showToast('🤝','매핑 저장',`${user.name}: ${temp.length}개 협력사`);
   });
   const rect=e.currentTarget.getBoundingClientRect();
   popup.style.left=Math.min(rect.left,window.innerWidth-280)+'px';
@@ -830,12 +830,12 @@ function savePartners(p){ST.set('partnersList',p)}
 function renderPartnerMgmt(){
   const list=document.getElementById('partnerMgmtList');if(!list)return;
   const partners=getPartners();
-  if(partners.length===0){list.innerHTML='<tr><td colspan="6" class="text-center text-gray-400 py-4">거래처 없음</td></tr>';return}
+  if(partners.length===0){list.innerHTML='<tr><td colspan="6" class="text-center text-gray-400 py-4">협력사 없음</td></tr>';return}
   list.innerHTML=partners.map((p,i)=>`<tr><td class="sheet-row-num">${i+1}</td><td contenteditable class="editable" oninput="updPartner(${i},'name',this.textContent)">${p.name}</td><td contenteditable class="editable" oninput="updPartner(${i},'manager',this.textContent)">${p.manager}</td><td contenteditable class="editable" oninput="updPartner(${i},'phone',this.textContent)">${p.phone}</td><td contenteditable class="editable" oninput="updPartner(${i},'note',this.textContent)">${p.note}</td><td><button onclick="delPartner(${i})" class="text-xs text-red-500">삭제</button></td></tr>`).join('');
 }
 function addPartner(){
-  const name=prompt('거래처명:');if(!name)return;
-  const ps=getPartners();ps.push({name,manager:'',phone:'',note:''});savePartners(ps);renderPartnerMgmt();showToast('🤝','거래처 추가',name);
+  const name=prompt('협력사명:');if(!name)return;
+  const ps=getPartners();ps.push({name,manager:'',phone:'',note:''});savePartners(ps);renderPartnerMgmt();showToast('🤝','협력사 추가',name);
 }
 function delPartner(i){
   const ps=getPartners();const name=ps[i].name;
@@ -848,7 +848,7 @@ function delPartner(i){
   });
   saveUsers(users);
   // ★ 2) 거래처 데이터 테이블(order/sales/inventory/settle)의 해당 partner 행도 모두 제거
-  ['order','sales','inventory','settle'].forEach(t=>{
+  ['order','sales','inventory'].forEach(t=>{
     const data=getPartnerData(t);
     const cleaned=data.filter(r=>r.partner!==name);
     savePartnerData(t,cleaned);
@@ -862,74 +862,154 @@ function delPartner(i){
   if(currentPartnerFilter===name)currentPartnerFilter='all';
   // ★ 5) 모든 관련 UI 갱신
   renderPartnerMgmt();renderMembers();renderPartnerFilter();initPartnerTables();
-  showToast('🗑️','거래처 삭제',name+' (멤버/데이터 모두 정리)');
+  showToast('🗑️','협력사 삭제',name+' (멤버/데이터 모두 정리)');
 }
 function updPartner(i,k,v){const ps=getPartners();ps[i][k]=v;savePartners(ps)}
 
 // ========== 거래처 페이지 테이블 ==========
 const PARTNER_SAMPLE={
-  // 발주 컬럼 (v3): col1=발주일 / col2=제품 / col3=수량 / col4=단가 / col5=상태 / col6=택배사 / col7=송장번호
+  // 발주 컬럼 (v4): col1=발주일 / col2=상품명 / col3=옵션명 / col4=수량 / col5=단가 / col6=상태 / col7=택배사 / col8=송장번호
   order:[
-    {partner:'(주)뷰티코리아',col1:'2026-05-01',col2:'스킨케어 세트',col3:'200',col4:'18000',col5:'배송완료',col6:'CJ대한통운',col7:'1234567890'},
-    {partner:'(주)뷰티코리아',col1:'2026-05-03',col2:'선크림 SPF50+',col3:'500',col4:'8000',col5:'배송중',col6:'',col7:''},
-    {partner:'라이프스타일컴퍼니',col1:'2026-05-05',col2:'보습 크림',col3:'150',col4:'12000',col5:'배송완료',col6:'한진택배',col7:'5566778899'},
-    {partner:'(주)코스메틱하우스',col1:'2026-05-08',col2:'클렌징 폼',col3:'300',col4:'5000',col5:'결제완료',col6:'',col7:''}
+    {partner:'(주)뷰티코리아',col1:'2026-05-03',col2:'선크림 SPF50+',col3:'50ml',col4:'500',col5:'8000',col6:'배송중',col7:'',col8:''},
+    {partner:'(주)코스메틱하우스',col1:'2026-05-08',col2:'클렌징 폼',col3:'대용량 200ml',col4:'300',col5:'5000',col6:'결제완료',col7:'',col8:''}
   ],
+  // 판매 컬럼 (v2): col1=날짜 / col2=상품명 / col3=옵션명 / col4=수량 / col5=단가
   sales:[
-    {partner:'(주)뷰티코리아',col1:'2026-05-12',col2:'스킨케어 세트',col3:'네이버',col4:'87',col5:'3,915,000',col6:'3,523,500'},
-    {partner:'(주)뷰티코리아',col1:'2026-05-12',col2:'선크림 SPF50+',col3:'쿠팡',col4:'132',col5:'1,980,000',col6:'1,782,000'},
-    {partner:'라이프스타일컴퍼니',col1:'2026-05-13',col2:'보습 크림',col3:'11번가',col4:'54',col5:'1,620,000',col6:'1,458,000'}
+    {partner:'(주)뷰티코리아',col1:'2026-05-01',col2:'스킨케어 세트',col3:'5종 풀세트',col4:'200',col5:'18000'},
+    {partner:'라이프스타일컴퍼니',col1:'2026-05-05',col2:'보습 크림',col3:'리뉴얼 80ml',col4:'150',col5:'12000'}
   ],
-  inventory:[
-    {partner:'(주)뷰티코리아',col1:'SK-001',col2:'스킨케어 세트',col3:'500',col4:'266',col5:'234',col6:'정상'},
-    {partner:'(주)뷰티코리아',col1:'SK-003',col2:'선크림 SPF50+',col3:'500',col4:'500',col5:'0',col6:'품절'},
-    {partner:'라이프스타일컴퍼니',col1:'SK-002',col2:'보습 크림',col3:'300',col4:'282',col5:'18',col6:'부족'}
-  ],
-  settle:[
-    {partner:'(주)뷰티코리아',col1:'2026-04',col2:'네이버',col3:'12,540,000',col4:'5,400,000',col5:'5,886,000',col6:'완료'},
-    {partner:'라이프스타일컴퍼니',col1:'2026-04',col2:'11번가',col3:'1,620,000',col4:'700,000',col5:'750,000',col6:'완료'}
-  ]
+  inventory:[]
 };
 function getPartnerData(t){
-  const key=t==='order'?'partner_order_v2':'partner_'+t;
+  const key=t==='order'?'partner_order_v2':t==='sales'?'partner_sales_v2':'partner_'+t;
   const data=ST.get(key,PARTNER_SAMPLE[t]||[]);
-  // partner_order 마이그레이션: 금액(col5) 제거, col6→col5, col7→col6, col8→col7 (한 번만)
+  // partner_order v2 → v3: 금액(col5) 제거 + 시프트 (1회)
   if(t==='order'&&!ST.get('partner_order_amount_removed_v1',false)){
     let migrated=false;
     data.forEach(r=>{
-      // 기존 col5가 금액(쉼표 포함 숫자)인 경우만 시프트
       const v5=r.col5||'';
       const looksLikeMoney=typeof v5==='string'&&/^[\d,]+$/.test(v5.replace(/\s/g,''));
       const hasOldCols=r.col6!==undefined||r.col7!==undefined||r.col8!==undefined;
       if(looksLikeMoney||hasOldCols){
-        r.col5=r.col6||'';r.col6=r.col7||'';r.col7=r.col8||'';
-        delete r.col8;
+        r.col5=r.col6||'';r.col6=r.col7||'';r.col7=r.col8||'';delete r.col8;
         migrated=true;
       }
-      // 상태값 정규화: 대기→결제완료, 진행중→배송중, 완료→배송완료
       const statusMap={'대기':'결제완료','진행중':'배송중','완료':'배송완료'};
       if(statusMap[r.col5]){r.col5=statusMap[r.col5];migrated=true;}
     });
     if(migrated)ST.set(key,data);
     ST.set('partner_order_amount_removed_v1',true);
   }
+  // partner_order v3 → v4: 옵션명(col3) 신설, 이후 col 시프트 (1회)
+  if(t==='order'&&!ST.get('partner_order_option_added_v1',false)){
+    let migrated=false;
+    data.forEach(r=>{
+      // 이미 v4 구조 (col2가 상품명, col3가 옵션명 또는 비어있음)인지 판별: col3가 숫자형이면 수량(이전 v3 구조)
+      const v3=String(r.col3||'').trim();
+      const looksLikeQty=/^\d+$/.test(v3);
+      if(looksLikeQty&&r.col4!==undefined){
+        // 시프트: col3(수량)→col4, col4(단가)→col5, col5(상태)→col6, col6(택배사)→col7, col7(송장)→col8
+        r.col8=r.col7||'';r.col7=r.col6||'';r.col6=r.col5||'';r.col5=r.col4||'';r.col4=r.col3||'';
+        // col2 (제품 / 옵션) 분리 시도: 'A / B' 형태면 분리
+        const productCol=String(r.col2||'');
+        const slashIdx=productCol.indexOf(' / ');
+        if(slashIdx>0){r.col2=productCol.slice(0,slashIdx);r.col3=productCol.slice(slashIdx+3);}
+        else{r.col3='';}
+        migrated=true;
+      }
+    });
+    if(migrated)ST.set(key,data);
+    ST.set('partner_order_option_added_v1',true);
+  }
   return data;
 }
 function savePartnerData(t,d){
-  const key=t==='order'?'partner_order_v2':'partner_'+t;
+  const key=t==='order'?'partner_order_v2':t==='sales'?'partner_sales_v2':'partner_'+t;
   ST.set(key,d);
 }
 let currentPartnerFilter='all';
 function renderPartnerFilter(){
   const sel=document.getElementById('partnerFilter');if(!sel)return;
   const partners=CURRENT?.partners||[];
-  sel.innerHTML='<option value="all">전체 거래처</option>'+partners.map(p=>`<option ${currentPartnerFilter===p?'selected':''}>${escapeHtml(p)}</option>`).join('');
+  sel.innerHTML='<option value="all">전체 협력사</option>'+partners.map(p=>`<option ${currentPartnerFilter===p?'selected':''}>${escapeHtml(p)}</option>`).join('');
   if(!partners.includes(currentPartnerFilter)&&currentPartnerFilter!=='all')currentPartnerFilter='all';
   const info=document.getElementById('partnerFilterInfo');
   if(info){info.textContent=currentPartnerFilter==='all'?(`전체 ${partners.length}개 거래처 통합 보기`):(`'${currentPartnerFilter}' 단독 보기`)}
 }
 function changePartnerFilter(v){currentPartnerFilter=v;document.getElementById('partnerFilterInfo')&&(document.getElementById('partnerFilterInfo').textContent=v==='all'?'전체 통합 보기':`'${v}' 단독 보기`);initPartnerTables();showToast('🔍','필터 변경',v==='all'?'전체':v)}
-function initPartnerTables(){['order','sales','inventory','settle'].forEach(renderPartnerTable)}
+function initPartnerTables(){['order','sales','inventory'].forEach(renderPartnerTable)}
+function renderPartnerSalesPage(){
+  const tb=document.querySelector('#partner-sales-table tbody');
+  if(!tb)return;
+  const all=getPartnerData('sales');
+  const userPartners=CURRENT?.partners||[];
+  let scoped=all.filter(r=>!r.partner||userPartners.length===0||userPartners.includes(r.partner));
+  if(currentPartnerFilter&&currentPartnerFilter!=='all'){
+    scoped=scoped.filter(r=>r.partner===currentPartnerFilter);
+  }
+  // 기간 필터
+  const from=document.getElementById('salesFromDate')?.value||'';
+  const to=document.getElementById('salesToDate')?.value||'';
+  let list=scoped;
+  if(from)list=list.filter(r=>(r.col1||'')>=from);
+  if(to)list=list.filter(r=>(r.col1||'')<=to);
+  // KPI
+  const totalQty=list.reduce((s,r)=>s+(parseInt(r.col4)||0),0);
+  const totalAmount=list.reduce((s,r)=>s+((parseInt(r.col4)||0)*(parseFloat(String(r.col5).replace(/[^\d.]/g,''))||0)),0);
+  document.getElementById('salesTotalQty')&&(document.getElementById('salesTotalQty').textContent=totalQty.toLocaleString());
+  document.getElementById('salesTotalAmount')&&(document.getElementById('salesTotalAmount').textContent='₩'+totalAmount.toLocaleString());
+  if(list.length===0){
+    tb.innerHTML=`<tr><td colspan="7" class="text-center text-gray-400 py-6 text-sm">${from||to?'기간 내 판매 내역이 없습니다':'판매 내역이 없습니다. 발주가 배송완료/취소되면 자동으로 추가됩니다.'}</td></tr>`;
+    window._partnerSalesFiltered=[];return;
+  }
+  tb.innerHTML=list.map((r,idx)=>{
+    const qty=parseInt(r.col4)||0;
+    const unit=parseFloat(String(r.col5).replace(/[^\d.]/g,''))||0;
+    const total=qty*unit;
+    const isCancelled=r.finalStatus==='취소';
+    return `<tr ${isCancelled?'class="bg-red-50/50"':''}>
+      <td class="sheet-row-num">${idx+1}</td>
+      <td class="font-mono text-xs">${fmtDateYY(r.col1)}</td>
+      <td>${escapeHtml(r.col2||'')}</td>
+      <td class="text-xs text-gray-600">${escapeHtml(r.col3||'-')}</td>
+      <td class="text-right">${qty.toLocaleString()}${isCancelled?' <span class="text-[10px] text-red-500">(취소)</span>':''}</td>
+      <td class="text-right">₩${unit.toLocaleString()}</td>
+      <td class="text-right font-semibold">₩${total.toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+  window._partnerSalesFiltered=list;
+}
+function resetSalesDateFilter(){
+  const f=document.getElementById('salesFromDate'),t=document.getElementById('salesToDate');
+  if(f)f.value='';if(t)t.value='';renderPartnerSalesPage();
+}
+function openSalesQtyBreakdown(){
+  const list=window._partnerSalesFiltered||getPartnerData('sales');
+  // 제품+옵션별 집계
+  const byProd={};
+  list.forEach(r=>{
+    const key=`${r.col2}|${r.col3||''}`;
+    if(!byProd[key])byProd[key]={product:r.col2||'',option:r.col3||'',qty:0,cancelledQty:0};
+    const q=parseInt(r.col4)||0;
+    if(r.finalStatus==='취소')byProd[key].cancelledQty+=q;
+    else byProd[key].qty+=q;
+  });
+  const rows=Object.values(byProd).sort((a,b)=>b.qty-a.qty);
+  const total=rows.reduce((s,r)=>s+r.qty,0);
+  document.getElementById('salesQtyBreakdownPeriod').textContent=`총 ${total.toLocaleString()}건 · ${rows.length}종 제품`;
+  document.getElementById('salesQtyBreakdownBody').innerHTML=rows.length===0?'<p class="text-xs text-gray-400 text-center py-6">데이터 없음</p>':`<div class="border border-gray-200 rounded-lg overflow-hidden"><table class="sheet-table"><thead><tr><th>제품</th><th>옵션</th><th>판매수량</th><th>취소수량</th><th>비율</th></tr></thead><tbody>${rows.map(r=>{const pct=total>0?(r.qty/total*100).toFixed(1):'0';return `<tr><td>${escapeHtml(r.product)}</td><td class="text-xs text-gray-600">${escapeHtml(r.option||'-')}</td><td class="text-right font-semibold">${r.qty.toLocaleString()}</td><td class="text-right text-red-500">${r.cancelledQty||'-'}</td><td class="text-right text-xs text-gray-500">${pct}%</td></tr>`}).join('')}</tbody></table></div>`;
+  openModal('salesQtyBreakdownModal');
+}
+function openSalesAmountBreakdown(){
+  const list=window._partnerSalesFiltered||getPartnerData('sales');
+  // 정산금 합계 (취소 제외)
+  const valid=list.filter(r=>r.finalStatus!=='취소');
+  const total=valid.reduce((s,r)=>s+((parseInt(r.col4)||0)*(parseFloat(String(r.col5).replace(/[^\d.]/g,''))||0)),0);
+  document.getElementById('salesAmountBreakdownPeriod').textContent=`총 ${valid.length}건 · 정산금 ₩${total.toLocaleString()} (취소 제외)`;
+  document.getElementById('salesAmountBreakdownBody').innerHTML=valid.length===0?'<p class="text-xs text-gray-400 text-center py-6">데이터 없음</p>':`<div class="border border-gray-200 rounded-lg overflow-hidden"><table class="sheet-table"><thead><tr><th>날짜</th><th>제품</th><th>옵션</th><th>수량</th><th>단가</th><th>합계</th></tr></thead><tbody>${valid.map(r=>{const qty=parseInt(r.col4)||0;const unit=parseFloat(String(r.col5).replace(/[^\d.]/g,''))||0;return `<tr><td class="font-mono text-xs">${fmtDateYY(r.col1)}</td><td>${escapeHtml(r.col2)}</td><td class="text-xs text-gray-600">${escapeHtml(r.col3||'-')}</td><td class="text-right">${qty.toLocaleString()}</td><td class="text-right">₩${unit.toLocaleString()}</td><td class="text-right font-semibold">₩${(qty*unit).toLocaleString()}</td></tr>`}).join('')}<tr class="bg-blue-50"><td colspan="5" class="text-right font-bold">합계</td><td class="text-right font-bold text-blue-600">₩${total.toLocaleString()}</td></tr></tbody></table></div>`;
+  openModal('salesAmountBreakdownModal');
+}
+
 function renderPartnerInventoryFromEc(){
   const tb=document.querySelector('#partner-inventory-table tbody');if(!tb)return;
   const inv=getEcData('inventory');
@@ -942,7 +1022,7 @@ function renderPartnerInventoryFromEc(){
     list=list.filter(i=>i.partner===currentPartnerFilter);
   }
   if(list.length===0){
-    tb.innerHTML=`<tr><td colspan="8" class="text-center text-gray-400 py-6 text-sm">${currentPartnerFilter==='all'?'거래처가 지정된 재고가 없습니다. 이커머스 ▸ 원가/마진에서 제품의 거래처를 지정하세요.':`'${currentPartnerFilter}' 거래처의 재고가 없습니다`}</td></tr>`;
+    tb.innerHTML=`<tr><td colspan="8" class="text-center text-gray-400 py-6 text-sm">${currentPartnerFilter==='all'?'협력사가 지정된 재고가 없습니다. 이커머스 ▸ 원가/마진에서 제품의 협력사를 지정하세요.':`'${currentPartnerFilter}' 협력사의 재고가 없습니다`}</td></tr>`;
     return;
   }
   tb.innerHTML=list.map((i,idx)=>{
@@ -965,8 +1045,8 @@ function renderPartnerInventoryFromEc(){
 }
 
 function renderPartnerTable(t){
-  // inventory는 이커머스 재고 데이터에서 거래처 지정된 항목을 view로 제공
   if(t==='inventory')return renderPartnerInventoryFromEc();
+  if(t==='sales')return renderPartnerSalesPage();
   const tb=document.querySelector(`#partner-${t}-table tbody`);if(!tb)return;
   const allData=getPartnerData(t);
   // ★ 사용자 거래처 + 필터 적용 (이중 필터링)
@@ -988,15 +1068,14 @@ function renderPartnerTable(t){
     let c=`<td class="sheet-row-num"><input type="checkbox" class="row-check" data-type="${t}" data-idx="${origIdx}" />${linked?'<div class="text-[9px] text-purple-600 mt-0.5" title="이커머스 '+r.sourceOrderIds.length+'건과 연동">🔁</div>':''}</td>`;
     for(let j=1;j<=cc;j++){
       const val=r['col'+j]||'';
-      // 발주의 col5=상태 → select (이커머스 상태와 동일)
-      if(t==='order'&&j===5){
+      // 발주 v4: col6=상태 / col7=택배사 / col8=송장
+      if(t==='order'&&j===6){
         const statusOpts=Object.values(EC_STATUS_LABELS).map(vv=>`<option value="${vv.l}">${vv.l}</option>`).join('');
         const st=Object.values(EC_STATUS_LABELS).find(vv=>vv.l===val);
         const colorCls=st?st.c:'bg-gray-100';
         c+=`<td><select onchange="updPartnerCell('${t}',${origIdx},${j},this.value)" class="text-xs border rounded px-1 py-0.5 ${colorCls}">${statusOpts.replace(`value="${val}"`,`value="${val}" selected`)}</select></td>`;
       }
-      // 발주의 col6=택배사 → select
-      else if(t==='order'&&j===6){
+      else if(t==='order'&&j===7){
         const courierList=getCourierList();
         const inList=val&&courierList.includes(val);
         const customOpt=val&&!inList?`<option value="${escapeHtml(val)}" selected>${escapeHtml(val)} (미등록)</option>`:'';
@@ -1032,28 +1111,55 @@ function toggleAllRows(t,c){document.querySelectorAll(`.row-check[data-type="${t
 function updPartnerCell(t,i,c,v){
   const d=getPartnerData(t);if(!d[i])return;
   d[i]['col'+c]=v;savePartnerData(t,d);
-  // 발주(order) col5=상태 / col6=택배사 / col7=송장번호 변경 시 이커머스 주문에도 양방향 반영
-  if(t==='order'&&(c===5||c===6||c===7)){
+  // 발주 v4: col6=상태 / col7=택배사 / col8=송장번호
+  if(t==='order'&&(c===6||c===7||c===8)){
     const row=d[i];
     const orderIds=row.sourceOrderIds||[];
     if(orderIds.length>0){
       const ecOrders=getEcOrders();let touched=0;
-      // 상태 라벨 → 키 변환
       const labelToKey={};Object.entries(EC_STATUS_LABELS).forEach(([k,vv])=>{labelToKey[vv.l]=k});
       orderIds.forEach(oid=>{
         const o=ecOrders.find(x=>x.id===oid);if(!o)return;
-        if(c===5){const newKey=labelToKey[v];if(newKey&&o.status!==newKey){o.status=newKey;touched++;}}
-        if(c===6){if(o.courier!==v){o.courier=v;touched++;}}
-        if(c===7){if(o.tracking!==v){o.tracking=v;touched++;}}
+        if(c===6){const newKey=labelToKey[v];if(newKey&&o.status!==newKey){o.status=newKey;touched++;}}
+        if(c===7){if(o.courier!==v){o.courier=v;touched++;}}
+        if(c===8){if(o.tracking!==v){o.tracking=v;touched++;}}
       });
       if(touched>0){
         saveEcOrders(ecOrders);
-        const fieldName=c===5?'상태':c===6?'택배사':'송장번호';
+        const fieldName=c===6?'상태':c===7?'택배사':'송장번호';
         showToast('🔁','이커머스 동기화',`${touched}건 ${fieldName} 반영`);
         if(document.getElementById('ecOrdersBody'))renderEcOrders();
       }
     }
+    // 상태가 '배송완료' or '취소' 로 변경되면 판매로 이동
+    if(c===6&&(v==='배송완료'||v==='취소')){
+      _moveOrderRowToSales(i);
+    }
   }
+}
+
+function _moveOrderRowToSales(orderIdx){
+  const orders=getPartnerData('order');
+  const row=orders[orderIdx];if(!row)return;
+  const sales=getPartnerData('sales');
+  const today=new Date().toISOString().split('T')[0];
+  sales.push({
+    partner:row.partner,
+    col1:today,
+    col2:row.col2||'',  // 상품명
+    col3:row.col3||'',  // 옵션명
+    col4:row.col4||'0', // 수량
+    col5:row.col5||'0', // 단가
+    sourceOrderIds:row.sourceOrderIds,
+    finalStatus:row.col6,
+    movedAt:new Date().toISOString()
+  });
+  savePartnerData('sales',sales);
+  orders.splice(orderIdx,1);
+  savePartnerData('order',orders);
+  if(document.querySelector('#partner-order-table tbody'))renderPartnerTable('order');
+  if(document.getElementById('partner-sales-table'))renderPartnerSalesPage();
+  showToast('💵','판매로 이동',`${row.col2||'(상품)'} → ${row.col6}`);
 }
 
 // ========== 메신저 ==========
@@ -2310,7 +2416,7 @@ function setCostPartner(costId,partnerName){
   }
   renderEcCost();
   if(document.getElementById('ecOrdersBody'))renderEcOrders();
-  showToast('🤝','거래처 지정',`${c.product} → ${partnerName||'(해제)'}`);
+  showToast('🤝','협력사 지정',`${c.product} → ${partnerName||'(해제)'}`);
 }
 
 // 원가행에 구성품 추가/제거
@@ -3179,15 +3285,17 @@ function _applyOrderStatusChange(o,d,newStatus){
 function _syncOrderStatusToPartnerOrder(orderId,newStatusKey){
   const partnerOrders=getPartnerData('order');
   const newLabel=EC_STATUS_LABELS[newStatusKey]?.l;if(!newLabel)return;
-  let touched=0;
-  partnerOrders.forEach(po=>{
-    if((po.sourceOrderIds||[]).includes(orderId)&&po.col5!==newLabel){
-      po.col5=newLabel;touched++;
+  let touched=0;const toMove=[];
+  partnerOrders.forEach((po,idx)=>{
+    if((po.sourceOrderIds||[]).includes(orderId)&&po.col6!==newLabel){
+      po.col6=newLabel;touched++;
+      if(newLabel==='배송완료'||newLabel==='취소')toMove.push(idx);
     }
   });
   if(touched>0){
     savePartnerData('order',partnerOrders);
-    // 거래처 페이지가 열려 있으면 재렌더
+    // 인덱스 큰 것부터 이동 (이동시 인덱스 어긋남 방지)
+    toMove.sort((a,b)=>b-a).forEach(idx=>_moveOrderRowToSales(idx));
     if(document.querySelector('#partner-order-table tbody'))initPartnerTables();
   }
 }
@@ -3270,7 +3378,7 @@ function setOrderPartner(orderId,partnerName){
     saveProductPartnerMap(m);
   }
   saveEcOrders(d);renderEcOrders();
-  showToast('🤝','거래처 지정',`${o.product}${oldPartner&&oldPartner!==partnerName?'  '+oldPartner+' → ':''} ${partnerName||'(해제)'}`);
+  showToast('🤝','협력사 지정',`${o.product}${oldPartner&&oldPartner!==partnerName?'  '+oldPartner+' → ':''} ${partnerName||'(해제)'}`);
 }
 function _autoAssignPartners(){
   // 거래처 매핑된 상품의 미할당 주문 자동 적용
@@ -3325,16 +3433,17 @@ function confirmSendToPartner(){
       items[key].sourceOrderIds.push(o.id);
     });
     Object.values(items).forEach(item=>{
-      // v3 컬럼: col1=발주일 / col2=제품 / col3=수량 / col4=단가 / col5=상태 / col6=택배사 / col7=송장번호
+      // v4: col1=발주일 / col2=상품명 / col3=옵션명 / col4=수량 / col5=단가 / col6=상태 / col7=택배사 / col8=송장번호
       partnerOrders.push({
         partner,
         col1:today,
-        col2:item.option?`${item.product} / ${item.option}`:item.product,
-        col3:String(item.qty),
-        col4:'',
-        col5:'결제완료',
-        col6:'',
+        col2:item.product,
+        col3:item.option||'',
+        col4:String(item.qty),
+        col5:'',
+        col6:'결제완료',
         col7:'',
+        col8:'',
         sourceOrderIds:item.sourceOrderIds
       });
       totalAdded++;
