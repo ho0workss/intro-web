@@ -402,6 +402,7 @@
           <a href="javascript:void(0)" onclick="navigateSub('ecommerce','inventory')" data-subnav="ecommerce-inventory" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">📦 재고</a>
           <a href="javascript:void(0)" onclick="navigateSub('ecommerce','cost')" data-subnav="ecommerce-cost" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">💰 원가/발주</a>
           <a href="javascript:void(0)" onclick="navigateSub('ecommerce','ranking')" data-subnav="ecommerce-ranking" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">🏆 순위</a>
+          <a href="javascript:void(0)" onclick="navigateSub('ecommerce','monitor')" data-subnav="ecommerce-monitor" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">🔍 쇼핑 모니터링</a>
         </div>
       </div>
       <a href="javascript:void(0)" onclick="navigateTo('events')" data-nav="events" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">🏷️</span>행사</a>
@@ -660,6 +661,7 @@
           <button data-subnav="ecommerce-inventory" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('ecommerce','inventory')">📦 재고</button>
           <button data-subnav="ecommerce-cost" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('ecommerce','cost')">💰 원가/발주</button>
           <button data-subnav="ecommerce-ranking" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('ecommerce','ranking')">🏆 순위</button>
+          <button data-subnav="ecommerce-monitor" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('ecommerce','monitor')">🔍 쇼핑 모니터링</button>
         </div>
         <div id="sub-ecommerce-sales" class="sub-page active">
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
@@ -814,7 +816,66 @@
               <tbody id="rankSlotBody"></tbody>
             </table></div>
           </div>
-        </div></div>
+        </div>
+
+        <!-- 🔍 쇼핑 모니터링 -->
+        <div id="sub-ecommerce-monitor" class="sub-page">
+          <div class="flex flex-wrap items-center gap-2 mb-4">
+            <button type="button" data-monmenu="ac" onclick="setMonitorMenu('ac')" class="rank-menu-btn px-3 py-1.5 border border-gray-300 rounded text-xs font-medium">⌨️ 자동완성</button>
+            <button type="button" data-monmenu="seo" onclick="setMonitorMenu('seo')" class="rank-menu-btn px-3 py-1.5 border border-gray-300 rounded text-xs font-medium">📊 SEO섹션</button>
+          </div>
+
+          <!-- 자동완성 -->
+          <div id="mon-menu-ac" class="rank-menu-page">
+            <div class="bg-blue-50 border border-blue-200 rounded p-3 mb-3 text-xs text-blue-900">
+              💡 키워드 또는 글자 일부(예: <code>ㅅ</code>, <code>스</code>, <code>스테</code>, <code>스텐ㅍ</code>)를 등록하면 네이버 자동완성 결과를 일별로 추적합니다. 실연동 시 네이버 자동완성 API(<code>ac.search.naver.com</code>)에서 조회.
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+              <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">추적 쿼리</p><p class="text-xl font-bold" id="acQueryTotal">0</p></div>
+              <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">신규 자동완성</p><p class="text-xl font-bold text-blue-600" id="acAdded">0</p></div>
+              <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">사라진 자동완성</p><p class="text-xl font-bold text-red-500" id="acRemoved">0</p></div>
+              <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">최근 조회</p><p class="text-sm font-bold" id="acLastChecked">-</p></div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 mb-3">
+              <input type="text" id="acNewQuery" placeholder="추적할 쿼리 (예: 스텐, 선크림)" class="px-3 py-1 border border-gray-300 rounded text-xs bg-white w-48" />
+              <button onclick="addAcQuery()" class="px-3 py-1 bg-black text-white text-xs rounded">+ 쿼리 추가</button>
+              <button onclick="refreshAllAcQueries()" class="px-3 py-1 bg-blue-600 text-white text-xs rounded">🔄 자동완성 새로고침</button>
+              <button onclick="delSelectedAcQueries()" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button>
+              <div class="ml-auto flex items-center gap-2">
+                <span class="text-xs text-gray-500">비교 기준:</span>
+                <select id="acCompareDate" onchange="renderAcTable()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white"></select>
+              </div>
+            </div>
+            <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
+              <thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllAcRows(this.checked)" /></th><th>쿼리</th><th>오늘 자동완성</th><th>비교일 자동완성</th><th>신규 ▲</th><th>이탈 ▼</th><th>마지막 조회</th><th>비고</th></tr></thead>
+              <tbody id="acTableBody"></tbody>
+            </table></div>
+          </div>
+
+          <!-- SEO 섹션 -->
+          <div id="mon-menu-seo" class="rank-menu-page hidden">
+            <div class="bg-blue-50 border border-blue-200 rounded p-3 mb-3 text-xs text-blue-900">
+              💡 키워드를 검색했을 때 네이버 통합검색 결과에 노출되는 <strong>SEO 섹션</strong>(파워링크, 쇼핑검색, 블로그, 카페, VIEW, 지식iN, 이미지, 동영상, 뉴스)을 추적합니다.
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+              <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">추적 키워드</p><p class="text-xl font-bold" id="seoTotal">0</p></div>
+              <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">파워링크 노출</p><p class="text-xl font-bold text-blue-600" id="seoPwr">0</p></div>
+              <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">쇼핑검색 노출</p><p class="text-xl font-bold text-green-600" id="seoShop">0</p></div>
+              <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">블로그/카페 노출</p><p class="text-xl font-bold text-purple-600" id="seoBlogCafe">0</p></div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 mb-3">
+              <input type="text" id="seoNewKw" placeholder="추적할 키워드 (예: 선크림)" class="px-3 py-1 border border-gray-300 rounded text-xs bg-white w-48" />
+              <button onclick="addSeoKeyword()" class="px-3 py-1 bg-black text-white text-xs rounded">+ 키워드 추가</button>
+              <button onclick="refreshSeoSections()" class="px-3 py-1 bg-blue-600 text-white text-xs rounded">🔄 노출 새로고침</button>
+              <button onclick="delSelectedSeoKws()" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button>
+              <span class="text-xs text-gray-400 ml-auto">✅ 노출 · — 없음 · 숫자 = 노출 순위</span>
+            </div>
+            <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
+              <thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllSeoRows(this.checked)" /></th><th>키워드</th><th>파워링크</th><th>쇼핑검색</th><th>블로그</th><th>카페</th><th>VIEW</th><th>지식iN</th><th>이미지</th><th>동영상</th><th>뉴스</th><th>마지막 조회</th></tr></thead>
+              <tbody id="seoTableBody"></tbody>
+            </table></div>
+          </div>
+        </div>
       </div>
     </div>
 

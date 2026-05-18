@@ -322,6 +322,8 @@ function navigateSub(page,sub){
   document.querySelectorAll(`[data-subnav="${page}-${sub}"]`).forEach(s=>{s.classList.add('active');if(s.tagName==='BUTTON')s.classList.add('border-black')});
   // 순위 탭 진입 시 현재 메뉴 활성화 (기본: 쇼핑검색순위)
   if(page==='ecommerce'&&sub==='ranking'){setRankMenu(_rankMenu||'search');renderRankSearch();renderRankSlot();}
+  // 쇼핑 모니터링 탭 진입
+  if(page==='ecommerce'&&sub==='monitor'){setMonitorMenu(_monitorMenu||'ac');renderAcTable();renderSeoTable();}
 }
 function switchSettingTab(tab){
   document.querySelectorAll('.settings-tab').forEach(t=>t.classList.remove('bg-gray-100','font-semibold'));
@@ -2212,6 +2214,197 @@ function delSelectedRankSlots(){
   if(ids.length===0){alert('선택하세요');return}
   if(!confirm(ids.length+'개 슬롯을 삭제하시겠습니까?'))return;
   saveRankSlots(getRankSlots().filter(s=>!ids.includes(s.id)));renderRankSlot();showToast('🗑','삭제됨','');
+}
+
+// ========== 쇼핑 모니터링 ==========
+let _monitorMenu='ac';
+function setMonitorMenu(m){
+  _monitorMenu=m;
+  document.querySelectorAll('[data-monmenu]').forEach(b=>b.classList.toggle('active',b.dataset.monmenu===m));
+  document.getElementById('mon-menu-ac')?.classList.toggle('hidden',m!=='ac');
+  document.getElementById('mon-menu-seo')?.classList.toggle('hidden',m!=='seo');
+}
+
+// ----- 자동완성 모니터링 -----
+const AC_MOCK_POOLS={
+  '스텐':['스텐 컵','스텐레스 후라이팬','스텐 텀블러','스텐 도시락','스텐 빨대','스텐 밀폐용기','스텐 약병','스텐 약수통','스테이플러','스텐 면도기','스텐 보온병'],
+  '선크림':['선크림 추천','선크림 spf50','선크림 자극없는','선크림 톤업','선크림 백탁없는','선크림 화장위에','선크림 무기자차','선크림 50ml','선크림 시카','선크림 닥터지','선크림 키엘'],
+  '클렌징':['클렌징폼','클렌징오일','클렌징밤','클렌징워터','클렌징젤','클렌징크림','클렌징 추천','클렌징 순한','클렌징밤 닥터지'],
+  '토너':['토너 추천','토너 세트','토너 패드','토너 닥터지','토너 산도','토너 비건','토너 흡수력'],
+  'ㅅ':['수면제','쇼핑몰','슬리퍼','삼겹살','수도요금','사과','소설책','셀트리온','소득공제','셀카','세무사'],
+  '스':['스타벅스','스마트폰','스시 추천','스카이라이프','스타필드','스튜디오 추천','스니커즈','스토케','스벅 메뉴'],
+  '스테':['스테이크','스테플러','스테레오 이어폰','스테이션 추천','스테빌라이저','스테레오 잭'],
+  '스텐ㅍ':['스텐 프라이팬','스텐 펌프','스텐 프레스']
+};
+function _genMockAcResult(query){
+  const pool=AC_MOCK_POOLS[query]||AC_MOCK_POOLS[query.slice(0,2)]||AC_MOCK_POOLS[query.slice(0,1)];
+  if(pool){
+    const shuffled=[...pool].sort(()=>Math.random()-0.5);
+    return shuffled.slice(0,Math.floor(Math.random()*4)+5);
+  }
+  // fallback: query + 일반 접미사
+  const suffixes=['추천','후기','가격','종류','쇼핑몰','순위','뜻','사용법','구매','비교'];
+  return suffixes.slice(0,6).map(s=>`${query} ${s}`);
+}
+function getAcQueries(){return ST.get('ac_queries_v1',[
+  {id:1,query:'스텐',history:_genMockAcHistory('스텐',7),note:'주력 카테고리'},
+  {id:2,query:'선크림',history:_genMockAcHistory('선크림',7),note:''},
+  {id:3,query:'클렌징',history:_genMockAcHistory('클렌징',7),note:''},
+  {id:4,query:'스',history:_genMockAcHistory('스',7),note:'단글자 트렌드'}
+])}
+function _genMockAcHistory(query,days){
+  const hist={};
+  const today=new Date();
+  for(let i=days-1;i>=0;i--){
+    const d=new Date(today);d.setDate(today.getDate()-i);
+    hist[d.toISOString().split('T')[0]]=_genMockAcResult(query);
+  }
+  return hist;
+}
+function saveAcQueries(d){ST.set('ac_queries_v1',d)}
+function renderAcTable(){
+  const body=document.getElementById('acTableBody');if(!body)return;
+  const d=getAcQueries();
+  // 비교일 옵션 채우기 (어제~6일 전)
+  const today=new Date().toISOString().split('T')[0];
+  const dates=new Set();
+  d.forEach(q=>Object.keys(q.history||{}).forEach(date=>{if(date!==today)dates.add(date)}));
+  const dateList=[...dates].sort().reverse();
+  const sel=document.getElementById('acCompareDate');
+  if(sel){
+    const prev=sel.value;
+    sel.innerHTML=dateList.length===0?'<option value="">비교 데이터 없음</option>':dateList.map(dt=>`<option value="${dt}">${fmtDateYY(dt)}</option>`).join('');
+    if([...sel.options].some(o=>o.value===prev))sel.value=prev;
+  }
+  const compareDate=sel?.value||dateList[0]||'';
+  // KPI
+  let totalAdded=0,totalRemoved=0;
+  d.forEach(q=>{
+    const now=q.history?.[today]||[];
+    const past=q.history?.[compareDate]||[];
+    totalAdded+=now.filter(x=>!past.includes(x)).length;
+    totalRemoved+=past.filter(x=>!now.includes(x)).length;
+  });
+  document.getElementById('acQueryTotal')&&(document.getElementById('acQueryTotal').textContent=d.length);
+  document.getElementById('acAdded')&&(document.getElementById('acAdded').textContent=totalAdded);
+  document.getElementById('acRemoved')&&(document.getElementById('acRemoved').textContent=totalRemoved);
+  const latestCheck=d.reduce((max,q)=>{const dates=Object.keys(q.history||{});if(dates.length===0)return max;const last=dates.sort().reverse()[0];return!max||last>max?last:max},null);
+  document.getElementById('acLastChecked')&&(document.getElementById('acLastChecked').textContent=latestCheck?fmtDateYY(latestCheck):'-');
+  if(d.length===0){body.innerHTML='<tr><td colspan="8" class="text-center text-gray-400 py-4">추적 쿼리가 없습니다.</td></tr>';return}
+  body.innerHTML=d.map(q=>{
+    const now=q.history?.[today]||[];
+    const past=q.history?.[compareDate]||[];
+    const added=now.filter(x=>!past.includes(x));
+    const removed=past.filter(x=>!now.includes(x));
+    const lastDate=Object.keys(q.history||{}).sort().reverse()[0];
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="acChk" data-id="${q.id}" /></td>
+      <td class="font-mono font-medium">${escapeHtml(q.query)}</td>
+      <td class="text-xs">${now.length===0?'<span class="text-gray-400">데이터 없음</span>':now.map(s=>escapeHtml(s)).join(', ')}</td>
+      <td class="text-xs text-gray-600">${past.length===0?'<span class="text-gray-400">-</span>':past.map(s=>escapeHtml(s)).join(', ')}</td>
+      <td class="text-xs">${added.length===0?'<span class="text-gray-400">·</span>':'<span class="text-blue-600 font-semibold">'+added.map(s=>escapeHtml(s)).join(', ')+'</span>'}</td>
+      <td class="text-xs">${removed.length===0?'<span class="text-gray-400">·</span>':'<span class="text-red-500 line-through">'+removed.map(s=>escapeHtml(s)).join(', ')+'</span>'}</td>
+      <td class="text-[10px] text-gray-500">${lastDate?fmtDateYY(lastDate):'-'}</td>
+      <td contenteditable oninput="updAcQuery(${q.id},'note',this.textContent)" class="text-xs text-gray-600">${escapeHtml(q.note||'')}</td>
+    </tr>`;
+  }).join('');
+}
+function updAcQuery(id,k,v){const d=getAcQueries();const x=d.find(y=>y.id===id);if(x){x[k]=v;saveAcQueries(d)}}
+function addAcQuery(){
+  const inp=document.getElementById('acNewQuery');const q=inp?.value.trim();
+  if(!q){alert('쿼리를 입력하세요 (예: 스텐, ㅅ, 선크림)');return}
+  const d=getAcQueries();
+  if(d.some(x=>x.query===q)){alert('이미 추적 중인 쿼리입니다');return}
+  d.push({id:Date.now(),query:q,history:_genMockAcHistory(q,7),note:''});
+  saveAcQueries(d);inp.value='';renderAcTable();
+  showToast('+','자동완성 쿼리 추가',q);
+}
+function refreshAllAcQueries(){
+  const d=getAcQueries();const today=new Date().toISOString().split('T')[0];
+  d.forEach(q=>{q.history=q.history||{};q.history[today]=_genMockAcResult(q.query)});
+  saveAcQueries(d);renderAcTable();
+  showToast('🔄','자동완성 새로고침',d.length+'개 쿼리 갱신 (시뮬레이션)');
+}
+function toggleAllAcRows(c){document.querySelectorAll('.acChk').forEach(x=>x.checked=c)}
+function delSelectedAcQueries(){
+  const ids=Array.from(document.querySelectorAll('.acChk:checked')).map(c=>parseInt(c.dataset.id));
+  if(ids.length===0){alert('선택하세요');return}
+  if(!confirm(ids.length+'개 쿼리를 삭제하시겠습니까?'))return;
+  saveAcQueries(getAcQueries().filter(q=>!ids.includes(q.id)));renderAcTable();showToast('🗑','삭제됨','');
+}
+
+// ----- SEO 섹션 모니터링 -----
+const SEO_SECTIONS=['파워링크','쇼핑검색','블로그','카페','VIEW','지식iN','이미지','동영상','뉴스'];
+function getSeoKeywords(){return ST.get('seo_keywords_v1',[
+  {id:1,keyword:'선크림',sections:{'파워링크':1,'쇼핑검색':3,'블로그':7,'카페':12,'VIEW':5,'지식iN':null,'이미지':2,'동영상':null,'뉴스':null},lastChecked:new Date().toISOString()},
+  {id:2,keyword:'스킨케어 세트',sections:{'파워링크':2,'쇼핑검색':5,'블로그':null,'카페':18,'VIEW':null,'지식iN':null,'이미지':4,'동영상':null,'뉴스':null},lastChecked:new Date().toISOString()},
+  {id:3,keyword:'클렌징폼 추천',sections:{'파워링크':null,'쇼핑검색':8,'블로그':3,'카페':4,'VIEW':2,'지식iN':6,'이미지':null,'동영상':null,'뉴스':null},lastChecked:new Date().toISOString()},
+  {id:4,keyword:'토너 추천',sections:{'파워링크':3,'쇼핑검색':9,'블로그':1,'카페':5,'VIEW':4,'지식iN':12,'이미지':null,'동영상':14,'뉴스':null},lastChecked:new Date().toISOString()},
+  {id:5,keyword:'프리미엄 보습 크림',sections:{'파워링크':null,'쇼핑검색':4,'블로그':2,'카페':null,'VIEW':6,'지식iN':null,'이미지':3,'동영상':null,'뉴스':null},lastChecked:new Date().toISOString()}
+])}
+function saveSeoKeywords(d){ST.set('seo_keywords_v1',d)}
+function renderSeoTable(){
+  const body=document.getElementById('seoTableBody');if(!body)return;
+  const d=getSeoKeywords();
+  // KPI
+  const pwrCount=d.filter(k=>k.sections?.['파워링크']).length;
+  const shopCount=d.filter(k=>k.sections?.['쇼핑검색']).length;
+  const blogCafeCount=d.filter(k=>k.sections?.['블로그']||k.sections?.['카페']).length;
+  document.getElementById('seoTotal')&&(document.getElementById('seoTotal').textContent=d.length);
+  document.getElementById('seoPwr')&&(document.getElementById('seoPwr').textContent=pwrCount);
+  document.getElementById('seoShop')&&(document.getElementById('seoShop').textContent=shopCount);
+  document.getElementById('seoBlogCafe')&&(document.getElementById('seoBlogCafe').textContent=blogCafeCount);
+  if(d.length===0){body.innerHTML='<tr><td colspan="12" class="text-center text-gray-400 py-4">추적 키워드가 없습니다.</td></tr>';return}
+  body.innerHTML=d.map(k=>{
+    const t=k.lastChecked?new Date(k.lastChecked):null;
+    const tStr=t?`${fmtDateYY(t.toISOString().slice(0,10))} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`:'-';
+    const cells=SEO_SECTIONS.map(s=>{
+      const rank=k.sections?.[s];
+      if(!rank)return '<td class="text-center text-gray-300">—</td>';
+      const color=rank<=3?'text-green-600 bg-green-50':rank<=10?'text-blue-600 bg-blue-50':'text-gray-600 bg-gray-50';
+      return `<td class="text-center text-xs font-semibold"><span class="px-1.5 py-0.5 rounded ${color}">${rank}</span></td>`;
+    }).join('');
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="seoChk" data-id="${k.id}" /></td>
+      <td contenteditable oninput="updSeoKw(${k.id},'keyword',this.textContent)" class="font-medium">${escapeHtml(k.keyword)}</td>
+      ${cells}
+      <td class="text-[10px] text-gray-500">${tStr}</td>
+    </tr>`;
+  }).join('');
+}
+function updSeoKw(id,k,v){const d=getSeoKeywords();const x=d.find(y=>y.id===id);if(x){x[k]=v;saveSeoKeywords(d)}}
+function addSeoKeyword(){
+  const inp=document.getElementById('seoNewKw');const kw=inp?.value.trim();
+  if(!kw){alert('키워드를 입력하세요');return}
+  const d=getSeoKeywords();
+  if(d.some(x=>x.keyword===kw)){alert('이미 추적 중인 키워드입니다');return}
+  // 시뮬레이션: 일부 섹션에 랜덤 순위 할당
+  const sections={};
+  SEO_SECTIONS.forEach(s=>{sections[s]=Math.random()<0.5?Math.floor(Math.random()*30+1):null});
+  d.push({id:Date.now(),keyword:kw,sections,lastChecked:new Date().toISOString()});
+  saveSeoKeywords(d);inp.value='';renderSeoTable();
+  showToast('+','SEO 키워드 추가',kw);
+}
+function refreshSeoSections(){
+  const d=getSeoKeywords();
+  d.forEach(k=>{
+    SEO_SECTIONS.forEach(s=>{
+      // 기존 노출되던 섹션은 ±5 변동, 안 되던 섹션은 30% 확률로 신규 진입
+      const cur=k.sections?.[s];
+      if(cur)k.sections[s]=Math.max(1,cur+Math.floor(Math.random()*11)-5);
+      else if(Math.random()<0.3)k.sections[s]=Math.floor(Math.random()*30+1);
+    });
+    k.lastChecked=new Date().toISOString();
+  });
+  saveSeoKeywords(d);renderSeoTable();
+  showToast('🔄','SEO 노출 새로고침',d.length+'개 키워드 갱신 (시뮬레이션)');
+}
+function toggleAllSeoRows(c){document.querySelectorAll('.seoChk').forEach(x=>x.checked=c)}
+function delSelectedSeoKws(){
+  const ids=Array.from(document.querySelectorAll('.seoChk:checked')).map(c=>parseInt(c.dataset.id));
+  if(ids.length===0){alert('선택하세요');return}
+  if(!confirm(ids.length+'개 키워드를 삭제하시겠습니까?'))return;
+  saveSeoKeywords(getSeoKeywords().filter(k=>!ids.includes(k.id)));renderSeoTable();showToast('🗑','삭제됨','');
 }
 
 // ----- 재고 7일 평균/상태/필터 -----
