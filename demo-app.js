@@ -2228,6 +2228,7 @@ function getEcOrders(){
 function saveEcOrders(d){ST.set('ec_orders_v2',d)}
 function renderEcOrders(){
   const body=document.getElementById('ecOrdersBody');if(!body)return;
+  _autoAssignPartners(); // 제품→거래처 매핑 자동 적용
   const orders=getEcOrders();
   // KPI 카운트
   const cnt={paid:0,preparing:0,onhold:0,shipped:0,delivered:0};
@@ -2258,19 +2259,25 @@ function renderEcOrders(){
   if(pf!=='all')list=list.filter(o=>o.platform===pf);
   if(af!=='all'){const [afp,afl]=af.split('|');list=list.filter(o=>o.platform===afp&&(o.accountLabel||'(기본)')===afl);}
   if(sf!=='all')list=list.filter(o=>o.status===sf);
-  if(list.length===0){body.innerHTML='<tr><td colspan="15" class="text-center text-gray-400 py-4">조건에 맞는 주문이 없습니다.</td></tr>';return}
+  if(list.length===0){body.innerHTML='<tr><td colspan="16" class="text-center text-gray-400 py-4">조건에 맞는 주문이 없습니다.</td></tr>';return}
   const courierOpts=getCourierList().map(c=>`<option value="${c}">${c}</option>`).join('');
   const statusOpts=Object.entries(EC_STATUS_LABELS).map(([k,v])=>`<option value="${k}">${v.l}</option>`).join('');
+  const partnerOpts=getPartners().map(p=>`<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join('');
   body.innerHTML=list.map(o=>{
     const st=EC_STATUS_LABELS[o.status]||{l:o.status,c:'bg-gray-100'};
-    return `<tr>
+    const mappedProduct=getMappedProduct(o.product,o.option);
+    const mappedOption=getMappedOption(o.product,o.option);
+    const productChanged=mappedProduct!==o.product;
+    const optionChanged=mappedOption!==(o.option||'');
+    return `<tr ${o.sentToPartner?'class="bg-purple-50"':''}>
       <td class="sheet-row-num"><input type="checkbox" class="ecOrderChk" data-id="${o.id}" /></td>
       <td><span class="text-xs px-2 py-0.5 rounded bg-gray-100">${EC_PLATFORM_NAMES[o.platform]||o.platform}</span></td>
       <td class="text-xs text-gray-700">${escapeHtml(o.accountLabel||'(기본)')}</td>
       <td class="font-mono text-xs">${escapeHtml(o.orderNo)}</td>
       <td class="font-mono text-xs">${fmtDateYY(o.orderDate)}</td>
-      <td>${escapeHtml(o.product)}</td>
-      <td class="text-xs text-gray-600">${escapeHtml(o.option||'-')}</td>
+      <td>${escapeHtml(mappedProduct)}${productChanged?`<div class="text-[10px] text-gray-400">원본: ${escapeHtml(o.product)}</div>`:''}</td>
+      <td class="text-xs text-gray-600">${escapeHtml(mappedOption||'-')}${optionChanged?`<div class="text-[10px] text-gray-400">원본: ${escapeHtml(o.option||'-')}</div>`:''}</td>
+      <td><select onchange="setOrderPartner(${o.id},this.value)" class="text-xs border rounded px-1 py-0.5 bg-white"><option value="">미지정</option>${partnerOpts.replace('value="'+escapeHtml(o.partner||'')+'"','value="'+escapeHtml(o.partner||'')+'" selected')}</select>${o.sentToPartner?'<div class="text-[10px] text-purple-600 mt-0.5">📤 발주 전송됨</div>':''}</td>
       <td class="text-center">${o.qty}</td>
       <td>${escapeHtml(o.customer)}</td>
       <td class="font-mono text-xs">${escapeHtml(o.zipcode||'-')}</td>
@@ -2287,6 +2294,137 @@ function changeEcOrderStatus(id,newStatus){
   const d=getEcOrders();const o=d.find(x=>x.id===id);if(!o)return;
   o.status=newStatus;saveEcOrders(d);renderEcOrders();
   showToast('🔄','상태 변경',`${o.customer} → ${EC_STATUS_LABELS[newStatus]?.l||newStatus}`);
+}
+
+// ----- 상품명/옵션명 매핑 -----
+function _productMapKey(product,option){return `${product||''}|${option||''}`}
+function getProductNameMap(){return ST.get('product_name_map_v1',{})}
+function saveProductNameMap(m){ST.set('product_name_map_v1',m)}
+function getMappedProduct(p,o){const m=getProductNameMap()[_productMapKey(p,o)];return m?.product||p}
+function getMappedOption(p,o){const m=getProductNameMap()[_productMapKey(p,o)];return m?.option!==undefined&&m.option!==''?m.option:o}
+function updProductNameMap(key,field,val){
+  const m=getProductNameMap();
+  if(!m[key])m[key]={};
+  m[key][field]=val;
+  saveProductNameMap(m);
+}
+function openProductNameMapModal(){renderProductNameMapTable();openModal('productNameMapModal')}
+function renderProductNameMapTable(){
+  const body=document.getElementById('productNameMapBody');if(!body)return;
+  const orders=getEcOrders();
+  const grouped={};
+  orders.forEach(o=>{const k=_productMapKey(o.product,o.option);if(!grouped[k])grouped[k]={product:o.product||'',option:o.option||'',count:0};grouped[k].count++});
+  const list=Object.entries(grouped).sort((a,b)=>b[1].count-a[1].count);
+  if(list.length===0){body.innerHTML='<tr><td colspan="5" class="text-center text-gray-400 py-4">매핑할 상품이 없습니다.</td></tr>';return}
+  const map=getProductNameMap();
+  body.innerHTML=list.map(([k,v])=>{
+    const m=map[k]||{};
+    return `<tr>
+      <td class="text-xs">${escapeHtml(v.product)}</td>
+      <td class="text-xs text-gray-600">${escapeHtml(v.option||'-')}</td>
+      <td contenteditable oninput="updProductNameMap('${escapeHtml(k).replace(/'/g,'&apos;')}','product',this.textContent);renderEcOrders()" class="text-xs">${escapeHtml(m.product||'')}</td>
+      <td contenteditable oninput="updProductNameMap('${escapeHtml(k).replace(/'/g,'&apos;')}','option',this.textContent);renderEcOrders()" class="text-xs">${escapeHtml(m.option||'')}</td>
+      <td class="text-center text-xs">${v.count}건</td>
+    </tr>`;
+  }).join('');
+}
+
+// ----- 제품 → 거래처 자동 매핑 -----
+function getProductPartnerMap(){return ST.get('product_partner_map_v1',{})}
+function saveProductPartnerMap(m){ST.set('product_partner_map_v1',m)}
+function setOrderPartner(orderId,partnerName){
+  const d=getEcOrders();const o=d.find(x=>x.id===orderId);if(!o)return;
+  const oldPartner=o.partner;
+  o.partner=partnerName;
+  // 같은 상품의 매핑 자동 저장 (이후 같은 상품 주문은 자동 할당)
+  if(o.product){
+    const m=getProductPartnerMap();
+    if(partnerName){
+      m[o.product]=partnerName;
+      // 같은 상품의 다른 주문에도 적용 (거래처 미지정 행만)
+      d.forEach(x=>{if(x.product===o.product&&!x.partner)x.partner=partnerName});
+    }else{
+      delete m[o.product];
+    }
+    saveProductPartnerMap(m);
+  }
+  saveEcOrders(d);renderEcOrders();
+  showToast('🤝','거래처 지정',`${o.product}${oldPartner&&oldPartner!==partnerName?'  '+oldPartner+' → ':''} ${partnerName||'(해제)'}`);
+}
+function _autoAssignPartners(){
+  // 거래처 매핑된 상품의 미할당 주문 자동 적용
+  const map=getProductPartnerMap();
+  const d=getEcOrders();let changed=false;
+  d.forEach(o=>{if(!o.partner&&o.product&&map[o.product]){o.partner=map[o.product];changed=true}});
+  if(changed)saveEcOrders(d);
+}
+
+// ----- 주문 → 거래처 발주 전송 -----
+function sendOrdersToPartner(){
+  const ids=Array.from(document.querySelectorAll('.ecOrderChk:checked')).map(c=>parseInt(c.dataset.id));
+  if(ids.length===0){alert('보낼 주문을 선택하세요');return}
+  const d=getEcOrders();const selected=d.filter(o=>ids.includes(o.id));
+  const withPartner=selected.filter(o=>o.partner);
+  const withoutPartner=selected.length-withPartner.length;
+  if(withPartner.length===0){alert('거래처가 지정된 주문이 없습니다. 행에서 거래처를 먼저 선택하세요.');return}
+  // 거래처별 그룹핑
+  const byPartner={};
+  withPartner.forEach(o=>{
+    if(!byPartner[o.partner])byPartner[o.partner]=[];
+    byPartner[o.partner].push(o);
+  });
+  const preview=document.getElementById('sendToPartnerPreview');
+  preview.innerHTML=Object.entries(byPartner).map(([partner,orders])=>{
+    const items=orders.reduce((acc,o)=>{const k=`${o.product}|${o.option||''}`;if(!acc[k])acc[k]={product:o.product,option:o.option,qty:0};acc[k].qty+=parseInt(o.qty)||0;return acc},{});
+    return `<div class="border border-gray-200 rounded-lg p-3">
+      <div class="flex items-center gap-2 mb-2"><strong class="text-sm">${escapeHtml(partner)}</strong><span class="text-xs text-gray-400">주문 ${orders.length}건 · 품목 ${Object.keys(items).length}종</span></div>
+      <div class="space-y-1">
+        ${Object.values(items).map(i=>`<div class="text-xs flex justify-between border-b border-gray-100 py-1"><span>${escapeHtml(getMappedProduct(i.product,i.option))}${i.option?' / '+escapeHtml(getMappedOption(i.product,i.option)):''}</span><span class="font-mono">× ${i.qty}</span></div>`).join('')}
+      </div>
+    </div>`;
+  }).join('')+(withoutPartner>0?`<div class="text-xs text-amber-600 mt-2">⚠️ 거래처 미지정 ${withoutPartner}건은 전송에서 제외됩니다.</div>`:'');
+  // 데이터 임시 보관
+  window._pendingSendToPartner={byPartner,orderIds:withPartner.map(o=>o.id)};
+  openModal('sendToPartnerModal');
+}
+function confirmSendToPartner(){
+  const data=window._pendingSendToPartner;if(!data)return;
+  const today=new Date().toISOString().split('T')[0];
+  const partnerOrders=getPartnerData('order');
+  let totalAdded=0;
+  Object.entries(data.byPartner).forEach(([partner,orders])=>{
+    // 발주 항목으로 묶기 (제품 단위로 집계)
+    const items={};
+    orders.forEach(o=>{
+      const displayProduct=getMappedProduct(o.product,o.option);
+      const displayOption=getMappedOption(o.product,o.option);
+      const key=`${displayProduct}|${displayOption}`;
+      if(!items[key])items[key]={product:displayProduct,option:displayOption,qty:0};
+      items[key].qty+=parseInt(o.qty)||0;
+    });
+    Object.values(items).forEach(item=>{
+      partnerOrders.push({
+        partner,
+        col1:today, // 발주일
+        col2:'이커머스 자동발주', // 브랜드/출처
+        col3:item.option?`${item.product} / ${item.option}`:item.product, // 제품
+        col4:String(item.qty),
+        col5:'', // 단가
+        col6:'', // 금액
+        col7:'대기' // 상태
+      });
+      totalAdded++;
+    });
+  });
+  ST.set('partner_order',partnerOrders);
+  // 보낸 주문에 mark
+  const d=getEcOrders();
+  data.orderIds.forEach(id=>{const o=d.find(x=>x.id===id);if(o)o.sentToPartner=true});
+  saveEcOrders(d);renderEcOrders();
+  closeModal('sendToPartnerModal');
+  showToast('📤','발주 전송 완료',`거래처 ${Object.keys(data.byPartner).length}곳 · 발주 ${totalAdded}건`);
+  // 거래처 페이지로 이동? 일단 알림으로
+  addNotif({type:'order',icon:'📤',title:'발주 전송 알림',content:`이커머스에서 ${totalAdded}건 발주 자동 등록`,target:'partners'});
 }
 function updEcOrder(id,key,val){
   const d=getEcOrders();const o=d.find(x=>x.id===id);
@@ -2344,7 +2482,7 @@ function delCourier(idx){
 const EC_ORDER_ALL_COLUMNS=[
   {k:'platform',l:'플랫폼'},{k:'accountLabel',l:'스토어명'},
   {k:'orderNo',l:'주문번호'},{k:'orderDate',l:'주문일'},
-  {k:'product',l:'상품'},{k:'option',l:'옵션'},{k:'qty',l:'수량'},
+  {k:'product',l:'상품'},{k:'option',l:'옵션'},{k:'partner',l:'거래처'},{k:'qty',l:'수량'},
   {k:'customer',l:'주문자'},{k:'zipcode',l:'우편번호'},{k:'addr',l:'주소'},{k:'phone',l:'전화번호'},
   {k:'status',l:'상태'},{k:'courier',l:'택배사'},{k:'tracking',l:'송장번호'}
 ];
@@ -2453,6 +2591,8 @@ function downloadEcOrdersExcel(tplId){
     if(k==='platform')return EC_PLATFORM_NAMES[o.platform]||o.platform;
     if(k==='orderDate')return fmtDateYY(o.orderDate);
     if(k==='status')return EC_STATUS_LABELS[o.status]?.l||o.status;
+    if(k==='product')return getMappedProduct(o.product,o.option);
+    if(k==='option')return getMappedOption(o.product,o.option);
     return o[k]??'';
   }));
   const today=new Date().toISOString().slice(2,10);
@@ -2511,7 +2651,7 @@ function _doPrintWaybills(list){
     <div class="row"><strong>받는분:</strong>${escapeHtml(o.customer)} (${escapeHtml(o.phone||'-')})</div>
     <div class="row"><strong>우편번호:</strong>${escapeHtml(o.zipcode||'-')}</div>
     <div class="row"><strong>주소:</strong>${escapeHtml(o.addr)}</div>
-    <div class="row"><strong>상품:</strong>${escapeHtml(o.product)}${o.option?' / '+escapeHtml(o.option):''} × ${o.qty}</div>
+    <div class="row"><strong>상품:</strong>${escapeHtml(getMappedProduct(o.product,o.option))}${getMappedOption(o.product,o.option)?' / '+escapeHtml(getMappedOption(o.product,o.option)):''} × ${o.qty}</div>
     <div class="row"><strong>택배사:</strong>${escapeHtml(o.courier||'(미지정)')}</div>
     <div class="tracking">${escapeHtml(o.tracking||'송장번호 미입력')}</div>
   </div>`).join('')}

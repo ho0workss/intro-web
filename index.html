@@ -708,6 +708,8 @@
             <button onclick="bulkShipEcOrders()" class="px-3 py-1 bg-black text-white text-xs rounded">📦 일괄 출고</button>
             <button onclick="printEcWaybills()" class="px-3 py-1 border border-gray-300 text-xs rounded">🖨 송장 출력</button>
             <button onclick="openCourierMgmtModal()" class="px-3 py-1 border border-gray-300 text-xs rounded">🚚 택배사 관리</button>
+            <button onclick="openProductNameMapModal()" class="px-3 py-1 border border-gray-300 text-xs rounded">🏷️ 상품명 매핑</button>
+            <button onclick="sendOrdersToPartner()" class="px-3 py-1 bg-purple-600 text-white text-xs rounded">📤 발주 보내기</button>
             <button onclick="openExcelDownloadModal()" class="px-3 py-1 bg-green-600 text-white text-xs rounded">📥 엑셀 다운로드</button>
             <button onclick="openOrderTemplateModal()" class="px-3 py-1 border border-gray-300 text-xs rounded" title="엑셀 양식 추가/삭제">📋 양식 관리</button>
           </div>
@@ -715,7 +717,7 @@
           <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
             <thead><tr>
               <th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAllOrders(this.checked)" /></th>
-              <th>플랫폼</th><th>스토어명</th><th>주문번호</th><th>주문일</th><th>상품</th><th>옵션</th><th>수량</th><th>주문자</th><th>우편번호</th><th>주소</th><th>상태</th><th>택배사</th><th>송장번호</th><th>관리</th>
+              <th>플랫폼</th><th>스토어명</th><th>주문번호</th><th>주문일</th><th>상품</th><th>옵션</th><th>거래처</th><th>수량</th><th>주문자</th><th>우편번호</th><th>주소</th><th>상태</th><th>택배사</th><th>송장번호</th><th>관리</th>
             </tr></thead>
             <tbody id="ecOrdersBody"></tbody>
           </table></div>
@@ -1107,6 +1109,51 @@
       </div>
       <!-- 결과 -->
       <div id="ecAnResult" class="text-xs text-gray-400 text-center py-8">[▶ 분석 실행]을 눌러 결과를 확인하세요.</div>
+    </div>
+  </div>
+</div>
+
+<!-- 상품명/옵션명 매핑 모달 -->
+<div id="productNameMapModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
+      <h2 class="text-lg font-bold">🏷️ 상품명/옵션명 매핑</h2>
+      <button onclick="closeModal('productNameMapModal')" class="hover-bg p-1 rounded">✕</button>
+    </div>
+    <div class="p-5">
+      <div class="bg-blue-50 border border-blue-200 rounded p-3 mb-3 text-xs text-blue-900">
+        💡 플랫폼에서 들어온 원본 이름을 내가 지정한 이름으로 표시할 수 있습니다. 비워두면 원본 그대로 표시됩니다.
+      </div>
+      <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto">
+        <table class="sheet-table">
+          <thead><tr>
+            <th>원본 상품명</th><th>원본 옵션</th><th>표시 상품명</th><th>표시 옵션</th><th>해당 주문수</th>
+          </tr></thead>
+          <tbody id="productNameMapBody"></tbody>
+        </table>
+      </div>
+      <p class="text-[10px] text-gray-500 mt-3">💡 셀을 더블클릭하여 편집. 변경 사항은 자동 저장됩니다.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 발주 보내기 미리보기 모달 -->
+<div id="sendToPartnerModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
+      <h2 class="text-lg font-bold">📤 발주 보내기</h2>
+      <button onclick="closeModal('sendToPartnerModal')" class="hover-bg p-1 rounded">✕</button>
+    </div>
+    <div class="p-5 space-y-3">
+      <div class="bg-amber-50 border border-amber-200 rounded p-3 text-xs text-amber-900">
+        선택된 주문을 거래처별로 묶어 발주(거래처 ▸ 발주)에 전송합니다.<br>
+        ⚠️ 거래처가 지정되지 않은 주문은 제외됩니다.
+      </div>
+      <div id="sendToPartnerPreview"></div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeModal('sendToPartnerModal')" class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm">취소</button>
+        <button onclick="confirmSendToPartner()" class="flex-1 px-3 py-2 bg-purple-600 text-white rounded text-sm font-medium">발주로 전송</button>
+      </div>
     </div>
   </div>
 </div>
