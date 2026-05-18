@@ -323,7 +323,7 @@ function navigateSub(page,sub){
   // 순위 탭 진입 시 현재 메뉴 활성화 (기본: 쇼핑검색순위)
   if(page==='ecommerce'&&sub==='ranking'){setRankMenu(_rankMenu||'search');renderRankSearch();renderRankSlot();}
   // 쇼핑 모니터링 탭 진입
-  if(page==='ecommerce'&&sub==='monitor'){setMonitorMenu(_monitorMenu||'ac');renderAcTable();renderSeoTable();}
+  if(page==='ecommerce'&&sub==='monitor'){setMonitorMenu(_monitorMenu||'ac');renderAcTable();renderSeoTable();_restoreAcDataSource();}
 }
 function switchSettingTab(tab){
   document.querySelectorAll('.settings-tab').forEach(t=>t.classList.remove('bg-gray-100','font-semibold'));
@@ -2319,11 +2319,63 @@ function addAcQuery(){
   saveAcQueries(d);inp.value='';renderAcTable();
   showToast('+','자동완성 쿼리 추가',q);
 }
-function refreshAllAcQueries(){
+function changeAcDataSource(v){
+  saveAcDataSource(v);
+  const hint=document.getElementById('acDataSourceHint');
+  if(hint){
+    const hints={
+      mock:'(API 호출 없음 - 데모용 가짜 데이터)',
+      naver_unofficial:'(Vercel Function /api/naver-autocomplete 사용 · API 키 불필요)',
+      naver_sa:'(설정 ▸ API 연동에 검색광고 키 등록 필요)'
+    };
+    hint.textContent=hints[v]||'';
+  }
+  showToast('🔄','데이터 소스 변경',v);
+}
+function _restoreAcDataSource(){
+  const sel=document.getElementById('acDataSourceSel');
+  if(sel){const cur=getAcDataSource();sel.value=cur;changeAcDataSource(cur);}
+}
+async function _fetchAcSuggestions(query,source){
+  if(source==='naver_unofficial'){
+    const r=await fetch(`/api/naver-autocomplete?q=${encodeURIComponent(query)}`);
+    if(!r.ok)throw new Error('Backend '+r.status);
+    const data=await r.json();
+    if(!Array.isArray(data?.suggestions))throw new Error('Invalid response');
+    return data.suggestions;
+  }
+  if(source==='naver_sa'){
+    // 네이버 검색광고 키워드 도구 (RelKwdStat)는 인증 헤더가 필요하므로 백엔드 함수가 있어야 함
+    // 현재는 Vercel Function 미구현 → 안내 후 mock으로 폴백
+    throw new Error('네이버 검색광고 키워드 도구는 별도 백엔드 함수가 필요합니다 (미구현)');
+  }
+  // mock
+  return _genMockAcResult(query);
+}
+async function refreshAllAcQueries(){
   const d=getAcQueries();const today=new Date().toISOString().split('T')[0];
-  d.forEach(q=>{q.history=q.history||{};q.history[today]=_genMockAcResult(q.query)});
+  const source=getAcDataSource();
+  let ok=0,fail=0;
+  for(const q of d){
+    try{
+      const suggestions=await _fetchAcSuggestions(q.query,source);
+      q.history=q.history||{};q.history[today]=suggestions;
+      ok++;
+    }catch(err){
+      console.warn('AC fetch failed for',q.query,err);
+      // 실패 시 mock으로 폴백 (사용자 경험 위해)
+      q.history=q.history||{};q.history[today]=_genMockAcResult(q.query);
+      fail++;
+    }
+  }
   saveAcQueries(d);renderAcTable();
-  showToast('🔄','자동완성 새로고침',d.length+'개 쿼리 갱신 (시뮬레이션)');
+  if(source==='mock'){
+    showToast('🔄','자동완성 새로고침',d.length+'개 쿼리 갱신 (Mock)');
+  }else if(fail===0){
+    showToast('✅','자동완성 새로고침',`${ok}건 실데이터 갱신 (${source})`);
+  }else{
+    showToast('⚠️','자동완성 새로고침',`성공 ${ok} · 실패 ${fail} (실패는 Mock 사용)`);
+  }
 }
 function toggleAllAcRows(c){document.querySelectorAll('.acChk').forEach(x=>x.checked=c)}
 function delSelectedAcQueries(){
@@ -3093,8 +3145,13 @@ const EXT_API_PROVIDERS=[
   {id:'goodsflow',name:'굿스플로 (통합 택배 송장)',cat:'shipping',platformKey:'goodsflow',fields:[{k:'apiKey',l:'API Key'}]},
   {id:'ezadmin',name:'이지어드민 (재고/주문 관리)',cat:'erp',platformKey:'ezadmin',fields:[{k:'apiKey',l:'API Key'},{k:'companyCode',l:'업체 코드'}]},
   {id:'cj_eflex',name:'CJ LoIS Eflex (WMS) · API 미지원',cat:'wms',platformKey:'cj_eflex',note:'표준 공개 OpenAPI 미제공 — CSV 업로드 방식으로만 연동 가능',fields:[{k:'centerCode',l:'센터 코드 (선택)'},{k:'memo',l:'메모'}]},
+  {id:'naver_autocomplete',name:'네이버 자동완성 (비공식 endpoint)',cat:'monitor',platformKey:'naver_autocomplete',note:'공식 API 아님. 약관 회색지대 / 차단 가능성 있음. API 키는 불필요하며, /api/naver-autocomplete 백엔드 함수가 ac.search.naver.com 을 프록시 호출함. 활성화하면 Mock 대신 실데이터를 사용.',fields:[{k:'memo',l:'메모 (선택)'}]},
+  {id:'naver_keyword_tool',name:'네이버 검색광고 - 키워드 도구 (공식 API)',cat:'monitor',platformKey:'naver_keyword_tool',note:'자동완성 그대로는 아니지만 공식. 연관 키워드 + 월간 검색량을 제공. 검색광고 API의 RelKwdStat 사용.',fields:[{k:'apiKey',l:'API Key'},{k:'secretKey',l:'Secret Key'},{k:'customerId',l:'Customer ID'}]},
 ];
-const EXT_API_CAT_NAMES={ecommerce:'🛍️ 이커머스',ads:'📣 광고',shipping:'🚚 택배',erp:'📦 ERP / 재고',wms:'🏭 WMS / 물류센터'};
+const EXT_API_CAT_NAMES={ecommerce:'🛍️ 이커머스',ads:'📣 광고',shipping:'🚚 택배',erp:'📦 ERP / 재고',wms:'🏭 WMS / 물류센터',monitor:'🔍 쇼핑 모니터링'};
+// 자동완성 데이터 소스 모드: mock(시뮬레이션) / naver_unofficial(비공식 endpoint, 백엔드 프록시) / naver_sa(검색광고 API)
+function getAcDataSource(){return ST.get('ac_data_source','mock')}
+function saveAcDataSource(v){ST.set('ac_data_source',v)}
 function getExtApiSettings(){
   const raw=ST.get('extApiSettings',{});
   // 구버전 호환: 단일 계정 → accounts 배열로 마이그레이션
