@@ -150,7 +150,7 @@ function closeMobileSidebar(){
   if(bd)bd.classList.remove('show');
 }
 // ========== 모바일 셸 (헤더/탭바/FAB) ==========
-const MOBILE_PAGE_TITLES={home:'홈',messenger:'메신저',chatgpt:'ChatGPT',meetings:'회의','meeting-detail':'회의',leave:'휴가 관리',partners:'거래처',ecommerce:'이커머스',events:'행사',design:'디자인',ads:'광고',other:'기타',settings:'설정'};
+const MOBILE_PAGE_TITLES={home:'홈',messenger:'메신저',chatgpt:'ChatGPT',meetings:'회의','meeting-detail':'회의',leave:'휴가 관리',partners:'거래처',ecommerce:'이커머스',events:'행사',design:'디자인',ads:'마케팅',other:'기타',settings:'설정'};
 const MOBILE_FAB_CONFIG={
   home:{action:'__menu__'},
   leave:{action:'openLeaveModal()'},
@@ -656,7 +656,7 @@ function renderDeptRole(){
     return `<tr><td class="sheet-row-num">${i+1}</td><td contenteditable class="editable">${d.name}</td><td>${count}명</td><td><select class="text-xs border rounded px-2 py-1 bg-white" onchange="updateDeptRole(${i},this.value)"><option value="admin" ${d.role==='admin'?'selected':''}>관리자</option><option value="manager" ${d.role==='manager'?'selected':''}>매니저</option><option value="member" ${d.role==='member'?'selected':''}>멤버</option></select></td><td><button onclick="openPermissionModal(${i})" class="text-xs px-2 py-1 border border-gray-200 rounded bg-white">🔐 권한 (${menuCount}메뉴) ▾</button></td><td><button onclick="deleteDept(${i})" class="text-xs text-red-500">삭제</button></td></tr>`;
   }).join('');
 }
-const DEFAULT_MENUS=['홈','메신저','ChatGPT','거래처','이커머스','행사','디자인','광고','기타','설정'];
+const DEFAULT_MENUS=['홈','메신저','ChatGPT','거래처','이커머스','행사','디자인','마케팅','기타','설정'];
 const DEFAULT_FEATURES=[
   {key:'read',label:'읽기'},{key:'write',label:'쓰기/등록'},{key:'edit',label:'수정'},{key:'delete',label:'삭제'},
   {key:'invite',label:'멤버 초대'},{key:'approve',label:'가입 승인'},{key:'kick',label:'멤버 강퇴'},
