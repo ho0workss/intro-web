@@ -862,11 +862,12 @@ function updPartner(i,k,v){const ps=getPartners();ps[i][k]=v;savePartners(ps)}
 
 // ========== 거래처 페이지 테이블 ==========
 const PARTNER_SAMPLE={
+  // 발주 컬럼 (v2): col1=발주일 / col2=제품 / col3=수량 / col4=단가 / col5=금액 / col6=상태 / col7=택배사 / col8=송장번호
   order:[
-    {partner:'(주)뷰티코리아',col1:'2026-05-01',col2:'INTRO',col3:'스킨케어 세트',col4:'200',col5:'18000',col6:'3,600,000',col7:'완료'},
-    {partner:'(주)뷰티코리아',col1:'2026-05-03',col2:'INTRO',col3:'선크림 SPF50+',col4:'500',col5:'8000',col6:'4,000,000',col7:'진행중'},
-    {partner:'라이프스타일컴퍼니',col1:'2026-05-05',col2:'스킨라이프',col3:'보습 크림',col4:'150',col5:'12000',col6:'1,800,000',col7:'완료'},
-    {partner:'(주)코스메틱하우스',col1:'2026-05-08',col2:'비욘드',col3:'클렌징 폼',col4:'300',col5:'5000',col6:'1,500,000',col7:'대기'}
+    {partner:'(주)뷰티코리아',col1:'2026-05-01',col2:'스킨케어 세트',col3:'200',col4:'18000',col5:'3,600,000',col6:'완료',col7:'CJ대한통운',col8:'1234567890'},
+    {partner:'(주)뷰티코리아',col1:'2026-05-03',col2:'선크림 SPF50+',col3:'500',col4:'8000',col5:'4,000,000',col6:'진행중',col7:'',col8:''},
+    {partner:'라이프스타일컴퍼니',col1:'2026-05-05',col2:'보습 크림',col3:'150',col4:'12000',col5:'1,800,000',col6:'완료',col7:'한진택배',col8:'5566778899'},
+    {partner:'(주)코스메틱하우스',col1:'2026-05-08',col2:'클렌징 폼',col3:'300',col4:'5000',col5:'1,500,000',col6:'대기',col7:'',col8:''}
   ],
   sales:[
     {partner:'(주)뷰티코리아',col1:'2026-05-12',col2:'스킨케어 세트',col3:'네이버',col4:'87',col5:'3,915,000',col6:'3,523,500'},
@@ -883,8 +884,15 @@ const PARTNER_SAMPLE={
     {partner:'라이프스타일컴퍼니',col1:'2026-04',col2:'11번가',col3:'1,620,000',col4:'700,000',col5:'750,000',col6:'완료'}
   ]
 };
-function getPartnerData(t){return ST.get('partner_'+t,PARTNER_SAMPLE[t]||[])}
-function savePartnerData(t,d){ST.set('partner_'+t,d)}
+function getPartnerData(t){
+  // 발주는 컬럼 구조 변경(브랜드 제거 + 택배사/송장 추가) 으로 v2 키 사용
+  const key=t==='order'?'partner_order_v2':'partner_'+t;
+  return ST.get(key,PARTNER_SAMPLE[t]||[]);
+}
+function savePartnerData(t,d){
+  const key=t==='order'?'partner_order_v2':'partner_'+t;
+  ST.set(key,d);
+}
 let currentPartnerFilter='all';
 function renderPartnerFilter(){
   const sel=document.getElementById('partnerFilter');if(!sel)return;
@@ -913,9 +921,10 @@ function renderPartnerTable(t){
   // 원본 인덱스를 유지하기 위해 origIdx 사용
   tb.innerHTML=data.map(r=>{
     const origIdx=allData.indexOf(r);
-    let c=`<td class="sheet-row-num"><input type="checkbox" class="row-check" data-type="${t}" data-idx="${origIdx}" /></td>`;
+    const linked=t==='order'&&r.sourceOrderIds&&r.sourceOrderIds.length>0;
+    let c=`<td class="sheet-row-num"><input type="checkbox" class="row-check" data-type="${t}" data-idx="${origIdx}" />${linked?'<div class="text-[9px] text-purple-600 mt-0.5" title="이커머스 '+r.sourceOrderIds.length+'건과 연동">🔁</div>':''}</td>`;
     for(let j=1;j<=cc;j++)c+=`<td contenteditable="true" oninput="updPartnerCell('${t}',${origIdx},${j},this.textContent)">${r['col'+j]||''}</td>`;
-    return `<tr data-partner="${escapeHtml(r.partner||'')}">${c}</tr>`;
+    return `<tr data-partner="${escapeHtml(r.partner||'')}" ${linked?'class="bg-purple-50"':''}>${c}</tr>`;
   }).join('');
 }
 function addPartnerRow(t){
@@ -938,7 +947,29 @@ function addPartnerRow(t){
 }
 function deletePartnerSelected(t){const cs=document.querySelectorAll(`.row-check[data-type="${t}"]:checked`);if(cs.length===0){alert('선택하세요');return}if(!confirm(cs.length+'개 삭제?'))return;const d=getPartnerData(t);Array.from(cs).map(c=>parseInt(c.dataset.idx)).sort((a,b)=>b-a).forEach(i=>d.splice(i,1));savePartnerData(t,d);renderPartnerTable(t);showToast('🗑️','삭제됨','')}
 function toggleAllRows(t,c){document.querySelectorAll(`.row-check[data-type="${t}"]`).forEach(x=>x.checked=c)}
-function updPartnerCell(t,i,c,v){const d=getPartnerData(t);if(d[i]){d[i]['col'+c]=v;savePartnerData(t,d)}}
+function updPartnerCell(t,i,c,v){
+  const d=getPartnerData(t);if(!d[i])return;
+  d[i]['col'+c]=v;savePartnerData(t,d);
+  // 발주(order) 의 col7=택배사 / col8=송장번호 변경 시 이커머스 주문에도 양방향 반영
+  if(t==='order'&&(c===7||c===8)){
+    const row=d[i];
+    const orderIds=row.sourceOrderIds||[];
+    if(orderIds.length>0){
+      const ecOrders=getEcOrders();let touched=0;
+      orderIds.forEach(oid=>{
+        const o=ecOrders.find(x=>x.id===oid);if(!o)return;
+        if(c===7)o.courier=v;
+        if(c===8)o.tracking=v;
+        touched++;
+      });
+      if(touched>0){
+        saveEcOrders(ecOrders);
+        showToast('🔁','이커머스 동기화',`${touched}건 ${c===7?'택배사':'송장번호'} 반영`);
+        if(document.getElementById('ecOrdersBody'))renderEcOrders();
+      }
+    }
+  }
+}
 
 // ========== 메신저 ==========
 const CHANNEL=new BroadcastChannel('intro-messenger');
@@ -2393,30 +2424,34 @@ function confirmSendToPartner(){
   const partnerOrders=getPartnerData('order');
   let totalAdded=0;
   Object.entries(data.byPartner).forEach(([partner,orders])=>{
-    // 발주 항목으로 묶기 (제품 단위로 집계)
+    // 발주 항목으로 묶기 (제품+옵션 단위로 집계, 원본 주문 id 보존)
     const items={};
     orders.forEach(o=>{
       const displayProduct=getMappedProduct(o.product,o.option);
       const displayOption=getMappedOption(o.product,o.option);
       const key=`${displayProduct}|${displayOption}`;
-      if(!items[key])items[key]={product:displayProduct,option:displayOption,qty:0};
+      if(!items[key])items[key]={product:displayProduct,option:displayOption,qty:0,sourceOrderIds:[]};
       items[key].qty+=parseInt(o.qty)||0;
+      items[key].sourceOrderIds.push(o.id);
     });
     Object.values(items).forEach(item=>{
+      // v2 컬럼: col1=발주일 / col2=제품 / col3=수량 / col4=단가 / col5=금액 / col6=상태 / col7=택배사 / col8=송장번호
       partnerOrders.push({
         partner,
-        col1:today, // 발주일
-        col2:'이커머스 자동발주', // 브랜드/출처
-        col3:item.option?`${item.product} / ${item.option}`:item.product, // 제품
-        col4:String(item.qty),
-        col5:'', // 단가
-        col6:'', // 금액
-        col7:'대기' // 상태
+        col1:today,
+        col2:item.option?`${item.product} / ${item.option}`:item.product,
+        col3:String(item.qty),
+        col4:'',
+        col5:'',
+        col6:'대기',
+        col7:'',
+        col8:'',
+        sourceOrderIds:item.sourceOrderIds
       });
       totalAdded++;
     });
   });
-  ST.set('partner_order',partnerOrders);
+  savePartnerData('order',partnerOrders);
   // 보낸 주문에 mark
   const d=getEcOrders();
   data.orderIds.forEach(id=>{const o=d.find(x=>x.id===id);if(o)o.sentToPartner=true});
