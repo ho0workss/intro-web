@@ -324,6 +324,8 @@ function navigateSub(page,sub){
   if(page==='ecommerce'&&sub==='ranking'){setRankMenu(_rankMenu||'search');renderRankSearch();renderRankSlot();}
   // 쇼핑 모니터링 탭 진입
   if(page==='ecommerce'&&sub==='monitor'){setMonitorMenu(_monitorMenu||'ac');renderAcTable();renderSeoTable();_restoreAcDataSource();_restoreSeoDataSource();_restoreAcHideIrrelevantToggle();}
+  // 원가/발주 탭 진입
+  if(page==='ecommerce'&&sub==='cost'){setCostMenu(_costMenu||'cost');renderEcCost();renderComponents();}
 }
 function switchSettingTab(tab){
   document.querySelectorAll('.settings-tab').forEach(t=>t.classList.remove('bg-gray-100','font-semibold'));
@@ -1996,12 +1998,19 @@ function getEcData(t){
     ];
     ST.set('ec_inventory_v2',fresh);return fresh;
   }
-  return ST.get('ec_'+t,{
-    cost:[{id:1,product:'스킨케어 세트',cost:18000,price:45000,orderQty:200},{id:2,product:'선크림 SPF50+',cost:8000,price:15000,orderQty:500},{id:3,product:'클렌징 폼',cost:5000,price:20000,orderQty:300}]
-  }[t]||[]);
+  if(t==='cost'){
+    const v=ST.get('ec_cost_v2',null);if(v)return v;
+    const fresh=[
+      {id:1,product:'스킨케어 세트',components:[],cost:18000,shippingFee:3000,price:45000,fee:4500},
+      {id:2,product:'선크림 SPF50+',components:[],cost:8000,shippingFee:3000,price:15000,fee:1500},
+      {id:3,product:'클렌징 폼',components:[],cost:5000,shippingFee:3000,price:20000,fee:2000}
+    ];
+    ST.set('ec_cost_v2',fresh);return fresh;
+  }
+  return ST.get('ec_'+t,[]);
 }
 function saveEcData(t,d){
-  const key=t==='sales'?'ec_sales_v2':t==='inventory'?'ec_inventory_v2':'ec_'+t;
+  const key=t==='sales'?'ec_sales_v2':t==='inventory'?'ec_inventory_v2':t==='cost'?'ec_cost_v2':'ec_'+t;
   ST.set(key,d);
 }
 function getEcSalesFiltered(){
@@ -2053,15 +2062,14 @@ function renderEcommerce(){
   document.getElementById('ecSalesSku')&&(document.getElementById('ecSalesSku').textContent=uniqueSku);
   document.getElementById('ecSalesAvg')&&(document.getElementById('ecSalesAvg').textContent=totalQty>0?'₩'+Math.round(totalRev/totalQty).toLocaleString():'₩0');
   renderEcInventory();
-  const cost=getEcData('cost');
-  document.getElementById('ecCostBody')&&(document.getElementById('ecCostBody').innerHTML=cost.map(c=>{const m=((c.price-c.cost)/c.price*100).toFixed(1);return `<tr><td class="sheet-row-num"><input type="checkbox" class="ecChk-cost" data-id="${c.id}" /></td><td contenteditable oninput="updEc('cost',${c.id},'product',this.textContent)">${c.product}</td><td contenteditable oninput="updEc('cost',${c.id},'cost',this.textContent)">₩${c.cost.toLocaleString()}</td><td contenteditable oninput="updEc('cost',${c.id},'price',this.textContent)">₩${c.price.toLocaleString()}</td><td class="${m>=50?'text-green-600':'text-amber-600'} font-semibold">${m}%</td><td contenteditable oninput="updEc('cost',${c.id},'orderQty',this.textContent)">${c.orderQty}</td></tr>`}).join(''));
+  renderEcCost();renderComponents();
   renderRankSearch();renderRankSlot();
 }
 function ecAddRow(t){
   const d=getEcData(t);const newRow={id:Date.now()};
   if(t==='sales')Object.assign(newRow,{date:new Date().toISOString().split('T')[0],brand:'',product:'새 상품',qty:0,revenue:0});
   if(t==='inventory')Object.assign(newRow,{sku:'',product:'새 상품',stock:0,min:0,source:'manual',lastSync:''});
-  if(t==='cost')Object.assign(newRow,{product:'새 상품',cost:0,price:0,orderQty:0});
+  if(t==='cost')Object.assign(newRow,{product:'새 상품',components:[],cost:0,shippingFee:0,price:0,fee:0});
   d.push(newRow);saveEcData(t,d);renderEcommerce();showToast('+','추가됨','');
 }
 function ecDelRow(t){const ids=Array.from(document.querySelectorAll('.ecChk-'+t+':checked')).map(c=>parseInt(c.dataset.id));if(ids.length===0){alert('선택하세요');return}if(!confirm('삭제?'))return;saveEcData(t,getEcData(t).filter(x=>!ids.includes(x.id)));renderEcommerce();showToast('🗑️','삭제됨','')}
@@ -2069,17 +2077,148 @@ function ecToggleAll(t,c){document.querySelectorAll('.ecChk-'+t).forEach(x=>x.ch
 function updEc(t,id,k,v){
   const d=getEcData(t);const x=d.find(y=>y.id===id);if(!x)return;
   const oldVal=x[k];
-  if(['qty','revenue','stock','min','cost','price','orderQty'].includes(k))x[k]=parseFloat(v.replace(/[^\d.-]/g,''))||0;
+  if(['qty','revenue','stock','min','cost','price','orderQty','shippingFee','fee'].includes(k))x[k]=parseFloat(String(v).replace(/[^\d.-]/g,''))||0;
   else if(k==='date')x[k]=parseDateYY(v);
   else x[k]=v;
   saveEcData(t,d);
   if(t==='inventory'){
-    // 재고 수량 변경 시 자동 PUSH (토글 ON일 때)
-    if(k==='stock'&&oldVal!==x.stock&&getInvAutoSync()){
-      pushInventoryToPlatform(x,oldVal);
-    }
+    if(k==='stock'&&oldVal!==x.stock&&getInvAutoSync()){pushInventoryToPlatform(x,oldVal);}
     renderEcInventory();
   }
+  if(t==='cost'){renderEcCost();}
+}
+
+// ----- 원가/발주 서브메뉴 -----
+let _costMenu='cost';
+function setCostMenu(m){
+  _costMenu=m;
+  document.querySelectorAll('[data-costmenu]').forEach(b=>b.classList.toggle('active',b.dataset.costmenu===m));
+  document.getElementById('cost-menu-cost')?.classList.toggle('hidden',m!=='cost');
+  document.getElementById('cost-menu-components')?.classList.toggle('hidden',m!=='components');
+}
+
+// ----- 구성품 데이터 -----
+function getComponents(){return ST.get('components_v1',[
+  {id:1,name:'주성분 (히알루론산)',price:3500,shippingFee:500,note:''},
+  {id:2,name:'유리 용기 50ml',price:1200,shippingFee:300,note:''},
+  {id:3,name:'펌프 캡',price:600,shippingFee:0,note:''},
+  {id:4,name:'외부 박스',price:400,shippingFee:0,note:''},
+  {id:5,name:'설명서/스티커',price:200,shippingFee:0,note:''}
+])}
+function saveComponents(d){ST.set('components_v1',d)}
+function renderComponents(){
+  const body=document.getElementById('componentsBody');if(!body)return;
+  const d=getComponents();
+  if(d.length===0){body.innerHTML='<tr><td colspan="6" class="text-center text-gray-400 py-4">등록된 구성품이 없습니다.</td></tr>';return}
+  body.innerHTML=d.map(c=>{
+    const total=(c.price||0)+(c.shippingFee||0);
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="compChk" data-id="${c.id}" /></td>
+      <td contenteditable oninput="updComponent(${c.id},'name',this.textContent)">${escapeHtml(c.name||'')}</td>
+      <td contenteditable oninput="updComponent(${c.id},'price',this.textContent)" class="text-right">₩${(c.price||0).toLocaleString()}</td>
+      <td contenteditable oninput="updComponent(${c.id},'shippingFee',this.textContent)" class="text-right">₩${(c.shippingFee||0).toLocaleString()}</td>
+      <td class="text-right font-semibold">₩${total.toLocaleString()}</td>
+      <td contenteditable oninput="updComponent(${c.id},'note',this.textContent)" class="text-xs text-gray-500">${escapeHtml(c.note||'')}</td>
+    </tr>`;
+  }).join('');
+}
+function updComponent(id,k,v){
+  const d=getComponents();const x=d.find(y=>y.id===id);if(!x)return;
+  if(['price','shippingFee'].includes(k))x[k]=parseFloat(String(v).replace(/[^\d.-]/g,''))||0;
+  else x[k]=v;
+  saveComponents(d);
+  // 원가 행에서 이 구성품을 참조 중이면 원가 재계산
+  const cost=getEcData('cost');let changed=false;
+  cost.forEach(c=>{const ref=(c.components||[]).find(r=>r.componentId===id);if(ref){ref.name=x.name;ref.price=x.price;changed=true}});
+  if(changed){saveEcData('cost',cost);renderEcCost();}
+  if(k==='price'||k==='shippingFee')renderComponents();
+}
+function addComponentRow(){
+  const d=getComponents();
+  d.push({id:Date.now(),name:'새 구성품',price:0,shippingFee:0,note:''});
+  saveComponents(d);renderComponents();showToast('+','구성품 추가','');
+}
+function toggleAllComponents(c){document.querySelectorAll('.compChk').forEach(x=>x.checked=c)}
+function delSelectedComponents(){
+  const ids=Array.from(document.querySelectorAll('.compChk:checked')).map(c=>parseInt(c.dataset.id));
+  if(ids.length===0){alert('선택하세요');return}
+  if(!confirm(ids.length+'개 구성품을 삭제하시겠습니까?'))return;
+  saveComponents(getComponents().filter(c=>!ids.includes(c.id)));
+  renderComponents();
+  // 원가 행에서 참조하던 구성품도 제거 + 원가 재계산
+  const cost=getEcData('cost');let changed=false;
+  cost.forEach(c=>{const orig=c.components||[];c.components=orig.filter(r=>!ids.includes(r.componentId));if(c.components.length!==orig.length)changed=true});
+  if(changed){saveEcData('cost',cost);renderEcCost();}
+  showToast('🗑','삭제됨','');
+}
+
+// ----- 원가/발주 렌더링 -----
+function _calcCostFromComponents(row){
+  return (row.components||[]).reduce((sum,r)=>sum+(parseFloat(r.price)||0),0);
+}
+function renderEcCost(){
+  const body=document.getElementById('ecCostBody');if(!body)return;
+  const d=getEcData('cost');
+  if(d.length===0){body.innerHTML='<tr><td colspan="9" class="text-center text-gray-400 py-4">제품이 없습니다.</td></tr>';return}
+  body.innerHTML=d.map(c=>{
+    // 원가 자동 계산: 구성품 가격 합 (배송비 제외)
+    const componentsCost=_calcCostFromComponents(c);
+    const hasComponents=(c.components||[]).length>0;
+    // 원가 = 구성품 합 (구성품 있을 때) 또는 사용자 입력 cost (없을 때)
+    const cost=hasComponents?componentsCost:(c.cost||0);
+    if(hasComponents&&c.cost!==componentsCost){c.cost=componentsCost;}
+    const price=c.price||0;
+    const shippingFee=c.shippingFee||0;
+    const fee=c.fee||0;
+    const marginAmount=price-cost-shippingFee-fee;
+    const marginRate=price>0?(marginAmount/price*100):0;
+    // 구성품 칩 표시
+    const compChips=(c.components||[]).map((r,idx)=>`<span class="ac-chip ac-chip-pos" title="₩${(r.price||0).toLocaleString()}">${escapeHtml(r.name||'')} <button onclick="delCompFromCost(${c.id},${idx})" class="text-red-500 hover:text-red-700 ml-1" title="제거">×</button></span>`).join('');
+    const addBtn=`<button onclick="openAddCompToCost(${c.id})" class="ac-chip" style="cursor:pointer;background:#e0e7ff;color:#3730a3;border-color:#c7d2fe">+ 추가</button>`;
+    return `<tr>
+      <td class="sheet-row-num"><input type="checkbox" class="ecChk-cost" data-id="${c.id}" /></td>
+      <td contenteditable oninput="updEc('cost',${c.id},'product',this.textContent)" class="align-top">${escapeHtml(c.product||'')}</td>
+      <td class="align-top" style="min-width:200px">${compChips}${addBtn}${hasComponents?`<div class="text-[10px] text-gray-500 mt-1">합계 ₩${componentsCost.toLocaleString()}</div>`:''}</td>
+      <td class="align-top text-right">${hasComponents?`<div class="text-gray-700">₩${cost.toLocaleString()}</div><div class="text-[10px] text-gray-400">자동계산</div>`:`<div contenteditable oninput="updEc('cost',${c.id},'cost',this.textContent)">₩${cost.toLocaleString()}</div>`}</td>
+      <td contenteditable oninput="updEc('cost',${c.id},'shippingFee',this.textContent)" class="align-top text-right">₩${shippingFee.toLocaleString()}</td>
+      <td contenteditable oninput="updEc('cost',${c.id},'price',this.textContent)" class="align-top text-right">₩${price.toLocaleString()}</td>
+      <td contenteditable oninput="updEc('cost',${c.id},'fee',this.textContent)" class="align-top text-right">₩${fee.toLocaleString()}</td>
+      <td class="align-top text-right ${marginAmount>=0?'text-green-700':'text-red-600'} font-semibold">₩${marginAmount.toLocaleString()}</td>
+      <td class="align-top text-right ${marginRate>=30?'text-green-600':marginRate>=10?'text-amber-600':'text-red-600'} font-bold">${marginRate.toFixed(1)}%</td>
+    </tr>`;
+  }).join('');
+  saveEcData('cost',d); // 자동 계산된 cost 저장
+}
+
+// 원가행에 구성품 추가/제거
+function openAddCompToCost(costId){
+  const cost=getEcData('cost').find(c=>c.id===costId);if(!cost)return;
+  window._addCompTarget=costId;
+  document.getElementById('addCompTargetName').textContent=`(제품: ${cost.product})`;
+  const comps=getComponents();
+  const usedIds=new Set((cost.components||[]).map(r=>r.componentId));
+  const list=document.getElementById('addCompList');
+  list.innerHTML=comps.length===0?'<p class="text-xs text-gray-400 text-center py-4">등록된 구성품이 없습니다. [📦 구성품] 탭에서 먼저 추가하세요.</p>':comps.map(c=>{
+    const inUse=usedIds.has(c.id);
+    return `<button onclick="addCompToCost(${c.id})" ${inUse?'disabled':''} class="w-full text-left border ${inUse?'border-gray-100 bg-gray-50 cursor-not-allowed':'border-gray-200 hover:border-black hover:bg-gray-50'} rounded p-3 transition"><div class="flex items-center justify-between"><div><strong class="text-sm">${escapeHtml(c.name)}</strong>${inUse?' <span class="text-xs text-gray-400">(이미 추가됨)</span>':''}</div><div class="text-right text-xs"><div class="text-blue-700 font-semibold">₩${(c.price||0).toLocaleString()}</div><div class="text-gray-400">배송 ₩${(c.shippingFee||0).toLocaleString()}</div></div></div></button>`;
+  }).join('');
+  openModal('addComponentToCostModal');
+}
+function addCompToCost(componentId){
+  const costId=window._addCompTarget;if(!costId)return;
+  const cost=getEcData('cost');const row=cost.find(c=>c.id===costId);if(!row)return;
+  const comp=getComponents().find(c=>c.id===componentId);if(!comp)return;
+  row.components=row.components||[];
+  row.components.push({componentId:comp.id,name:comp.name,price:comp.price||0});
+  saveEcData('cost',cost);
+  closeModal('addComponentToCostModal');renderEcCost();
+  showToast('+','구성품 추가',comp.name);
+}
+function delCompFromCost(costId,idx){
+  const cost=getEcData('cost');const row=cost.find(c=>c.id===costId);if(!row||!row.components)return;
+  const removed=row.components.splice(idx,1);
+  saveEcData('cost',cost);renderEcCost();
+  if(removed[0])showToast('×','구성품 제거',removed[0].name);
 }
 
 // ========== 순위 (쇼핑검색순위 + 슬롯구동) ==========
