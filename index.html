@@ -415,7 +415,7 @@
         <div data-submenu="ecommerce" class="hidden sidebar-sub mt-1">
           <a href="javascript:void(0)" onclick="navigateSub('ecommerce','sales')" data-subnav="ecommerce-sales" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">📈 판매</a>
           <a href="javascript:void(0)" onclick="navigateSub('ecommerce','inventory')" data-subnav="ecommerce-inventory" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">📦 재고</a>
-          <a href="javascript:void(0)" onclick="navigateSub('ecommerce','cost')" data-subnav="ecommerce-cost" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">💰 원가/발주</a>
+          <a href="javascript:void(0)" onclick="navigateSub('ecommerce','cost')" data-subnav="ecommerce-cost" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">💰 원가/마진</a>
           <a href="javascript:void(0)" onclick="navigateSub('ecommerce','ranking')" data-subnav="ecommerce-ranking" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">🏆 순위</a>
           <a href="javascript:void(0)" onclick="navigateSub('ecommerce','monitor')" data-subnav="ecommerce-monitor" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">🔍 쇼핑 모니터링</a>
         </div>
@@ -674,7 +674,7 @@
           <button data-subnav="ecommerce-sales" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('ecommerce','sales')">📈 판매</button>
           <button data-subnav="ecommerce-orders" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('ecommerce','orders')">📋 주문/출고</button>
           <button data-subnav="ecommerce-inventory" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('ecommerce','inventory')">📦 재고</button>
-          <button data-subnav="ecommerce-cost" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('ecommerce','cost')">💰 원가/발주</button>
+          <button data-subnav="ecommerce-cost" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('ecommerce','cost')">💰 원가/마진</button>
           <button data-subnav="ecommerce-ranking" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('ecommerce','ranking')">🏆 순위</button>
           <button data-subnav="ecommerce-monitor" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('ecommerce','monitor')">🔍 쇼핑 모니터링</button>
         </div>
@@ -780,7 +780,7 @@
         <div id="sub-ecommerce-cost" class="sub-page">
           <!-- 서브 메뉴 -->
           <div class="flex flex-wrap items-center gap-2 mb-4">
-            <button type="button" data-costmenu="cost" onclick="setCostMenu('cost')" class="rank-menu-btn px-3 py-1.5 border border-gray-300 rounded text-xs font-medium">💰 원가/발주</button>
+            <button type="button" data-costmenu="cost" onclick="setCostMenu('cost')" class="rank-menu-btn px-3 py-1.5 border border-gray-300 rounded text-xs font-medium">💰 원가/마진</button>
             <button type="button" data-costmenu="components" onclick="setCostMenu('components')" class="rank-menu-btn px-3 py-1.5 border border-gray-300 rounded text-xs font-medium">📦 구성품</button>
           </div>
 
@@ -800,7 +800,7 @@
               </tr></thead>
               <tbody id="ecCostBody"></tbody>
             </table></div>
-            <p class="text-[10px] text-gray-500 mt-2">💡 구성품 셀의 [+] 버튼으로 구성품을 추가하면 원가가 자동 합산됩니다. 마진액 = 판매가 - 원가 - 배송비 - 수수료</p>
+            <p class="text-[10px] text-gray-500 mt-2">💡 원가 = 기본 원가 + 구성품 가격 합. 수수료는 판매가의 %로 입력합니다. 마진액 = 판매가 - 총 원가 - 배송비 - (판매가 × 수수료%)</p>
           </div>
 
           <!-- 구성품 관리 -->
@@ -819,7 +819,7 @@
               </tr></thead>
               <tbody id="componentsBody"></tbody>
             </table></div>
-            <p class="text-[10px] text-gray-500 mt-2">💡 등록한 구성품은 원가/발주의 구성품 셀에서 선택해 추가할 수 있습니다.</p>
+            <p class="text-[10px] text-gray-500 mt-2">💡 등록한 구성품은 원가/마진의 구성품 셀에서 선택해 추가할 수 있습니다.</p>
           </div>
         </div>
         <div id="sub-ecommerce-ranking" class="sub-page">
