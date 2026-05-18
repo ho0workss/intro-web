@@ -778,8 +778,49 @@
           <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAll('inventory',this.checked)" /></th><th>SKU(옵션ID)</th><th>제품</th><th>현재고</th><th>7일 평균 판매량</th><th>상태</th><th>출처</th><th>최근동기화</th></tr></thead><tbody id="ecInventoryBody"></tbody></table></div>
         </div>
         <div id="sub-ecommerce-cost" class="sub-page">
-          <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">💰 원가/마진</h3><div class="flex gap-2"><button onclick="ecAddRow('cost')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 추가</button><button onclick="ecDelRow('cost')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div>
-          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAll('cost',this.checked)" /></th><th>제품</th><th>원가</th><th>판매가</th><th>마진율</th><th>발주 수량</th></tr></thead><tbody id="ecCostBody"></tbody></table></div>
+          <!-- 서브 메뉴 -->
+          <div class="flex flex-wrap items-center gap-2 mb-4">
+            <button type="button" data-costmenu="cost" onclick="setCostMenu('cost')" class="rank-menu-btn px-3 py-1.5 border border-gray-300 rounded text-xs font-medium">💰 원가/발주</button>
+            <button type="button" data-costmenu="components" onclick="setCostMenu('components')" class="rank-menu-btn px-3 py-1.5 border border-gray-300 rounded text-xs font-medium">📦 구성품</button>
+          </div>
+
+          <!-- 원가/발주 메인 -->
+          <div id="cost-menu-cost" class="rank-menu-page">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-bold">💰 제품별 원가/마진</h3>
+              <div class="flex gap-2">
+                <button onclick="ecAddRow('cost')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 제품 추가</button>
+                <button onclick="ecDelRow('cost')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button>
+              </div>
+            </div>
+            <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
+              <thead><tr>
+                <th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAll('cost',this.checked)" /></th>
+                <th>제품</th><th>구성품</th><th>원가</th><th>배송비</th><th>판매가</th><th>수수료</th><th>마진액</th><th>마진율</th>
+              </tr></thead>
+              <tbody id="ecCostBody"></tbody>
+            </table></div>
+            <p class="text-[10px] text-gray-500 mt-2">💡 구성품 셀의 [+] 버튼으로 구성품을 추가하면 원가가 자동 합산됩니다. 마진액 = 판매가 - 원가 - 배송비 - 수수료</p>
+          </div>
+
+          <!-- 구성품 관리 -->
+          <div id="cost-menu-components" class="rank-menu-page hidden">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-bold">📦 구성품 관리</h3>
+              <div class="flex gap-2">
+                <button onclick="addComponentRow()" class="px-3 py-1 bg-black text-white text-xs rounded">+ 구성품 추가</button>
+                <button onclick="delSelectedComponents()" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button>
+              </div>
+            </div>
+            <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
+              <thead><tr>
+                <th class="sheet-row-num"><input type="checkbox" onchange="toggleAllComponents(this.checked)" /></th>
+                <th>구성품명</th><th>가격</th><th>배송비</th><th>합계</th><th>비고</th>
+              </tr></thead>
+              <tbody id="componentsBody"></tbody>
+            </table></div>
+            <p class="text-[10px] text-gray-500 mt-2">💡 등록한 구성품은 원가/발주의 구성품 셀에서 선택해 추가할 수 있습니다.</p>
+          </div>
         </div>
         <div id="sub-ecommerce-ranking" class="sub-page">
           <!-- 내부 메뉴 선택 -->
@@ -1274,6 +1315,21 @@
       </div>
       <!-- 결과 -->
       <div id="ecAnResult" class="text-xs text-gray-400 text-center py-8">[▶ 분석 실행]을 눌러 결과를 확인하세요.</div>
+    </div>
+  </div>
+</div>
+
+<!-- 원가/발주 - 구성품 선택 모달 -->
+<div id="addComponentToCostModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
+      <h2 class="text-lg font-bold">📦 구성품 선택</h2>
+      <button onclick="closeModal('addComponentToCostModal')" class="hover-bg p-1 rounded">✕</button>
+    </div>
+    <div class="p-5">
+      <p class="text-xs text-gray-500 mb-3">원가에 추가할 구성품을 선택하세요. <span id="addCompTargetName" class="text-gray-700 font-semibold"></span></p>
+      <div id="addCompList" class="space-y-2"></div>
+      <p class="text-[10px] text-gray-400 mt-3">💡 구성품 목록은 [📦 구성품] 서브탭에서 관리하세요.</p>
     </div>
   </div>
 </div>
