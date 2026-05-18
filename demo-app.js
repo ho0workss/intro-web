@@ -1992,7 +1992,12 @@ function renderEcommerce(){
   document.getElementById('ecSalesSku')&&(document.getElementById('ecSalesSku').textContent=uniqueSku);
   document.getElementById('ecSalesAvg')&&(document.getElementById('ecSalesAvg').textContent=totalQty>0?'₩'+Math.round(totalRev/totalQty).toLocaleString():'₩0');
   const inv=getEcData('inventory');
-  document.getElementById('ecInventoryBody')&&(document.getElementById('ecInventoryBody').innerHTML=inv.map(i=>{const st=i.stock===0?{l:'품절',c:'bg-red-50 text-red-600'}:i.stock<i.min?{l:'부족',c:'bg-amber-50 text-amber-700'}:{l:'정상',c:'bg-green-50 text-green-700'};return `<tr><td class="sheet-row-num"><input type="checkbox" class="ecChk-inventory" data-id="${i.id}" /></td><td contenteditable oninput="updEc('inventory',${i.id},'sku',this.textContent)">${i.sku}</td><td contenteditable oninput="updEc('inventory',${i.id},'product',this.textContent)">${i.product}</td><td contenteditable oninput="updEc('inventory',${i.id},'stock',this.textContent)">${i.stock}</td><td contenteditable oninput="updEc('inventory',${i.id},'min',this.textContent)">${i.min}</td><td><span class="text-xs px-2 py-0.5 rounded ${st.c}">${st.l}</span></td></tr>`}).join(''));
+  document.getElementById('ecInventoryBody')&&(document.getElementById('ecInventoryBody').innerHTML=inv.map(i=>{
+    const st=i.stock===0?{l:'품절',c:'bg-red-50 text-red-600'}:i.stock<i.min?{l:'부족',c:'bg-amber-50 text-amber-700'}:{l:'정상',c:'bg-green-50 text-green-700'};
+    const sourceLabel=i.source==='naver_store'?'네이버':i.source==='coupang'?'쿠팡':i.source==='ezadmin'?'이지어드민':i.source==='cj_eflex'?'CJ Eflex':'수기';
+    const sourceColor=i.source&&i.source!=='manual'?'bg-blue-50 text-blue-700':'bg-gray-100 text-gray-600';
+    return `<tr><td class="sheet-row-num"><input type="checkbox" class="ecChk-inventory" data-id="${i.id}" /></td><td contenteditable oninput="updEc('inventory',${i.id},'sku',this.textContent)">${escapeHtml(i.sku||'')}</td><td contenteditable oninput="updEc('inventory',${i.id},'product',this.textContent)">${escapeHtml(i.product||'')}</td><td contenteditable oninput="updEc('inventory',${i.id},'stock',this.textContent)">${i.stock}</td><td contenteditable oninput="updEc('inventory',${i.id},'min',this.textContent)">${i.min}</td><td><span class="text-xs px-2 py-0.5 rounded ${st.c}">${st.l}</span></td><td><span class="text-xs px-2 py-0.5 rounded ${sourceColor}">${sourceLabel}</span></td><td class="text-[10px] text-gray-500">${i.lastSync?fmtDateYY(i.lastSync.slice(0,10))+' '+i.lastSync.slice(11,16):'-'}</td></tr>`;
+  }).join(''));
   const cost=getEcData('cost');
   document.getElementById('ecCostBody')&&(document.getElementById('ecCostBody').innerHTML=cost.map(c=>{const m=((c.price-c.cost)/c.price*100).toFixed(1);return `<tr><td class="sheet-row-num"><input type="checkbox" class="ecChk-cost" data-id="${c.id}" /></td><td contenteditable oninput="updEc('cost',${c.id},'product',this.textContent)">${c.product}</td><td contenteditable oninput="updEc('cost',${c.id},'cost',this.textContent)">₩${c.cost.toLocaleString()}</td><td contenteditable oninput="updEc('cost',${c.id},'price',this.textContent)">₩${c.price.toLocaleString()}</td><td class="${m>=50?'text-green-600':'text-amber-600'} font-semibold">${m}%</td><td contenteditable oninput="updEc('cost',${c.id},'orderQty',this.textContent)">${c.orderQty}</td></tr>`}).join(''));
   // 순위: 필터된 데이터에서 제품별 집계
@@ -2004,7 +2009,7 @@ function renderEcommerce(){
 function ecAddRow(t){
   const d=getEcData(t);const newRow={id:Date.now()};
   if(t==='sales')Object.assign(newRow,{date:new Date().toISOString().split('T')[0],brand:'',product:'새 상품',qty:0,revenue:0});
-  if(t==='inventory')Object.assign(newRow,{sku:'',product:'새 상품',stock:0,min:0});
+  if(t==='inventory')Object.assign(newRow,{sku:'',product:'새 상품',stock:0,min:0,source:'manual',lastSync:''});
   if(t==='cost')Object.assign(newRow,{product:'새 상품',cost:0,price:0,orderQty:0});
   d.push(newRow);saveEcData(t,d);renderEcommerce();showToast('+','추가됨','');
 }
@@ -2254,8 +2259,8 @@ const EC_ORDER_TEMPLATES_DEFAULT=[
 ];
 function getEcOrderTemplates(){
   const list=ST.get('ec_order_templates',EC_ORDER_TEMPLATES_DEFAULT.slice());
-  // 'tpl_all' 기본양식은 제거됨 - 기존 사용자 데이터에서도 자동 필터
-  const filtered=list.filter(t=>t.id!=='tpl_all');
+  // 'tpl_all' 또는 '전체' 라벨 양식 자동 제거 (구버전 잔존 처리)
+  const filtered=list.filter(t=>t.id!=='tpl_all'&&t.name!=='전체');
   if(filtered.length!==list.length)ST.set('ec_order_templates',filtered);
   return filtered;
 }
@@ -2468,7 +2473,10 @@ const EXT_API_PROVIDERS=[
   {id:'google_ads',name:'Google Ads',cat:'ads',platformKey:'google_ads',fields:[{k:'developerToken',l:'Developer Token'},{k:'clientId',l:'Client ID'},{k:'clientSecret',l:'Client Secret'},{k:'refreshToken',l:'Refresh Token'}]},
   {id:'meta_ads',name:'Meta Ads (Facebook/Instagram)',cat:'ads',platformKey:'meta_ads',fields:[{k:'accessToken',l:'Access Token'},{k:'adAccountId',l:'광고계정 ID'}]},
   {id:'goodsflow',name:'굿스플로 (통합 택배 송장)',cat:'shipping',platformKey:'goodsflow',fields:[{k:'apiKey',l:'API Key'}]},
+  {id:'ezadmin',name:'이지어드민 (재고/주문 관리)',cat:'erp',platformKey:'ezadmin',fields:[{k:'apiKey',l:'API Key'},{k:'companyCode',l:'업체 코드'}]},
+  {id:'cj_eflex',name:'CJ LoIS Eflex (WMS) · API 미지원',cat:'wms',platformKey:'cj_eflex',note:'표준 공개 OpenAPI 미제공 — CSV 업로드 방식으로만 연동 가능',fields:[{k:'centerCode',l:'센터 코드 (선택)'},{k:'memo',l:'메모'}]},
 ];
+const EXT_API_CAT_NAMES={ecommerce:'🛍️ 이커머스',ads:'📣 광고',shipping:'🚚 택배',erp:'📦 ERP / 재고',wms:'🏭 WMS / 물류센터'};
 function getExtApiSettings(){
   const raw=ST.get('extApiSettings',{});
   // 구버전 호환: 단일 계정 → accounts 배열로 마이그레이션
@@ -2526,7 +2534,7 @@ function delExtApiAccount(providerId,accountId){
 function renderExtApiSettings(){
   const list=document.getElementById('extApiList');if(!list)return;
   const settings=getExtApiSettings();
-  const catNames={ecommerce:'🛍️ 이커머스',ads:'📣 광고',shipping:'🚚 택배'};
+  const catNames=EXT_API_CAT_NAMES;
   const byCat={};
   EXT_API_PROVIDERS.forEach(p=>{(byCat[p.cat]=byCat[p.cat]||[]).push(p)});
   list.innerHTML=Object.entries(byCat).map(([cat,ps])=>`
@@ -2537,6 +2545,7 @@ function renderExtApiSettings(){
           const accounts=(settings[p.id]?.accounts)||[];
           const enabledCnt=accounts.filter(a=>a.enabled).length;
           return `<div class="border border-gray-100 rounded-lg p-3">
+            ${p.note?`<div class="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mb-2">⚠️ ${escapeHtml(p.note)}</div>`:''}
             <div class="flex items-center gap-2 mb-2">
               <span class="text-sm font-medium">${p.name}</span>
               <span class="text-xs text-gray-400">${accounts.length}개 계정${enabledCnt?` · ${enabledCnt}개 활성`:''}</span>
@@ -2572,6 +2581,62 @@ function getActiveAccounts(cat){
     });
   });
   return result;
+}
+
+// ========== 재고 플랫폼 연동 (목업) ==========
+async function syncInventoryFromPlatform(providerId){
+  const labels={naver_store:'네이버 스마트스토어',coupang:'쿠팡 Wing',ezadmin:'이지어드민'};
+  const label=labels[providerId]||providerId;
+  // 활성 계정 확인
+  const accs=(getExtApiSettings()[providerId]?.accounts||[]).filter(a=>a.enabled);
+  if(accs.length===0){
+    showToast('⚠️',`${label} 연동 안내`,'활성 계정 없음 — 설정 ▸ API 연동에서 키 등록 필요 (현재 목업 동작)');
+  }
+  // 목업: 기존 SKU 중 일부의 재고를 랜덤 변경 + 신규 SKU 1개 추가 가능
+  const inv=getEcData('inventory');
+  const now=new Date().toISOString();
+  let updated=0;
+  inv.forEach(i=>{
+    if(Math.random()<0.6){
+      i.stock=Math.max(0,Math.round(i.stock*(0.6+Math.random()*0.8)));
+      i.source=providerId;i.lastSync=now;updated++;
+    }
+  });
+  // 50% 확률로 신규 SKU 발견
+  if(Math.random()<0.5){
+    const newSku='AUTO-'+String(Math.floor(Math.random()*9000+1000));
+    inv.push({id:Date.now(),sku:newSku,product:`${label} 신규 상품`,stock:Math.floor(Math.random()*200+10),min:10,source:providerId,lastSync:now});
+    updated++;
+  }
+  saveEcData('inventory',inv);renderEcommerce();
+  showToast('🔄',`${label} 재고 동기화`,`${updated}건 갱신 (목업)`);
+}
+async function uploadCjEflexCsv(input){
+  const file=input.files?.[0];if(!file)return;
+  const text=await file.text();
+  input.value=''; // 같은 파일 재선택 가능하도록 초기화
+  // CSV 파싱: 헤더 행 + 데이터
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2){alert('CSV에 데이터가 없습니다');return}
+  const header=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+  // 컬럼 자동 인식 (SKU, 제품명, 재고)
+  const findCol=(...keys)=>{for(const k of keys){const i=header.findIndex(h=>h.toLowerCase().includes(k.toLowerCase()));if(i>=0)return i}return -1};
+  const colSku=findCol('sku','품목코드','상품코드');
+  const colProduct=findCol('product','상품명','품목명');
+  const colStock=findCol('stock','재고','수량');
+  if(colSku<0||colStock<0){alert('CSV 형식을 인식할 수 없습니다.\nSKU/재고 컬럼이 필요합니다.\n\n예: SKU,상품명,재고\nSK-001,스킨케어,234');return}
+  const inv=getEcData('inventory');const now=new Date().toISOString();let added=0,updated=0;
+  for(let i=1;i<lines.length;i++){
+    const parts=lines[i].split(',').map(p=>p.trim().replace(/^"|"$/g,''));
+    const sku=parts[colSku];if(!sku)continue;
+    const product=colProduct>=0?parts[colProduct]:'';
+    const stock=parseInt(parts[colStock])||0;
+    const existing=inv.find(x=>x.sku===sku);
+    if(existing){existing.stock=stock;if(product)existing.product=product;existing.source='cj_eflex';existing.lastSync=now;updated++;}
+    else{inv.push({id:Date.now()+i,sku,product:product||sku,stock,min:10,source:'cj_eflex',lastSync:now});added++;}
+  }
+  saveEcData('inventory',inv);renderEcommerce();
+  showToast('📥','CJ Eflex CSV 업로드',`신규 ${added}건 · 갱신 ${updated}건`);
 }
 
 // ========== 과거 휴가 내역 ==========
