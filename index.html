@@ -722,8 +722,27 @@
           </table></div>
         </div>
         <div id="sub-ecommerce-inventory" class="sub-page">
-          <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">📦 재고 현황</h3><div class="flex gap-2"><button onclick="ecAddRow('inventory')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 추가</button><button onclick="ecDelRow('inventory')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div>
-          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAll('inventory',this.checked)" /></th><th>SKU</th><th>제품</th><th>현재고</th><th>최소재고</th><th>상태</th></tr></thead><tbody id="ecInventoryBody"></tbody></table></div>
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3 text-xs text-blue-900">
+            <p class="font-semibold mb-1">📡 재고 연동 방법</p>
+            <ul class="list-disc pl-4 space-y-0.5">
+              <li><strong>네이버 스마트스토어 / 쿠팡 Wing / 이지어드민</strong> — REST API 실시간 동기화 가능 (설정 ▸ API 연동에서 키 등록 필요)</li>
+              <li><strong>CJ LoIS Eflex</strong> — 표준 공개 OpenAPI 미제공. <strong>CSV 파일 업로드</strong> 방식만 가능 (WMS에서 일/주 단위 재고 추출 후 업로드)</li>
+              <li>모든 항목은 <strong>수기 입력/수정</strong>도 가능합니다 — [+ 수기 추가] 버튼 사용</li>
+            </ul>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 mb-3">
+            <span class="text-xs text-gray-500 font-semibold">동기화:</span>
+            <button onclick="syncInventoryFromPlatform('naver_store')" class="px-3 py-1 bg-blue-600 text-white text-xs rounded">🔄 네이버</button>
+            <button onclick="syncInventoryFromPlatform('coupang')" class="px-3 py-1 bg-blue-600 text-white text-xs rounded">🔄 쿠팡</button>
+            <button onclick="syncInventoryFromPlatform('ezadmin')" class="px-3 py-1 bg-purple-600 text-white text-xs rounded">🔄 이지어드민</button>
+            <button onclick="document.getElementById('cjEflexCsvInput').click()" class="px-3 py-1 bg-orange-600 text-white text-xs rounded" title="CJ Eflex는 표준 OpenAPI 미제공 — CSV 업로드로 처리">📥 CJ Eflex CSV</button>
+            <input type="file" id="cjEflexCsvInput" accept=".csv" onchange="uploadCjEflexCsv(this)" class="hidden" />
+            <div class="ml-auto flex gap-2">
+              <button onclick="ecAddRow('inventory')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 수기 추가</button>
+              <button onclick="ecDelRow('inventory')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button>
+            </div>
+          </div>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table"><thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="ecToggleAll('inventory',this.checked)" /></th><th>SKU</th><th>제품</th><th>현재고</th><th>최소재고</th><th>상태</th><th>출처</th><th>최근동기화</th></tr></thead><tbody id="ecInventoryBody"></tbody></table></div>
         </div>
         <div id="sub-ecommerce-cost" class="sub-page">
           <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">💰 원가/마진</h3><div class="flex gap-2"><button onclick="ecAddRow('cost')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 추가</button><button onclick="ecDelRow('cost')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div>
