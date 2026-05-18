@@ -419,6 +419,31 @@
           <a href="javascript:void(0)" onclick="navigateSub('ecommerce','monitor')" data-subnav="ecommerce-monitor" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">🔍 쇼핑 모니터링</a>
         </div>
       </div>
+      <div>
+        <a href="javascript:void(0)" onclick="navigateTo('logistics','order_dom')" data-nav="logistics" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">🚚</span>물류<span class="ml-auto text-xs text-gray-400">▾</span></a>
+        <div data-submenu="logistics" class="hidden sidebar-sub mt-1">
+          <a href="javascript:void(0)" onclick="navigateSub('logistics','order_dom')" data-subnav="logistics-order_dom" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">🇰🇷 국내 발주</a>
+          <a href="javascript:void(0)" onclick="navigateSub('logistics','order_intl')" data-subnav="logistics-order_intl" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">🌐 해외 발주</a>
+          <a href="javascript:void(0)" onclick="navigateSub('logistics','inventory')" data-subnav="logistics-inventory" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">📦 재고 관리</a>
+          <a href="javascript:void(0)" onclick="navigateSub('logistics','ship')" data-subnav="logistics-ship" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">📤 배송 요청</a>
+        </div>
+      </div>
+      <div>
+        <a href="javascript:void(0)" onclick="navigateTo('cs','reviews')" data-nav="cs" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">📞</span>CS<span class="ml-auto text-xs text-gray-400">▾</span></a>
+        <div data-submenu="cs" class="hidden sidebar-sub mt-1">
+          <a href="javascript:void(0)" onclick="navigateSub('cs','reviews')" data-subnav="cs-reviews" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">⭐ 리뷰 관리</a>
+          <a href="javascript:void(0)" onclick="navigateSub('cs','inquiries')" data-subnav="cs-inquiries" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">💬 고객 문의</a>
+        </div>
+      </div>
+      <div>
+        <a href="javascript:void(0)" onclick="navigateTo('admin','supplies')" data-nav="admin" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">🏢</span>경영지원<span class="ml-auto text-xs text-gray-400">▾</span></a>
+        <div data-submenu="admin" class="hidden sidebar-sub mt-1">
+          <a href="javascript:void(0)" onclick="navigateSub('admin','supplies')" data-subnav="admin-supplies" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">🛒 물품/간식 요청</a>
+          <a href="javascript:void(0)" onclick="navigateSub('admin','purchase')" data-subnav="admin-purchase" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">💳 구매 관리</a>
+          <a href="javascript:void(0)" onclick="navigateSub('admin','tax')" data-subnav="admin-tax" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">🧾 세무 업무</a>
+          <a href="javascript:void(0)" onclick="navigateSub('admin','hr')" data-subnav="admin-hr" class="sub-nav-item flex items-center gap-2 px-2 py-1 rounded-md text-xs text-gray-600 hover-bg">👥 인사 관리</a>
+        </div>
+      </div>
       <a href="javascript:void(0)" onclick="navigateTo('events')" data-nav="events" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">🏷️</span>행사</a>
       <a href="javascript:void(0)" onclick="navigateTo('design')" data-nav="design" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">🎨</span>디자인</a>
       <a href="javascript:void(0)" onclick="navigateTo('ads')" data-nav="ads" class="nav-item flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-gray-700 hover-bg"><span class="text-base">📣</span>마케팅</a>
@@ -1015,6 +1040,160 @@
               <tbody id="seoTableBody"></tbody>
             </table></div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🚚 물류 -->
+    <div id="page-logistics" class="page">
+      <div class="max-w-6xl mx-auto px-12 py-6">
+        <div class="mb-4"><h1 class="text-2xl font-extrabold flex items-center gap-2"><span class="text-3xl">🚚</span>물류</h1><p class="text-gray-500 text-xs mt-1">국내/해외 발주 · 재고 · 배송 관리</p></div>
+        <div class="border-b border-gray-200 mb-6 flex gap-1 flex-wrap">
+          <button data-subnav="logistics-order_dom" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('logistics','order_dom')">🇰🇷 국내 발주</button>
+          <button data-subnav="logistics-order_intl" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('logistics','order_intl')">🌐 해외 발주</button>
+          <button data-subnav="logistics-inventory" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('logistics','inventory')">📦 재고 관리</button>
+          <button data-subnav="logistics-ship" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('logistics','ship')">📤 배송 요청</button>
+        </div>
+        <div id="sub-logistics-order_dom" class="sub-page active">
+          <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">🇰🇷 국내 발주</h3><div class="flex gap-2"><button onclick="addLogRow('order_dom')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 행</button><button onclick="delLogRows('order_dom')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
+            <thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllLogRows('order_dom',this.checked)" /></th><th>발주일</th><th>협력사</th><th>상품명</th><th>옵션</th><th>수량</th><th>단가</th><th>합계</th><th>입고예정일</th><th>상태</th></tr></thead>
+            <tbody id="logOrderDomBody"></tbody>
+          </table></div>
+        </div>
+        <div id="sub-logistics-order_intl" class="sub-page">
+          <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">🌐 해외 발주</h3><div class="flex gap-2"><button onclick="addLogRow('order_intl')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 행</button><button onclick="delLogRows('order_intl')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
+            <thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllLogRows('order_intl',this.checked)" /></th><th>발주일</th><th>공급처</th><th>국가</th><th>상품명</th><th>수량</th><th>단가</th><th>통화</th><th>관세(%)</th><th>총비용(₩)</th><th>통관상태</th></tr></thead>
+            <tbody id="logOrderIntlBody"></tbody>
+          </table></div>
+        </div>
+        <div id="sub-logistics-inventory" class="sub-page">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">총 창고</p><p class="text-xl font-bold" id="logInvWarehouseCount">0</p></div>
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">SKU 수</p><p class="text-xl font-bold" id="logInvSkuCount">0</p></div>
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">총 재고</p><p class="text-xl font-bold text-blue-600" id="logInvTotal">0</p></div>
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">부족 SKU</p><p class="text-xl font-bold text-red-500" id="logInvLow">0</p></div>
+          </div>
+          <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">📦 창고별 재고</h3><div class="flex gap-2"><button onclick="addLogRow('inventory')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 행</button><button onclick="delLogRows('inventory')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
+            <thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllLogRows('inventory',this.checked)" /></th><th>창고</th><th>SKU</th><th>상품명</th><th>옵션</th><th>현재고</th><th>안전재고</th><th>상태</th><th>비고</th></tr></thead>
+            <tbody id="logInvBody"></tbody>
+          </table></div>
+        </div>
+        <div id="sub-logistics-ship" class="sub-page">
+          <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">📤 배송 요청</h3><div class="flex gap-2"><button onclick="addLogRow('ship')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 요청</button><button onclick="delLogRows('ship')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
+            <thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllLogRows('ship',this.checked)" /></th><th>요청일</th><th>요청자</th><th>수령처</th><th>상품명</th><th>수량</th><th>희망배송일</th><th>택배사</th><th>송장번호</th><th>상태</th></tr></thead>
+            <tbody id="logShipBody"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 📞 CS -->
+    <div id="page-cs" class="page">
+      <div class="max-w-6xl mx-auto px-12 py-6">
+        <div class="mb-4"><h1 class="text-2xl font-extrabold flex items-center gap-2"><span class="text-3xl">📞</span>CS</h1><p class="text-gray-500 text-xs mt-1">리뷰 / 고객 문의 관리</p></div>
+        <div class="border-b border-gray-200 mb-6 flex gap-1 flex-wrap">
+          <button data-subnav="cs-reviews" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('cs','reviews')">⭐ 리뷰 관리</button>
+          <button data-subnav="cs-inquiries" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('cs','inquiries')">💬 고객 문의</button>
+        </div>
+        <div id="sub-cs-reviews" class="sub-page active">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">전체 리뷰</p><p class="text-xl font-bold" id="csReviewTotal">0</p></div>
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">평균 별점</p><p class="text-xl font-bold text-amber-500" id="csReviewAvg">0.0</p></div>
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">답변 완료</p><p class="text-xl font-bold text-green-600" id="csReviewAnswered">0</p></div>
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">미답변</p><p class="text-xl font-bold text-red-500" id="csReviewPending">0</p></div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 mb-3">
+            <select id="csReviewPlatformFilter" onchange="renderCsReviews()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white">
+              <option value="all">전체 플랫폼</option>
+              <option value="naver">네이버 스마트스토어</option>
+              <option value="coupang">쿠팡</option>
+              <option value="cafe24">카페24</option>
+              <option value="11st">11번가</option>
+            </select>
+            <select id="csReviewStatusFilter" onchange="renderCsReviews()" class="px-2 py-1 border border-gray-300 rounded text-xs bg-white">
+              <option value="all">전체 상태</option>
+              <option value="pending">미답변</option>
+              <option value="answered">답변완료</option>
+            </select>
+            <div class="ml-auto flex gap-2">
+              <button onclick="addCsReview()" class="px-3 py-1 bg-black text-white text-xs rounded">+ 리뷰 추가</button>
+              <button onclick="delSelectedCsReviews()" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button>
+            </div>
+          </div>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
+            <thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllCsReviews(this.checked)" /></th><th>플랫폼</th><th>작성일</th><th>상품</th><th>별점</th><th>작성자</th><th>리뷰 내용</th><th>답변</th><th>상태</th></tr></thead>
+            <tbody id="csReviewsBody"></tbody>
+          </table></div>
+        </div>
+        <div id="sub-cs-inquiries" class="sub-page">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">전체 문의</p><p class="text-xl font-bold" id="csInqTotal">0</p></div>
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">접수</p><p class="text-xl font-bold text-blue-600" id="csInqOpen">0</p></div>
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">처리중</p><p class="text-xl font-bold text-amber-600" id="csInqProgress">0</p></div>
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">완료</p><p class="text-xl font-bold text-green-600" id="csInqDone">0</p></div>
+          </div>
+          <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">💬 고객 문의 내역</h3><div class="flex gap-2"><button onclick="addCsInquiry()" class="px-3 py-1 bg-black text-white text-xs rounded">+ 문의 추가</button><button onclick="delSelectedCsInquiries()" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
+            <thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllCsInquiries(this.checked)" /></th><th>접수일</th><th>채널</th><th>고객</th><th>제목</th><th>내용</th><th>담당자</th><th>상태</th></tr></thead>
+            <tbody id="csInquiriesBody"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🏢 경영지원 -->
+    <div id="page-admin" class="page">
+      <div class="max-w-6xl mx-auto px-12 py-6">
+        <div class="mb-4"><h1 class="text-2xl font-extrabold flex items-center gap-2"><span class="text-3xl">🏢</span>경영지원</h1><p class="text-gray-500 text-xs mt-1">물품/간식 · 구매 · 세무 · 인사</p></div>
+        <div class="border-b border-gray-200 mb-6 flex gap-1 flex-wrap">
+          <button data-subnav="admin-supplies" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('admin','supplies')">🛒 물품/간식</button>
+          <button data-subnav="admin-purchase" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('admin','purchase')">💳 구매 관리</button>
+          <button data-subnav="admin-tax" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('admin','tax')">🧾 세무</button>
+          <button data-subnav="admin-hr" class="sub-nav-item px-4 py-2 text-sm font-medium border-b-2 border-transparent" onclick="navigateSub('admin','hr')">👥 인사</button>
+        </div>
+        <div id="sub-admin-supplies" class="sub-page active">
+          <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">🛒 물품/간식 요청</h3><div class="flex gap-2"><button onclick="addAdminRow('supplies')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 요청</button><button onclick="delAdminRows('supplies')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
+            <thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllAdminRows('supplies',this.checked)" /></th><th>요청일</th><th>요청자</th><th>분류</th><th>품목</th><th>수량</th><th>예상금액</th><th>사유</th><th>상태</th></tr></thead>
+            <tbody id="adminSuppliesBody"></tbody>
+          </table></div>
+        </div>
+        <div id="sub-admin-purchase" class="sub-page">
+          <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">💳 구매 관리</h3><div class="flex gap-2"><button onclick="addAdminRow('purchase')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 구매 등록</button><button onclick="delAdminRows('purchase')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
+            <thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllAdminRows('purchase',this.checked)" /></th><th>구매일</th><th>구매처</th><th>품목</th><th>수량</th><th>단가</th><th>총액</th><th>결제수단</th><th>증빙</th><th>상태</th></tr></thead>
+            <tbody id="adminPurchaseBody"></tbody>
+          </table></div>
+        </div>
+        <div id="sub-admin-tax" class="sub-page">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">이번달 매입</p><p class="text-lg font-bold text-blue-600" id="adminTaxIn">₩0</p></div>
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">이번달 매출</p><p class="text-lg font-bold text-green-600" id="adminTaxOut">₩0</p></div>
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">부가세 (예상)</p><p class="text-lg font-bold text-purple-600" id="adminTaxVat">₩0</p></div>
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">대기 항목</p><p class="text-lg font-bold text-amber-600" id="adminTaxPending">0</p></div>
+          </div>
+          <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">🧾 세무 업무 일정</h3><div class="flex gap-2"><button onclick="addAdminRow('tax')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 항목</button><button onclick="delAdminRows('tax')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
+            <thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllAdminRows('tax',this.checked)" /></th><th>마감일</th><th>구분</th><th>거래처</th><th>금액</th><th>부가세</th><th>증빙유형</th><th>담당</th><th>상태</th></tr></thead>
+            <tbody id="adminTaxBody"></tbody>
+          </table></div>
+        </div>
+        <div id="sub-admin-hr" class="sub-page">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">총 인원</p><p class="text-xl font-bold" id="adminHrTotal">0</p></div>
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">정규직</p><p class="text-xl font-bold text-blue-600" id="adminHrRegular">0</p></div>
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">계약직/인턴</p><p class="text-xl font-bold text-purple-600" id="adminHrContract">0</p></div>
+            <div class="border border-gray-200 rounded-lg p-3"><p class="text-xs text-gray-500">이번달 입/퇴사</p><p class="text-xl font-bold text-amber-600" id="adminHrNew">0</p></div>
+          </div>
+          <div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold">👥 임직원 명단</h3><div class="flex gap-2"><button onclick="addAdminRow('hr')" class="px-3 py-1 bg-black text-white text-xs rounded">+ 직원</button><button onclick="delAdminRows('hr')" class="px-3 py-1 border border-red-200 text-red-600 text-xs rounded">🗑 삭제</button></div></div>
+          <div class="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto"><table class="sheet-table">
+            <thead><tr><th class="sheet-row-num"><input type="checkbox" onchange="toggleAllAdminRows('hr',this.checked)" /></th><th>이름</th><th>부서</th><th>직급</th><th>고용형태</th><th>입사일</th><th>퇴사일</th><th>연락처</th><th>이메일</th><th>상태</th></tr></thead>
+            <tbody id="adminHrBody"></tbody>
+          </table></div>
         </div>
       </div>
     </div>
